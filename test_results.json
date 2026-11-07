@@ -1,0 +1,74 @@
+{
+  "suite": "AUTHR_OS Desktop \u2014 Phase 1 + Phase 3 acceptance",
+  "recorded_at": "2026-11-07T06:49:17.840377+00:00",
+  "rust": {
+    "toolchain": "rustc 1.99.1",
+    "crate": "authr 3.0.0",
+    "unit_tests": "2 passed"
+  },
+  "e2e_full_suite": {
+    "suite": "AUTHR_OS E2E",
+    "exit_code": 0,
+    "passed": 101,
+    "failed": 0,
+    "duration_s": 5.56,
+    "tier": null,
+    "feature": null,
+    "modules": 4
+  },
+  "tiers": {
+    "tier1": {
+      "suite": "AUTHR_OS E2E",
+      "exit_code": 0,
+      "passed": 50,
+      "failed": 0,
+      "duration_s": 4.24,
+      "tier": 1,
+      "feature": null,
+      "modules": 9
+    },
+    "tier2": {
+      "suite": "AUTHR_OS E2E",
+      "exit_code": 0,
+      "passed": 40,
+      "failed": 0,
+      "duration_s": 2.94,
+      "tier": 2,
+      "feature": null,
+      "modules": 8
+    },
+    "tier3": {
+      "suite": "AUTHR_OS E2E",
+      "exit_code": 0,
+      "passed": 6,
+      "failed": 0,
+      "duration_s": 2.8,
+      "tier": 3,
+      "feature": null,
+      "modules": 1
+    },
+    "tier4": {
+      "suite": "AUTHR_OS E2E",
+      "exit_code": 0,
+      "passed": 5,
+      "failed": 0,
+      "duration_s": 2.66,
+      "tier": 4,
+      "feature": null,
+      "modules": 1
+    }
+  },
+  "frontend": {
+    "stack": "React 19 + TypeScript + Vite 6 + Tailwind 3.4 + Lexical 0.29 + Zustand 5",
+    "typecheck": "tsc --noEmit: 0 errors",
+    "build": "vite build: success (dist/, 503 kB main chunk)",
+    "dev_bridge": "POST /api/ipc verified end-to-end against the authr CLI"
+  },
+  "totals": {
+    "e2e_tests": 101,
+    "pass_rate": "100%",
+    "commands": 35,
+    "error_codes": 9,
+    "test_modules": 19
+  }
+}

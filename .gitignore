@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Dev sandbox bundle (created by the browser dev bridge)
+sandbox.authr/
+
+# Local env / logs
+*.local
+*.log
+
+# OS noise
+.DS_Store
