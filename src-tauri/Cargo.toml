@@ -34,6 +34,13 @@ chrono = { version = "0.4", default-features = false, features = ["clock"] }
 whoami = "1"
 keyring = { version = "3", optional = true, default-features = false, features = ["linux-native"] }
 tauri = { version = "2", optional = true, default-features = false }
+# ── Phase 4: audio stack ────────────────────────────────────────────────────
+hound = "3.5"                                   # WAV encode/decode (16-bit PCM)
+rubato = "0.16"                                 # high-quality resampling
+symphonia = { version = "0.5", default-features = false, features = ["wav", "pcm", "mp3"] }
+sha2 = "0.10"                                   # content-addressable chunk keys, Edge-TTS GEC token
+ureq = { version = "2", default-features = false, features = ["json", "tls"] }
+tungstenite = { version = "0.24", default-features = false, features = ["handshake", "rustls-tls-webpki-roots"] }
 
 [profile.release]
 opt-level = 2

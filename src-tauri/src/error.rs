@@ -1,5 +1,7 @@
 // AUTHR_OS — Unified error taxonomy (docs/CLI_CONTRACT.md §3).
-// Exactly 9 canonical codes across 3 categories.
+// Contract v1: 9 canonical codes across 3 categories (frozen).
+// Contract v1.1 (Phases 4–5): +4 additive codes in the `audio` and `ai`
+// categories. Existing v1 codes and their semantics are untouched.
 
 use serde_json::{json, Value};
 
@@ -8,6 +10,8 @@ pub enum Category {
     Storage,
     Bundle,
     Security,
+    Audio,
+    Ai,
 }
 
 impl Category {
@@ -16,6 +20,8 @@ impl Category {
             Category::Storage => "storage",
             Category::Bundle => "bundle",
             Category::Security => "security",
+            Category::Audio => "audio",
+            Category::Ai => "ai",
         }
     }
 }
@@ -63,6 +69,22 @@ impl AppError {
     }
     pub fn security(msg: impl Into<String>) -> Self {
         Self::new("SECURITY_ERROR", Category::Security, msg)
+    }
+
+    // ── audio (contract v1.1) ───────────────────────────────────────────────
+    pub fn audio(msg: impl Into<String>) -> Self {
+        Self::new("AUDIO_ERROR", Category::Audio, msg)
+    }
+    pub fn audio_engine_unavailable(msg: impl Into<String>) -> Self {
+        Self::new("AUDIO_ENGINE_UNAVAILABLE", Category::Audio, msg)
+    }
+
+    // ── ai (contract v1.1) ──────────────────────────────────────────────────
+    pub fn ai(msg: impl Into<String>) -> Self {
+        Self::new("AI_ERROR", Category::Ai, msg)
+    }
+    pub fn ai_engine_unavailable(msg: impl Into<String>) -> Self {
+        Self::new("AI_ENGINE_UNAVAILABLE", Category::Ai, msg)
     }
 
     /// Contract envelope fragment (§2): {"code","message","category"}.

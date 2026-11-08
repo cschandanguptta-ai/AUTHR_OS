@@ -1,9 +1,12 @@
-# AUTHR_OS — Frozen IPC / CLI Contract (v1)
+# AUTHR_OS — Frozen IPC / CLI Contract (v1.1)
 
-**Status**: FROZEN. Every command handler (Tauri `#[tauri::command]`, CLI subcommand, and
-frontend bridge) MUST conform to this document. Any change requires a contract version bump.
+**Status**: v1 sections are FROZEN. v1.1 (Phases 4–5) extends the surface
+**additively**: 13 new commands (§4.11–4.12) and 4 new error codes in two new
+categories (§3). Every v1 command, code and semantic is untouched. Any further
+change requires a contract version bump.
 
-**Applies to**: Phase 1 (Storage Core), Phase 3 (Author's Cockpit UI), all later phases.
+**Applies to**: Phase 1 (Storage Core), Phase 3 (Author's Cockpit UI),
+Phase 4 (Audio Studio), Phase 5 (Local-First AI & Vector RAG).
 
 ---
 
@@ -26,10 +29,12 @@ Exactly **one line** of JSON on stdout. Exit code `0` on success, `1` on failure
 
 ```json
 {"ok": true,  "data": <result>}
-{"ok": false, "error": {"code": "<CODE>", "message": "<human-readable>", "category": "<storage|bundle|security>"}}
+{"ok": false, "error": {"code": "<CODE>", "message": "<human-readable>", "category": "<storage|bundle|security|audio|ai>"}}
 ```
 
-## 3. Error Taxonomy (9 canonical codes — closed set)
+## 3. Error Taxonomy
+
+### v1 — 9 canonical codes (frozen, closed set)
 
 | Code | Category | Raised when |
 |------|----------|-------------|
@@ -43,7 +48,16 @@ Exactly **one line** of JSON on stdout. Exit code `0` on success, `1` on failure
 | `ZIP_SLIP_VIOLATION` | security | Archive entry escapes the destination (`../`, absolute, drive letter, symlink) |
 | `SECURITY_ERROR` | security | Keychain unavailable/failure, or any other security-layer failure |
 
-## 4. Command Surface (35 commands)
+### v1.1 — 4 additive codes (Phases 4–5)
+
+| Code | Category | Raised when |
+|------|----------|-------------|
+| `AUDIO_ERROR` | audio | Invalid audio args (engine name, layer kind, sample rate, wav decode, output name) |
+| `AUDIO_ENGINE_UNAVAILABLE` | audio | Network TTS engine unreachable / API key env missing / `AUTHR_TTS_OFFLINE=1` |
+| `AI_ERROR` | ai | Invalid RAG/LLM args (unknown source, mode, embedder, voice, empty query) |
+| `AI_ENGINE_UNAVAILABLE` | ai | llama-server unreachable, Kokoro/MiniLM model or runtime missing |
+
+## 4. Command Surface (48 commands)
 
 ### 4.1 Project lifecycle
 
@@ -132,6 +146,44 @@ mock (`$AUTHR_MOCK_KEYRING_FILE` or `~/.authr/mock_keyring.json`). Headless CI a
 |---|---------|------|--------|
 | 32 | `git_snapshot` | `{message?}` | `{commit}` — stage manuscript/ + manifest, commit (default `chore: manual snapshot`) |
 | 33 | `clean_sweep` | `{}` | `{purged_segments, purged_threads, fts_rebuilt:true}` — orphan purge + FTS rebuild |
+
+### 4.11 Audio Studio (Phase 4, v1.1)
+
+All file arguments are bundle-relative and sandbox-resolved; traversal attempts
+raise `PATH_TRAVERSAL_VIOLATION`. `AUTHR_TTS_OFFLINE=1` deterministically blocks
+network engines (`AUDIO_ENGINE_UNAVAILABLE`). `SCRIPTED` is the deterministic
+offline synthesis engine used by headless CI.
+
+| # | Command | Args | Result |
+|---|---------|------|--------|
+| 34 | `audio_cache_stats` | `{}` | `{root, chunks, bytes, hits, misses, hit_rate}` — SHA-256 content-addressable chunk cache in `audio/segments/` |
+| 35 | `audio_pronounce` | `{names:[…]}` (≤256) | `{entries:[{name, ipa, source:lexicon\|rules}], count}` — proper-noun IPA phonetics |
+| 36 | `audio_plan` | `{chapter_id}` | `{turns, speakers, waves:[[idx…]], wave_count, deps, continuity:[{turn, previous_request_from, previous_request_id}], order, segment_turns}` — topological DAG lookahead schedule (same-speaker turns serialized for acoustic continuity, independent speakers parallel) |
+| 37 | `audio_synthesize` | `{text, voice?, engine?, sample_rate?, rate?, pitch?, ipa_names?}` **or** `{chapter_id, engine?, sample_rate?, ipa_names?, dry_run?}` | single: `{cached, hash(sha256), engine, path, duration_ms?, request_id?}`; chapter: `{chapter_id, engine, turns, cache_hits, waves, results:[…]}` — synthesizes every segment with per-cast voices, stores `audio_hash`/`audio_cache_path`/`audio_duration_ms`/`prev_request_id` on each segment row, threads request ids for continuity |
+| 38 | `audio_master` | `{layers:[{kind:SPEECH\|SFX\|AMBIENT, wav, gain_db?, offset_ms?}] (1–16), sample_rate?, out?, target_rms_db?=-20.0, ceiling_db?=-3.1, duck?=true, duck_params?{depth_db=18, attack_ms=120, release_ms=750}}` | `{out: exports/<name>.wav, sample_rate, layers, duck:{ducked_samples, ducked_ms}, metrics:{rms_db, peak_db, lufs, noise_floor_db, gain_applied_db, limited}, acx:{…}}` — 3-layer mix → sidechain ducking → two-pass normalize (−20 dB RMS target) → lookahead limiter (−3.1 dBFS) |
+| 39 | `audio_validate` | `{wav}` | `{pass, rms_db, peak_db, noise_floor_db, checks:{rms_ok(−23…−18 dB), peak_ok(≤−3 dB), noise_ok(≤−60 dB)}, issues[]}` — ACX compliance report |
+
+Engines (contract §4.4 `voice_engine` spellings): `SCRIPTED`, `KOKORO_LOCAL`
+(via `local_tts_generate`), `EDGE_TTS`, `ELEVEN_LABS`, `CARTESIA`, `OPENAI_TTS`
+(+`HF_MMS`). Keys come from env (`ELEVENLABS_API_KEY`, `CARTESIA_API_KEY`,
+`OPENAI_API_KEY`, `HUGGINGFACE_API_KEY`).
+
+### 4.12 Local-First AI & Vector RAG (Phase 5, v1.1)
+
+| # | Command | Args | Result |
+|---|---------|------|--------|
+| 40 | `rag_index` | `{sources?=[lorebook,characters,chapters], book_id?, embedder?="hashing"}` | `{indexed:{…}, total_chunks, dim=384, embedder, elapsed_ms, sources_requested}` — one chunk per lore entry / character profile / AST segment; embeddings stored as f32 LE BLOBs in `rag_chunks` + `rag_chunks_fts` (FTS5 porter unicode61) |
+| 41 | `rag_search` | `{query, k?=5(1–50), mode?="hybrid"\|"dense"\|"fts", embedder?}` | `{query, mode, k, hits:[{chunk_id, source, ref_id, snippet, score, ranks:{dense, fts}}], returned, corpus, embedder, latency_us, latency_ms}` — hybrid mode fuses BM25 + cosine via Reciprocal Rank Fusion (k=60) |
+| 42 | `rag_status` | `{}` | `{chunks, by_source, embedder, dim, modes}` |
+| 43 | `local_llm_generate` | `{prompt, max_tokens?=64, temperature?=0.7, seed?=42, grammar?, server_url?}` | `{backend:"OFFLINE_GRAMMAR"\|"LLAMA_SERVER", text, tokens, seed, prompt_cache_pinned, server?, timings?}` — offline engine is deterministic; `server_url`/`AUTHR_LLAMA_SERVER` routes to a llama.cpp `llama-server` `/completion` call with `cache_prompt:true`, `keep_alive:-1` |
+| 44 | `local_llm_status` | `{}` | `{default_backend, server_configured, server_url?, capabilities:{grammar_constrained_output, prompt_prefix_kv_cache, offline}}` |
+| 45 | `local_tts_generate` | `{text, voice?="af_bella"}` | Kokoro-82M availability-negotiated; model absent/runtime missing ⇒ `AI_ENGINE_UNAVAILABLE` with placement guidance |
+| 46 | `local_ai_status` | `{}` | `{embedder, minilm_model_present, kokoro:{model_file, model_present, voices}, llm:…, fallbacks:{tts:"SCRIPTED", llm:"OFFLINE_GRAMMAR", embedder:"hashing-384"}, audio_cache?}` |
+
+Bundle extension (additive): `models/` holds optional ONNX weights
+(`all-MiniLM-L6-v2.onnx`, `kokoro-v1.0.onnx`) — see `docs/LOCAL_AI.md`.
+`rag_chunks`/`rag_chunks_fts` are created by an idempotent migration; the
+frozen §6.1 core DDL is untouched.
 
 ## 5. Row Shapes (camel-free — snake_case exactly as SQLite)
 

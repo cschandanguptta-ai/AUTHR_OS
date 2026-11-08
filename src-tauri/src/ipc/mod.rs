@@ -3,6 +3,7 @@
 
 pub mod args;
 pub mod handlers;
+pub mod studio;
 
 use crate::bundle::lock;
 use crate::bundle::manifest::Manifest;
@@ -66,9 +67,12 @@ pub const WRITER_COMMANDS: &[&str] = &[
     "sync_lexical_ast_mutation",
     "git_snapshot",
     "clean_sweep",
+    "audio_synthesize",
+    "audio_master",
+    "rag_index",
 ];
 
-/// Full contract dispatch (§4, 34 commands). `root` is the `--bundle` value.
+/// Full contract dispatch (§4, 48 commands). `root` is the `--bundle` value.
 pub fn dispatch(root: Option<&Path>, command: &str, args: &Value) -> IpcResult {
     // ── Bundle-free commands ────────────────────────────────────────────────
     match command {
@@ -166,6 +170,23 @@ pub fn dispatch(root: Option<&Path>, command: &str, args: &Value) -> IpcResult {
                 .map(|oid| serde_json::json!({ "commit": oid }))
         }
         "clean_sweep" => crate::storage::cleaner::sweep(&ctx.conn, &ctx.root),
+
+        // ── 4.11 audio studio (Phase 4) ───────────────────────────────────
+        "audio_cache_stats" => crate::ipc::studio::audio_cache_stats(&ctx, args),
+        "audio_pronounce" => crate::ipc::studio::audio_pronounce(&ctx, args),
+        "audio_plan" => crate::ipc::studio::audio_plan(&ctx, args),
+        "audio_synthesize" => crate::ipc::studio::audio_synthesize(&mut ctx, args),
+        "audio_master" => crate::ipc::studio::audio_master(&mut ctx, args),
+        "audio_validate" => crate::ipc::studio::audio_validate(&ctx, args),
+
+        // ── 4.12 local-first AI & vector RAG (Phase 5) ────────────────────
+        "rag_index" => crate::ipc::studio::rag_index(&mut ctx, args),
+        "rag_search" => crate::ipc::studio::rag_search(&ctx, args),
+        "rag_status" => crate::ipc::studio::rag_status(&ctx, args),
+        "local_llm_generate" => crate::ipc::studio::local_llm_generate(&ctx, args),
+        "local_llm_status" => crate::ipc::studio::local_llm_status(&ctx, args),
+        "local_tts_generate" => crate::ipc::studio::local_tts_generate(&mut ctx, args),
+        "local_ai_status" => crate::ipc::studio::local_ai_status(&ctx, args),
 
         other => Err(AppError::bundle(format!(
             "unknown command `{other}` — see docs/CLI_CONTRACT.md §4"

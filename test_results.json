@@ -1,74 +1,58 @@
 {
-  "suite": "AUTHR_OS Desktop \u2014 Phase 1 + Phase 3 acceptance",
-  "recorded_at": "2026-11-07T06:49:17.840377+00:00",
+  "suite": "AUTHR_OS Desktop \u2014 Phase 1\u20135 acceptance (contract v1.1)",
+  "recorded_at": "2026-11-08T13:13:05.210901+00:00",
   "rust": {
     "toolchain": "rustc 1.99.1",
     "crate": "authr 3.0.0",
-    "unit_tests": "2 passed"
+    "unit_tests": "57 passed (dsp kernels, tts protocols, scheduler, rag, llm)"
   },
   "e2e_full_suite": {
     "suite": "AUTHR_OS E2E",
     "exit_code": 0,
-    "passed": 101,
+    "passed": 149,
     "failed": 0,
-    "duration_s": 5.56,
-    "tier": null,
-    "feature": null,
+    "duration_s": 9.39,
     "modules": 4
   },
   "tiers": {
     "tier1": {
-      "suite": "AUTHR_OS E2E",
-      "exit_code": 0,
-      "passed": 50,
+      "passed": 82,
       "failed": 0,
-      "duration_s": 4.24,
-      "tier": 1,
-      "feature": null,
-      "modules": 9
+      "duration_s": 6.77,
+      "modules": 14
     },
     "tier2": {
-      "suite": "AUTHR_OS E2E",
-      "exit_code": 0,
-      "passed": 40,
+      "passed": 55,
       "failed": 0,
-      "duration_s": 2.94,
-      "tier": 2,
-      "feature": null,
-      "modules": 8
+      "duration_s": 3.82,
+      "modules": 9
     },
     "tier3": {
-      "suite": "AUTHR_OS E2E",
-      "exit_code": 0,
       "passed": 6,
       "failed": 0,
-      "duration_s": 2.8,
-      "tier": 3,
-      "feature": null,
+      "duration_s": 2.75,
       "modules": 1
     },
     "tier4": {
-      "suite": "AUTHR_OS E2E",
-      "exit_code": 0,
-      "passed": 5,
+      "passed": 6,
       "failed": 0,
-      "duration_s": 2.66,
-      "tier": 4,
-      "feature": null,
-      "modules": 1
+      "duration_s": 2.82,
+      "modules": 2
     }
   },
   "frontend": {
     "stack": "React 19 + TypeScript + Vite 6 + Tailwind 3.4 + Lexical 0.29 + Zustand 5",
-    "typecheck": "tsc --noEmit: 0 errors",
-    "build": "vite build: success (dist/, 503 kB main chunk)",
+    "typecheck": "tsc --noEmit: 0 errors (re-verified with Phase 4/5 build)",
+    "build": "vite build: success (dist/ restored, 503 kB main chunk)",
     "dev_bridge": "POST /api/ipc verified end-to-end against the authr CLI"
   },
   "totals": {
-    "e2e_tests": 101,
+    "e2e_tests": 149,
     "pass_rate": "100%",
-    "commands": 35,
-    "error_codes": 9,
-    "test_modules": 19
+    "commands": 48,
+    "error_codes": 11,
+    "test_modules": 24,
+    "rust_unit_tests": 57,
+    "phases": "1\u20135 complete; Phase 6 (publishing & hardening) next"
   }
 }

@@ -1,6 +1,11 @@
-"""AUTHR_OS — DTO schemas, serialization and error-code taxonomy (contract §3/§5)."""
+"""AUTHR_OS — DTO schemas, serialization and error-code taxonomy (contract §3/§5).
+
+Contract v1.1: the 9 frozen v1 codes remain untouched; 4 additive codes in
+the `audio` and `ai` categories cover the Phase 4/5 studio surface.
+"""
 
 CANONICAL_CODES = {
+    # v1 (frozen)
     "ENTITY_NOT_FOUND",
     "FOREIGN_KEY_VIOLATION",
     "STORAGE_ERROR",
@@ -10,9 +15,14 @@ CANONICAL_CODES = {
     "PATH_TRAVERSAL_VIOLATION",
     "ZIP_SLIP_VIOLATION",
     "SECURITY_ERROR",
+    # v1.1 additive (Phases 4–5)
+    "AUDIO_ERROR",
+    "AUDIO_ENGINE_UNAVAILABLE",
+    "AI_ERROR",
+    "AI_ENGINE_UNAVAILABLE",
 }
 
-CATEGORIES = {"storage", "bundle", "security"}
+CATEGORIES = {"storage", "bundle", "security", "audio", "ai"}
 
 CODE_CATEGORY = {
     "ENTITY_NOT_FOUND": "storage",
@@ -24,9 +34,13 @@ CODE_CATEGORY = {
     "PATH_TRAVERSAL_VIOLATION": "security",
     "ZIP_SLIP_VIOLATION": "security",
     "SECURITY_ERROR": "security",
+    "AUDIO_ERROR": "audio",
+    "AUDIO_ENGINE_UNAVAILABLE": "audio",
+    "AI_ERROR": "ai",
+    "AI_ENGINE_UNAVAILABLE": "ai",
 }
 
-# Contract §4 command surface (34 commands).
+# Contract §4 command surface (v1.1 — 48 commands).
 CONTRACT_COMMANDS = [
     "project_init", "project_open", "project_close", "project_lock_status",
     "project_export", "project_import",
@@ -39,9 +53,16 @@ CONTRACT_COMMANDS = [
     "sync_lexical_ast_mutation",
     "keychain_store", "keychain_get", "keychain_delete",
     "git_snapshot", "clean_sweep", "sandbox_normalize",
+    # v1.1 — audio studio (Phase 4)
+    "audio_cache_stats", "audio_pronounce", "audio_plan",
+    "audio_synthesize", "audio_master", "audio_validate",
+    # v1.1 — local-first AI & vector RAG (Phase 5)
+    "rag_index", "rag_search", "rag_status",
+    "local_llm_generate", "local_llm_status", "local_tts_generate",
+    "local_ai_status",
 ]
 
-EXPECTED_COMMAND_COUNT = 35
+EXPECTED_COMMAND_COUNT = 48
 
 ROW_FIELDS = {
     "book": ["id", "title", "author", "genre", "premise", "theme", "narrative_structure",

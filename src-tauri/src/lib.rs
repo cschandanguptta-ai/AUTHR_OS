@@ -1,9 +1,12 @@
 // AUTHR_OS — library crate root. All subsystems are public so the Tauri
 // shell, the CLI and integration tests can drive the same dispatcher.
 
+pub mod audio;
 pub mod bundle;
 pub mod error;
 pub mod ipc;
+pub mod localai;
+pub mod rag;
 pub mod security;
 pub mod shadow;
 pub mod storage;
@@ -11,8 +14,8 @@ pub mod storage;
 #[cfg(feature = "gui")]
 pub mod shell;
 
-pub const CONTRACT_VERSION: &str = "1";
-pub const COMMAND_COUNT: usize = 35;
+pub const CONTRACT_VERSION: &str = "1.1";
+pub const COMMAND_COUNT: usize = 48;
 
 /// The frozen command surface (docs/CLI_CONTRACT.md §4).
 pub const COMMANDS: &[&str] = &[
@@ -61,4 +64,19 @@ pub const COMMANDS: &[&str] = &[
     "git_snapshot",
     "clean_sweep",
     "sandbox_normalize",
+    // 4.11 audio studio (Phase 4)
+    "audio_cache_stats",
+    "audio_pronounce",
+    "audio_plan",
+    "audio_synthesize",
+    "audio_master",
+    "audio_validate",
+    // 4.12 local-first AI & vector RAG (Phase 5)
+    "rag_index",
+    "rag_search",
+    "rag_status",
+    "local_llm_generate",
+    "local_llm_status",
+    "local_tts_generate",
+    "local_ai_status",
 ];
