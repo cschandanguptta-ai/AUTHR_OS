@@ -1,0 +1,100 @@
+# testing.md — how the suite is organized and how to verify a change safely
+
+## 1. Three test layers
+
+| Layer | Location | Count | Runner | What it exercises |
+|---|---|---|---|---|
+| Rust unit | `#[cfg(test)]` mods inside `src-tauri/src/**/*.rs` | 67 | `cargo test --release` (~0.02 s) | Pure kernels: DSP (`dsp.rs` 6), TTS protocols with injected transports (`tts.rs` 8), scheduler DAG (4), G2P (4), cache key (1), mixer/master (8), RAG embed/store/search (17), LLM (5), publish helpers (9), sandbox (2), Kokoro (2) |
+| E2E contract | `tests/` pytest, 30 modules, 168 collected tests | — | `python3 tests/run_e2e.py` / `pytest` (~11 s) | The compiled binary over the real CLI transport — the exact production path |
+| Frontend typecheck | `src/` | — | `npm run typecheck` (`package.json:11`) | Row/arg type fidelity vs contract §5; no runtime UI tests exist (UNKNOWN gap, `open-questions.md Q-6`) |
+
+E2E count detail: 167 `def test_` functions + 1 parametrize ×2
+(`tier1_features/test_t1_audio_surface.py:75`) = **168 collected** (matches
+`test_results.json` `e2e_full_suite.passed=168`). 30 modules = 16 tier1 +
+10 tier2 + 1 tier3 + 3 tier4. (`test_results.json.totals.test_modules=28` is
+stale — see `tech-debt.md T-7`.)
+
+## 2. Tier semantics (TEST_INFRA §3, `tests/run_e2e.py`)
+
+| Tier | Dir | Purpose |
+|---|---|---|
+| 1 — features | `tests/tier1_features/` | one module per feature area: keychain, sandbox, sqlite_schema, indexes, fts5_triggers, bundle_lifecycle, git_integration, shadow_markdown, ipc_contracts, audio_surface, tts_engines, dsp_mastering, rag, local_ai, publish, release_bench |
+| 2 — boundaries | `tests/tier2_boundaries/` | adversarial/negative vectors: path_traversal, windows_prefixes, zip_slip, schema_constraints, foreign_key_violations, cascade_deletions, stale_lease_recovery, cloud_wal_truncation, audio_ai_boundaries, publish_boundaries |
+| 3 — interactions | `tests/tier3_interactions/` | pairwise cross-feature interactions (6 tests) |
+| 4 — scenarios | `tests/tier4_scenarios/` | multi-command author journeys: author_scenarios, audio_rag_scenario, publish_scenario |
+
+Runners:
+```bash
+python3 tests/run_e2e.py --json            # full suite, machine summary
+python3 tests/run_e2e.py --tier=2          # one tier
+python3 tests/run_e2e.py --feature=rag     # one module (map: run_e2e.py:22-49)
+python3 tests/run_e2e.py --bail -v
+AUTHR_MOCK_KEYCHAIN=1 python3 -m pytest tests/ -q
+```
+Note: `--feature` has no alias for `tier2_publish_boundaries` — run it via
+`--tier=2` or pytest directly (gap logged as `tech-debt.md T-8`).
+
+## 3. Isolation model (TEST_INFRA §1, `tests/conftest.py`)
+
+- Per-test tmp sandbox dir; fresh `.authr` bundle via the `bundle` fixture
+  (`conftest.py:87-102`); `seeded_bundle` = 1 chapter, cast KIRA, 3 segments
+  (`conftest.py:105-132`).
+- Per-test mock keyring file: `AUTHR_MOCK_KEYCHAIN=1` +
+  `AUTHR_MOCK_KEYRING_FILE` (`conftest.py:42-48`).
+- Binary resolution: `AUTHR_BIN` env or
+  `src-tauri/target/release/authr` (`conftest.py:24-39`) — building the binary
+  is the only prerequisite; pytest never invokes cargo.
+- `Cli` helper asserts the envelope shape (`conftest.py:51-79`); malformed
+  stdout is reported as a synthetic `STORAGE_ERROR` result, never swallowed.
+- Helper harnesses in `tests/helpers/`: `assertions.py` (`CLIResult`,
+  envelope/error asserters), `bundle_harness.py` (`Bundle`), plus domain
+  helpers (audio_fixtures, ipc_contract_harness, git_harness,
+  schema_reference, shadow_harness, sandbox_harness).
+
+## 4. What guards what (change → tests)
+
+| Area changed | Guarding tests |
+|---|---|
+| Command surface / envelope | `test_t1_ipc_contracts.py` (`authr --contract` exact-match, DTO shapes, error code/category pairing) |
+| Schema / CHECKs / indexes / FTS triggers | `test_t1_sqlite_schema.py`, `test_t1_indexes.py` (query plans), `test_t1_fts5_triggers.py`, `test_t2_schema_constraints.py` |
+| FK / cascade semantics | `test_t2_foreign_key_violations.py`, `test_t2_cascade_deletions.py` |
+| Lease lifecycle | `test_t1_bundle_lifecycle.py`, `test_t2_stale_lease_recovery.py` |
+| Cloud-sync WAL guard | `test_t2_cloud_wal_truncation.py` |
+| Shadow format / git messages | `test_t1_shadow_markdown.py`, `test_t1_git_integration.py` |
+| Path sandbox / archives | `test_t1_sandbox.py`, `test_t2_path_traversal.py`, `test_t2_windows_prefixes.py`, `test_t2_zip_slip.py` |
+| Keychain | `test_t1_keychain.py` |
+| Audio cache / synthesis / continuity | `test_t1_audio_surface.py`, `test_t1_tts_engines.py` (incl. offline guard, engine-unavailable mapping) |
+| DSP / mastering / ACX | `test_t1_dsp_mastering.py` |
+| RAG | `test_t1_rag.py` (+ Rust-side `rag/*` unit tests) |
+| Local AI | `test_t1_local_ai.py` |
+| Publishing | `test_t1_publish.py`, `test_t2_publish_boundaries.py` (hostile titles, read-only lease), `test_t4_publish_scenario.py` |
+| Release signing / benchmarks | `test_t1_release_bench.py` (r1–r3 sign/verify incl. tamper, `test_b1` perf gates) |
+| Arg boundary codes (audio/ai) | `test_t2_audio_ai_boundaries.py` |
+| Cross-feature regressions | `test_t3_cross_interactions.py`, tier-4 scenarios |
+
+## 5. Not covered (so a green run is not a proof of)
+
+- Real network engines (Edge/ElevenLabs/Cartesia/OpenAI/HF): only protocol
+  logic via injected transports; no live calls ever
+  (`SECURITY_AUDIT.md §4`).
+- Real ONNX runtimes (MiniLM/Kokoro): seams are documented but unimplemented
+  (`docs/LOCAL_AI.md §2`).
+- GUI/webview behavior: no frontend runtime tests; Tauri shell has 0 unit
+  tests (`shell/mod.rs`).
+- Multi-process lease contention beyond the simulated PID vectors.
+- 12-hour soak (`SECURITY_AUDIT.md §6` marks it release-machine).
+- `cargo audit`/`cargo deny` (network advisory DB; release machine).
+
+## 6. Safe-change verification recipe
+
+1. `cd src-tauri && cargo test --release` — 67 pass.
+2. `AUTHR_MOCK_KEYCHAIN=1 python3 -m pytest tests/ -q` — 168 pass.
+3. `./src-tauri/target/release/authr benchmark_run --args '{}'` — `pass:true`.
+4. Frontend touched: `npm run typecheck` + `npm run build` + a 60-second
+   `npm run dev` smoke (create project → edit → save → open audio studio).
+5. Contract touched: additionally `authr --contract` diff vs
+   `docs/CLI_CONTRACT.md §4` and `test_t1_ipc_contracts.py` green.
+
+Toolchain note: this repo was developed against rustc 1.99.1; the release
+build must be warning-free (`docs/PACKAGING.md` Golden Master step 1). A
+local rustup install suffices (no sudo needed).

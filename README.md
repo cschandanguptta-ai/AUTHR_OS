@@ -26,7 +26,7 @@ AUTHR_OS/
 ├── docs/BENCHMARKS.md        # Phase-6 measured thresholds (cold start / RSS / size)
 ├── src-tauri/                # Rust core runtime
 │   └── src/
-│       ├── error.rs          # 11-code taxonomy (storage/bundle/security/audio/ai)
+│       ├── error.rs          # 13-code taxonomy (storage/bundle/security/audio/ai)
 │       ├── security/         # OS keychain (+ mock), path sandbox, zip-slip
 │       ├── storage/          # SQLite schema, entity CRUD, git2, cleaner
 │       ├── bundle/           # manifest v1, .authr_lock lease, atomic zip export/import
@@ -46,7 +46,7 @@ AUTHR_OS/
 │   ├── components/studios/   # Audio / Video / Localization / Marketing
 │   ├── stores/               # Zustand domain stores
 │   └── ipc/                  # typed contract surface + transport bridge
-├── tests/                    # 28 modules · 168 E2E tests (pytest + run_e2e.py)
+├── tests/                    # 30 modules · 168 E2E tests (pytest + run_e2e.py)
 └── scripts/ipc-proxy.mjs     # browser dev bridge: POST /api/ipc → CLI
 ```
 
@@ -79,7 +79,7 @@ npm run dev                    # http://localhost:5173
 envelope, so Lexical edits, binder trees and studio tables drive the actual
 Rust core. No Tauri required until packaging.
 
-### 3. E2E test suite (149 tests)
+### 3. E2E test suite (168 tests · 30 modules)
 
 ```bash
 python tests/run_e2e.py                 # all 4 tiers
@@ -96,7 +96,8 @@ Headless environments: the suite sets `AUTHR_MOCK_KEYCHAIN=1`
 
 Every transport — `#[tauri::command]`, the CLI, and the browser dev bridge —
 dispatches through one frozen surface: **`docs/CLI_CONTRACT.md`**
-(v1.1: 48 commands · `{ok,data}` / `{ok:false,error{code,message,category}}` envelopes ·
-11 canonical error codes across 5 categories · 120 s lease TTL · shadow-format &
+(v1.2: 56 commands · `{ok,data}` / `{ok:false,error{code,message,category}}` envelopes ·
+13 canonical error codes across 5 categories · 120 s lease TTL · shadow-format &
 git-message rules). The 9 v1 codes and 35 v1 commands are untouched; v1.1 adds
-the Phase 4/5 studio surface additively. Changes require a contract version bump.
+the Phase 4/5 studio surface and v1.2 the Phase 6 publishing surface, both
+additively. Changes require a contract version bump.
