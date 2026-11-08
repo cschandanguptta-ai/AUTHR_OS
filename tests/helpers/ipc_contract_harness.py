@@ -1,7 +1,8 @@
 """AUTHR_OS — DTO schemas, serialization and error-code taxonomy (contract §3/§5).
 
-Contract v1.1: the 9 frozen v1 codes remain untouched; 4 additive codes in
-the `audio` and `ai` categories cover the Phase 4/5 studio surface.
+Contract v1.2: the 9 frozen v1 codes remain untouched; 4 additive codes in
+the `audio` and `ai` categories cover the Phase 4/5 studio surface. Phase 6
+(publishing & release) reuses the frozen taxonomy — no new codes.
 """
 
 CANONICAL_CODES = {
@@ -40,7 +41,7 @@ CODE_CATEGORY = {
     "AI_ENGINE_UNAVAILABLE": "ai",
 }
 
-# Contract §4 command surface (v1.1 — 48 commands).
+# Contract §4 command surface (v1.2 — 56 commands).
 CONTRACT_COMMANDS = [
     "project_init", "project_open", "project_close", "project_lock_status",
     "project_export", "project_import",
@@ -60,9 +61,12 @@ CONTRACT_COMMANDS = [
     "rag_index", "rag_search", "rag_status",
     "local_llm_generate", "local_llm_status", "local_tts_generate",
     "local_ai_status",
+    # v1.2 — publishing & release (Phase 6)
+    "publish_epub", "publish_docx", "publish_typst", "publish_captions",
+    "publish_m4b", "release_manifest", "release_verify", "benchmark_run",
 ]
 
-EXPECTED_COMMAND_COUNT = 48
+EXPECTED_COMMAND_COUNT = 56
 
 ROW_FIELDS = {
     "book": ["id", "title", "author", "genre", "premise", "theme", "narrative_structure",

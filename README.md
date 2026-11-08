@@ -13,14 +13,17 @@ Tailwind CSS / Meta's Lexical AST** under a Zero-Double-Work paradigm.
 | Phase 3 — Author's Cockpit & Lexical AST Canvas | ✅ 3-pane cockpit, triple-view canvas, 4 restored studios |
 | Phase 4 — Lookahead TTS & 3-Layer DSP Rack | ✅ content-addressable audio cache, Edge/ElevenLabs/Cartesia/OpenAI/HF-MMS connectors, DAG lookahead scheduler, IPA phonetics, sidechain ducking, EBU R128/BS.1770 mastering, ACX validation |
 | Phase 5 — Local-First AI & Vector RAG | ✅ hashing-384 embedder (+ONNX seam), dense/FTS5/hybrid-RRF retrieval, `rag_chunks` store, offline grammar LLM + llama-server client (`cache_prompt`, `keep_alive:-1`), Kokoro-82M availability path |
-| Phase 6 — Publishing & Hardening | ⏳ next phase (per build plan §8) |
+| Phase 6 — Publishing & Hardening | ✅ EPUB 3 compiler with SMIL overlays, DOCX manuscript, Typst print engine (.typ + optional PDF), synced .lrc/.vtt captions, ACX M4B audiobook (ffmpeg AAC + chapter atoms), ed25519 release signing/verification, Tauri bundler + updater config, benchmark gates (cold start 1.7 ms / RSS 6.2 MB / binary 10.1 MB) |
 
 ## Layout
 
 ```
 AUTHR_OS/
-├── docs/CLI_CONTRACT.md      # FROZEN 48-command IPC surface v1.1 (all transports obey)
+├── docs/CLI_CONTRACT.md      # FROZEN 56-command IPC surface v1.2 (all transports obey)
 ├── docs/LOCAL_AI.md          # Phase-5 extension points (ort / llama.cpp / models/)
+├── docs/PACKAGING.md         # Phase-6 installer matrix, signing, auto-updater
+├── docs/SECURITY_AUDIT.md    # Phase-6 hardening report (credentials, sandbox, IPC)
+├── docs/BENCHMARKS.md        # Phase-6 measured thresholds (cold start / RSS / size)
 ├── src-tauri/                # Rust core runtime
 │   └── src/
 │       ├── error.rs          # 11-code taxonomy (storage/bundle/security/audio/ai)
@@ -32,6 +35,8 @@ AUTHR_OS/
 │       │                     #          3-layer mixer, ducking, BS.1770 master, ACX
 │       ├── rag/              # Phase 5: embedder, chunk store, hybrid search
 │       ├── localai/          # Phase 5: offline LLM + llama-server client, Kokoro path
+│       ├── publish/          # Phase 6: EPUB 3/SMIL, DOCX, Typst, captions, M4B,
+│       │                     #          ed25519 release signing, benchmark gates
 │       ├── ipc/              # dispatcher — CLI, Tauri and dev bridge share it
 │       ├── shell/            # Tauri v2 window builder (feature = "gui")
 │       └── main.rs           # `authr` CLI (single-line JSON envelope)
@@ -41,7 +46,7 @@ AUTHR_OS/
 │   ├── components/studios/   # Audio / Video / Localization / Marketing
 │   ├── stores/               # Zustand domain stores
 │   └── ipc/                  # typed contract surface + transport bridge
-├── tests/                    # 24 modules · 149 E2E tests (pytest + run_e2e.py)
+├── tests/                    # 28 modules · 168 E2E tests (pytest + run_e2e.py)
 └── scripts/ipc-proxy.mjs     # browser dev bridge: POST /api/ipc → CLI
 ```
 

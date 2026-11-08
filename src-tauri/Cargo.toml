@@ -41,6 +41,9 @@ symphonia = { version = "0.5", default-features = false, features = ["wav", "pcm
 sha2 = "0.10"                                   # content-addressable chunk keys, Edge-TTS GEC token
 ureq = { version = "2", default-features = false, features = ["json", "tls"] }
 tungstenite = { version = "0.24", default-features = false, features = ["handshake", "rustls-tls-webpki-roots"] }
+# ── Phase 6: publishing & release ───────────────────────────────────────────
+ed25519-dalek = { version = "2", default-features = false, features = ["fast", "rand_core"] }
+rand_core = { version = "0.6", features = ["getrandom"] }
 
 [profile.release]
 opt-level = 2

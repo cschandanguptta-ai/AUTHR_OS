@@ -1,6 +1,6 @@
 {
  "suite": "AUTHR_OS Desktop — Phase 1–5 acceptance (contract v1.1)",
- "recorded_at": "2026-11-08T15:06:35.354260+00:00",
+ "recorded_at": "2026-11-08T15:36:20.583288+00:00",
  "rust": {
   "toolchain": "rustc 1.99.1",
   "crate": "authr 3.0.0",
@@ -9,9 +9,9 @@
  "e2e_full_suite": {
   "suite": "AUTHR_OS E2E",
   "exit_code": 0,
-  "passed": 150,
+  "passed": 168,
   "failed": 0,
-  "duration_s": 8.7,
+  "duration_s": 11.74,
   "tier": null,
   "feature": null,
   "modules": 4
@@ -49,13 +49,34 @@
   "dev_bridge": "POST /api/ipc verified end-to-end against the authr CLI"
  },
  "totals": {
-  "e2e_tests": 150,
+  "e2e_tests": 168,
   "pass_rate": "100%",
-  "commands": 48,
+  "commands": 56,
   "error_codes": 11,
-  "test_modules": 24,
-  "rust_unit_tests": 57,
-  "phases": "1–5 complete; Phase 6 (publishing & hardening) next"
+  "test_modules": 28,
+  "rust_unit_tests": 67,
+  "phases": "1–6 complete — Golden Master v3.0.0-PROD",
+  "contract_version": "1.2"
  },
- "verification_note": "Re-verified after sandbox recycle: rustup 1.99.1 restored, clean release build (0 warnings), 150/150 E2E + 57/57 Rust unit tests green, tsc --noEmit + vite build re-confirmed, duplicate-segment cache-hit stamping bug found & fixed (studio.rs) with regression test s4b."
+ "verification_note": "Phase 6 verified end-to-end: 168/168 E2E + 67/67 Rust unit tests green; EPUB validated structurally (mimetype-first, well-formed XML, SMIL clips); M4B validated with ffprobe (AAC + chapter atom); release signature roundtrip + tamper detection verified; benchmark thresholds enforced in CI.",
+ "phase6": {
+  "sprint14_publishing": [
+   "publish_epub (EPUB 3 + SMIL overlays + Dublin Core)",
+   "publish_docx",
+   "publish_typst (+optional PDF)",
+   "publish_captions (.lrc/.vtt)",
+   "publish_m4b (ffmpeg AAC + chapter atoms)"
+  ],
+  "sprint15_packaging": [
+   "release_manifest / release_verify (ed25519 + sha256)",
+   "tauri.conf.json: msi/nsis/dmg/appimage/deb + updater endpoint",
+   "docs/PACKAGING.md"
+  ],
+  "sprint16_hardening": [
+   "benchmark_run gates: cold start median 1.72ms (<1500), peak RSS 6.22MB (<50), binary 10.11MB (<25)",
+   "docs/SECURITY_AUDIT.md",
+   "0 unsafe blocks in runtime code"
+  ],
+  "rust_unit_result": "test result: ok. 67 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s"
+ }
 }

@@ -70,9 +70,14 @@ pub const WRITER_COMMANDS: &[&str] = &[
     "audio_synthesize",
     "audio_master",
     "rag_index",
+    "publish_epub",
+    "publish_docx",
+    "publish_typst",
+    "publish_captions",
+    "publish_m4b",
 ];
 
-/// Full contract dispatch (§4, 48 commands). `root` is the `--bundle` value.
+/// Full contract dispatch (§4, 56 commands). `root` is the `--bundle` value.
 pub fn dispatch(root: Option<&Path>, command: &str, args: &Value) -> IpcResult {
     // ── Bundle-free commands ────────────────────────────────────────────────
     match command {
@@ -86,6 +91,9 @@ pub fn dispatch(root: Option<&Path>, command: &str, args: &Value) -> IpcResult {
         "keychain_get" => return handlers::keychain_get(args),
         "keychain_delete" => return handlers::keychain_delete(args),
         "sandbox_normalize" => return handlers::sandbox_normalize(args),
+        "release_manifest" => return crate::publish::release::release_manifest(args),
+        "release_verify" => return crate::publish::release::release_verify(args),
+        "benchmark_run" => return crate::publish::bench::benchmark_run(args),
         _ => {}
     }
 
@@ -187,6 +195,13 @@ pub fn dispatch(root: Option<&Path>, command: &str, args: &Value) -> IpcResult {
         "local_llm_status" => crate::ipc::studio::local_llm_status(&ctx, args),
         "local_tts_generate" => crate::ipc::studio::local_tts_generate(&mut ctx, args),
         "local_ai_status" => crate::ipc::studio::local_ai_status(&ctx, args),
+
+        // ── 4.13 publishing & release (Phase 6) ──────────────────────────
+        "publish_epub" => crate::publish::epub::publish_epub(&mut ctx, args),
+        "publish_docx" => crate::publish::docx::publish_docx(&mut ctx, args),
+        "publish_typst" => crate::publish::typst::publish_typst(&mut ctx, args),
+        "publish_captions" => crate::publish::captions::publish_captions(&mut ctx, args),
+        "publish_m4b" => crate::publish::m4b::publish_m4b(&mut ctx, args),
 
         other => Err(AppError::bundle(format!(
             "unknown command `{other}` — see docs/CLI_CONTRACT.md §4"

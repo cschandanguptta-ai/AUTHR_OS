@@ -27,6 +27,43 @@
   "bundle": {
     "active": true,
     "targets": ["msi", "nsis", "dmg", "appimage", "deb"],
-    "icon": []
+    "icon": [],
+    "category": "Productivity",
+    "shortDescription": "AUTHR_OS — AI-native novel workstation with studio-grade audiobook pipeline",
+    "longDescription": "Local-first authoring cockpit: Lexical AST canvas, lookahead TTS, 3-layer DSP mastering, vector RAG, and 1-click EPUB 3 / DOCX / Typst PDF / ACX M4B publishing.",
+    "windows": {
+      "wix": {
+        "language": "en-US",
+        "template": null
+      },
+      "nsis": {
+        "installMode": "both",
+        "languages": ["English"]
+      },
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "http://timestamp.digicert.com"
+    },
+    "macOS": {
+      "minimumSystemVersion": "10.15",
+      "targets": ["dmg", "app"],
+      "signingIdentity": null
+    },
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": false
+      },
+      "deb": {
+        "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0"]
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/authr-os/authr-os/releases/latest/download/latest.json"
+      ],
+      "pubkey": "REPLACE_WITH_AUTHR_UPDATER_PUBKEY (generate: release_manifest → latest.json public_key)"
+    }
   }
 }

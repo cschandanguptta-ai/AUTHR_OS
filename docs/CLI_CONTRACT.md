@@ -1,12 +1,15 @@
-# AUTHR_OS — Frozen IPC / CLI Contract (v1.1)
+# AUTHR_OS — Frozen IPC / CLI Contract (v1.2)
 
-**Status**: v1 sections are FROZEN. v1.1 (Phases 4–5) extends the surface
+**Status**: v1 sections are FROZEN. v1.1 (Phases 4–5) extended the surface
 **additively**: 13 new commands (§4.11–4.12) and 4 new error codes in two new
-categories (§3). Every v1 command, code and semantic is untouched. Any further
-change requires a contract version bump.
+categories (§3). v1.2 (Phase 6) extends it further: 8 new commands (§4.13),
+**reusing the frozen error taxonomy** — no new codes. Every v1/v1.1 command,
+code and semantic is untouched. Any further change requires a contract
+version bump.
 
 **Applies to**: Phase 1 (Storage Core), Phase 3 (Author's Cockpit UI),
-Phase 4 (Audio Studio), Phase 5 (Local-First AI & Vector RAG).
+Phase 4 (Audio Studio), Phase 5 (Local-First AI & Vector RAG),
+Phase 6 (Publishing, Packaging & Hardening).
 
 ---
 
@@ -57,7 +60,7 @@ Exactly **one line** of JSON on stdout. Exit code `0` on success, `1` on failure
 | `AI_ERROR` | ai | Invalid RAG/LLM args (unknown source, mode, embedder, voice, empty query) |
 | `AI_ENGINE_UNAVAILABLE` | ai | llama-server unreachable, Kokoro/MiniLM model or runtime missing |
 
-## 4. Command Surface (48 commands)
+## 4. Command Surface (56 commands)
 
 ### 4.1 Project lifecycle
 
@@ -184,6 +187,27 @@ Bundle extension (additive): `models/` holds optional ONNX weights
 (`all-MiniLM-L6-v2.onnx`, `kokoro-v1.0.onnx`) — see `docs/LOCAL_AI.md`.
 `rag_chunks`/`rag_chunks_fts` are created by an idempotent migration; the
 frozen §6.1 core DDL is untouched.
+
+### 4.13 Publishing & Release (Phase 6, v1.2)
+
+All `publish_*` commands are bundle-scoped **writers** (lease enforced,
+`exports/` sandbox). Output names derive from the book title via a slugifier
+that collapses hostile titles to safe bare names — traversal attempts raise
+`PATH_TRAVERSAL_VIOLATION`. `release_*` and `benchmark_run` are bundle-free
+(like `keychain_*`). The error taxonomy is unchanged: publishing failures
+(missing ffmpeg, unsynthesized chapters, typst compile errors) raise
+`BUNDLE_ERROR`.
+
+| # | Command | Args | Result |
+|---|---------|------|--------|
+| 47 | `publish_epub` | `{book_id}` | `{out: exports/<slug>.epub, format:"EPUB 3", entries, chapters, overlays, duration_ms, dc:{title,creator,identifier,language,publisher}}` — EPUB 3 OCF: stored-first `mimetype`, container.xml, Dublin Core `content.opf` with `dcterms:modified`, `nav.xhtml`, per-chapter XHTML with `id="sN"` anchors, **SMIL media overlays** (`overlay/chNN.smil`, one `<par>` per segment with `clipBegin`/`clipEnd`) and embedded cached WAVs whenever the chapter is synthesized |
+| 48 | `publish_docx` | `{book_id}` | `{out, chapters, paragraphs, words}` — WordprocessingML manuscript: Title/Subtitle/Heading1 styles, bold speaker runs, italic monologue, `docProps/core.xml` |
+| 49 | `publish_typst` | `{book_id, typ_bin?}` | `{typ, pdf?, compiled, reason?, chapters, words}` — always emits the print-ready `.typ` (A5 novel template); compiles the PDF via `typ_bin` / `AUTHR_TYPST_BIN` / PATH when present, otherwise degrades gracefully (`compiled:false` + guidance); compile failure ⇒ `BUNDLE_ERROR` |
+| 50 | `publish_captions` | `{chapter_id, formats?=["lrc","vtt"]}` | `{chapter_id, lrc?, vtt?, cues, duration_ms}` — line-synced `.lrc` + WebVTT `.vtt` built from segment durations (synthesized values, else the scheduler estimator); timeline identical to the EPUB overlays |
+| 51 | `publish_m4b` | `{book_id}` or `{chapter_id}`, `ffmpeg_bin?` | `{out, bytes, chapters, duration_ms, codec:"aac-lc 64k mono 44.1kHz", ffmpeg}` — ffmpeg concat → AAC-LC → `-f ipod` M4B with ffmetadata **chapter atoms**; missing binary ⇒ `BUNDLE_ERROR` with install guidance; any unsynthesized segment ⇒ `BUNDLE_ERROR` |
+| 52 | `release_manifest` | `{artifact, version?, url?, key_hex?, out?}` | `{manifest, manifest_data, artifact_bytes, artifact_sha256, generated_key_hex?}` — signs the artifact bytes with **ed25519**; key from `key_hex` / `AUTHR_RELEASE_KEY_HEX` / ephemeral (returned, CI-only); emits the Tauri-updater-shaped `latest.json` |
+| 53 | `release_verify` | `{manifest, artifact?}` | `{valid, checks:{sha256, signature}, artifact, version}` — independent verification; tampered artifacts report `valid:false` (still `ok:true`) |
+| 54 | `benchmark_run` | `{iterations?=7(3–25), cold_start_limit_ms?=1500, rss_limit_mb?=50, binary_limit_mb?=25}` | `{cold_start_ms:{iterations,min,median,p95,max,limit}, rss:{peak_kb,peak_mb,current_kb,limit_mb}, binary:{bytes,mb,limit_mb}, checks, pass}` — Sprint 16 hardening thresholds: median cold start <1.5 s, peak RSS <50 MB, binary <25 MB |
 
 ## 5. Row Shapes (camel-free — snake_case exactly as SQLite)
 

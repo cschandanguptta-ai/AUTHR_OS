@@ -6,6 +6,7 @@ pub mod bundle;
 pub mod error;
 pub mod ipc;
 pub mod localai;
+pub mod publish;
 pub mod rag;
 pub mod security;
 pub mod shadow;
@@ -14,8 +15,8 @@ pub mod storage;
 #[cfg(feature = "gui")]
 pub mod shell;
 
-pub const CONTRACT_VERSION: &str = "1.1";
-pub const COMMAND_COUNT: usize = 48;
+pub const CONTRACT_VERSION: &str = "1.2";
+pub const COMMAND_COUNT: usize = 56;
 
 /// The frozen command surface (docs/CLI_CONTRACT.md §4).
 pub const COMMANDS: &[&str] = &[
@@ -79,4 +80,13 @@ pub const COMMANDS: &[&str] = &[
     "local_llm_status",
     "local_tts_generate",
     "local_ai_status",
+    // 4.13 publishing & release (Phase 6)
+    "publish_epub",
+    "publish_docx",
+    "publish_typst",
+    "publish_captions",
+    "publish_m4b",
+    "release_manifest",
+    "release_verify",
+    "benchmark_run",
 ];
