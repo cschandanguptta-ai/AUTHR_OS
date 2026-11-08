@@ -13,3 +13,7 @@ sandbox.authr/
 
 # OS noise
 .DS_Store
+
+# Rust build artifacts (keep only the prebuilt release binary for tests)
+src-tauri/target/
+!src-tauri/target/release/authr

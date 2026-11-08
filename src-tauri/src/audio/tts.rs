@@ -401,7 +401,7 @@ pub fn decode_audio_bytes(bytes: &[u8]) -> Result<(Vec<f32>, u32), AppError> {
         let mut mono: Vec<f32> = Vec::new();
         let mut acc = 0.0f32;
         let mut n = 0usize;
-        let mut push = |acc: &mut f32, n: &mut usize, v: f32, mono: &mut Vec<f32>| {
+        let push = |acc: &mut f32, n: &mut usize, v: f32, mono: &mut Vec<f32>| {
             *acc += v;
             *n += 1;
             if *n == channels {

@@ -72,6 +72,30 @@ def test_s4_second_chapter_pass_is_full_cache_hit(bundle, cli):
     assert r2.payload["data"]["turns"] == 5
 
 
+def test_s4b_duplicate_text_cache_hit_stamps_segment_row(bundle, cli):
+    # Two byte-identical segments: the second resolves to a cache hit, and its
+    # row must still receive audio_hash / audio_cache_path / duration.
+    b = bundle()
+    _, chapter_id, _ = seed_audio_chapter(b, cli)
+    dup = "Echo turn for the duplicate-text regression."
+    for _ in range(2):
+        assert cli("segment_append", bundle=b, args={
+            "chapter_id": chapter_id, "segment_type": "NARRATION",
+            "speaker_id": "NARRATOR", "text_content": dup,
+        }).ok
+    r = cli("audio_synthesize", bundle=b, args={"chapter_id": chapter_id, "engine": "SCRIPTED"})
+    assert r.ok, r.payload
+    by_seg = {x["segment_id"]: x for x in r.payload["data"]["results"]}
+    listing = cli("segment_list", bundle=b, args={"chapter_id": chapter_id}).payload["data"]["segments"]
+    dups = [s for s in listing if s["text_content"] == dup]
+    assert len(dups) == 2
+    assert dups[0]["audio_hash"] == dups[1]["audio_hash"]
+    for s in dups:
+        assert s["audio_cache_path"], s
+        assert s["audio_duration_ms"] > 0
+        assert by_seg[s["segment_id"]]["cached"] in (True, False)
+
+
 def test_s5_export_includes_cached_audio(bundle, cli, tmp_path):
     import zipfile
     b = bundle()

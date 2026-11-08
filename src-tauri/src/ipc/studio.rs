@@ -259,9 +259,10 @@ fn synthesize_chapter(
         if let Some(rid) = &request_id {
             last_request_by_speaker.insert(speaker.clone(), rid.clone());
         }
-        if !hit && !dry_run {
-            // Update the segment row: cache pointer + duration + continuity id
-            // (prev = the speaker's previous turn request id, None for firsts).
+        // Stamp the segment row in every non-dry-run branch — including cache
+        // hits, so rows created after an earlier synthesis run (e.g. duplicate
+        // text) still receive their cache pointer + duration + continuity id.
+        if !dry_run {
             ctx.conn
                 .execute(
                     "UPDATE chapter_segments SET audio_hash = ?1, audio_cache_path = ?2,
