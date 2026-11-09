@@ -1,12 +1,14 @@
-// AUTHR_OS — Settings popover: the reader-facing surface for the three
-// preferences that already existed in settingsStore (theme, editor type
-// size, focus mode). Lives in the workstation header, next to the palette
+// AUTHR_OS — Settings popover: reader-facing preferences (theme, editor type
+// size, focus mode) plus the entry to the AI provider endpoints dialog
+// (v1.6, ADR-0012 — image generation R2I endpoint + local LLM server, keys in
+// the OS keychain). Lives in the workstation header, next to the palette
 // trigger. Zero dependencies; dismissal via useDismiss.
 
 import { useRef, useState } from 'react';
-import { Check, Settings2, Type, Columns3 } from 'lucide-react';
+import { Check, Settings2, Sparkles, Type, Columns3 } from 'lucide-react';
 import { useSettingsStore, type AppTheme } from '../../stores/settingsStore';
 import { useDismiss } from '../../hooks/useDismiss';
+import { ProviderSettingsModal } from './modals/ProviderSettingsModal';
 import { cn } from '../../lib/utils';
 
 const THEMES: Array<{ id: AppTheme; label: string; swatch: string; accentDot: string }> = [
@@ -20,6 +22,7 @@ const FONT_MAX = 22;
 
 export function SettingsPopover() {
   const [open, setOpen] = useState(false);
+  const [providersOpen, setProvidersOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   useDismiss(wrapRef, () => setOpen(false), open);
 
@@ -125,6 +128,27 @@ export function SettingsPopover() {
             </div>
           </section>
 
+          {/* AI providers — endpoints, keys, probe */}
+          <section>
+            <button
+              type="button"
+              onClick={() => {
+                setProvidersOpen(true);
+                setOpen(false);
+              }}
+              className="w-full flex items-center gap-2.5 rounded-md border border-line bg-panel2 hover:bg-panel3 px-3 py-2.5 text-left transition-colors"
+            >
+              <Sparkles size={14} className={cn('text-accent')} />
+              <span className="flex-1 min-w-0">
+                <span className="block text-[13px] text-ink">AI providers</span>
+                <span className="block text-2xs text-mut">
+                  Image endpoint (R2I) · LLM server · API keys
+                </span>
+              </span>
+              <span className="text-2xs text-mut font-mono">v1.6</span>
+            </button>
+          </section>
+
           {/* Focus mode */}
           <section>
             <button
@@ -160,6 +184,8 @@ export function SettingsPopover() {
           </section>
         </div>
       )}
+
+      <ProviderSettingsModal open={providersOpen} onClose={() => setProvidersOpen(false)} />
     </div>
   );
 }

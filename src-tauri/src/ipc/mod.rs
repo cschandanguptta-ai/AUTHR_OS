@@ -236,6 +236,12 @@ pub fn dispatch(root: Option<&Path>, command: &str, args: &Value) -> IpcResult {
         "provider_set" => crate::ipc::studio::provider_set(&mut ctx, args),
         "provider_test" => crate::ipc::studio::provider_test(&ctx, args),
 
+        // ── 4.18 art style catalog + per-book selection (v1.6) ─────
+        "video_style" => crate::video::style::video_style(&mut ctx, args),
+
+        // ── 4.19 media read access — bundle-scoped, read-only (v1.6) ──
+        "media_read" => crate::media::media_read(&ctx, args),
+
         other => Err(AppError::bundle(format!(
             "unknown command `{other}` — see docs/CLI_CONTRACT.md §4"
         ))),

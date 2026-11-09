@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    /* Board chrome (light) */
+    --b-text:#111827; --b-sub:#6B7280; --b-muted:#9CA3AF; --b-bg:#F8FAFC;
+    --b-surface:#FFFFFF; --b-border:#E5E7EB; --b-accent:#B45309;
+    /* App theme tokens (verbatim from src/index.css .theme-dark) */
+    --app:#09090b; --panel:#101013; --panel2:#16161a; --panel3:#1d1d22;
+    --line:#26262b; --line2:#333339; --ink:#e6e6e9; --mut:#9d9da7;
+    --accent:#f59e0b; --accent2:#8b8cf8; --ok:#34d399; --warn:#fbbf24; --bad:#fb7185;
+  }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,system-ui,sans-serif;
+         background:var(--b-bg); color:var(--b-text); -webkit-font-smoothing:antialiased; }
+  #root { width:fit-content; min-width:1200px; margin:0 auto; padding:48px 44px; background:var(--b-bg); }
+
+  .board-title { font-size:26px; font-weight:700; text-align:center; letter-spacing:.01em; }
+  .board-sub { font-size:14px; color:var(--b-sub); text-align:center; margin-top:8px; }
+  .board-sub .mono { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12.5px; }
+  .section-label { font-size:12px; font-weight:700; letter-spacing:.14em; color:var(--b-muted);
+                   text-transform:uppercase; margin:42px 0 14px; }
+
+  /* ── App window mockup ─────────────────────────────────────────── */
+  .window { width:1560px; background:var(--app); border:1px solid #1c1c22;
+            border-radius:12px; overflow:hidden; box-shadow:0 18px 50px rgba(15,23,42,.18); }
+  .win-titlebar { height:38px; display:flex; align-items:center; padding:0 14px;
+                  background:var(--panel); border-bottom:1px solid var(--line); position:relative; }
+  .dots { display:flex; gap:7px; }
+  .dot { width:11px; height:11px; border-radius:50%; }
+  .win-title { position:absolute; left:50%; transform:translateX(-50%);
+               font-size:12px; color:var(--mut); }
+  .win-title .mono { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11px; color:#6e6e78; }
+
+  .switcher { display:flex; align-items:center; gap:10px; padding:9px 14px;
+              background:var(--panel); border-bottom:1px solid var(--line); }
+  .wordmark { font-size:13px; font-weight:700; letter-spacing:.16em; color:var(--ink); }
+  .wordmark .os { font-family:ui-monospace,Menlo,Consolas,monospace; color:var(--accent); }
+  .tabs { display:flex; align-items:center; margin-left:8px; }
+  .tab { display:flex; align-items:center; gap:6px; padding:5px 11px; border-radius:7px;
+         font-size:13px; color:var(--mut); }
+  .tab.active { background:var(--panel3); color:var(--ink); font-weight:600; }
+  .tab-sep { color:#52525b; font-size:9px; padding:0 2px; }
+  .sw-right { margin-left:auto; display:flex; align-items:center; gap:10px; }
+  .ro-badge { display:flex; align-items:center; gap:4px; padding:2px 8px; border-radius:5px;
+              border:1px solid rgba(251,191,36,.4); background:rgba(251,191,36,.1);
+              color:var(--warn); font-size:11px; font-weight:600; }
+  .sw-title { font-size:13px; color:var(--ink); font-weight:600; }
+  .lock { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--mut); }
+  .lock .led { width:8px; height:8px; border-radius:50%; background:var(--ok); }
+  .sw-path { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11px; color:#6e6e78; }
+  .kebab { width:26px; height:26px; border-radius:6px; border:1px solid var(--line);
+           background:var(--panel2); color:var(--mut); display:flex; align-items:center;
+           justify-content:center; font-size:13px; }
+
+  .panes { display:flex; height:600px; background:var(--app); }
+  .pane-label { font-size:10px; font-weight:700; letter-spacing:.13em; color:#71717a;
+                text-transform:uppercase; padding:10px 14px 6px; }
+  .split-h { width:5px; background:var(--app); border-left:1px solid var(--line);
+             border-right:1px solid var(--line); position:relative; flex-shrink:0; }
+  .split-h::after { content:''; position:absolute; top:50%; left:1px; right:1px; height:34px;
+                    transform:translateY(-50%); background:var(--line2); border-radius:3px; }
+
+  /* Binder pane */
+  .binder { width:262px; flex-shrink:0; background:var(--panel); border-right:1px solid var(--line);
+            display:flex; flex-direction:column; overflow:hidden; }
+  .b-search { margin:2px 12px 8px; padding:5px 9px; border:1px solid var(--line);
+              border-radius:6px; font-size:11.5px; color:#71717a; background:var(--panel2); }
+  .b-body { flex:1; overflow:hidden; padding:0 8px 8px; }
+  .b-item { display:flex; align-items:center; gap:7px; padding:5px 8px; border-radius:6px;
+            font-size:12.5px; color:var(--ink); }
+  .b-item.sub { padding-left:22px; color:#c6c6cd; }
+  .b-item .n { margin-left:auto; font-family:ui-monospace,Menlo,Consolas,monospace;
+               font-size:10px; color:#5c5c66; }
+  .cdot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+  .badge { font-size:9.5px; font-weight:600; padding:1.5px 6px; border-radius:4px;
+           border:1px solid; white-space:nowrap; }
+  .bdg-amber { border-color:rgba(245,158,11,.4); background:rgba(245,158,11,.1); color:#fbbf24; }
+  .bdg-zinc  { border-color:rgba(161,161,170,.35); background:rgba(161,161,170,.1); color:#bfbfc7; }
+  .bdg-violet{ border-color:rgba(139,92,246,.4); background:rgba(139,92,246,.1); color:#c4b5fd; }
+  .bdg-rose  { border-color:rgba(251,113,133,.4); background:rgba(251,113,133,.1); color:#fda4af; }
+  .bdg-emer  { border-color:rgba(52,211,153,.4); background:rgba(52,211,153,.1); color:#6ee7b7; }
+
+  /* Canvas pane */
+  .canvas { flex:1; min-width:0; display:flex; flex-direction:column; position:relative; }
+  .vm-switch { position:absolute; top:8px; right:12px; display:flex; border:1px solid var(--line);
+               border-radius:7px; overflow:hidden; }
+  .vm { font-size:11px; padding:4px 10px; color:var(--mut); background:var(--panel); }
+  .vm.on { background:var(--panel3); color:var(--ink); font-weight:600; }
+  .doc { flex:1; padding:34px 60px 20px; font-family:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif; }
+  .ch-title { font-size:21px; color:var(--ink); font-weight:700; letter-spacing:.01em; }
+  .ch-meta { font-size:11px; color:#71717a; margin:4px 0 22px; font-family:ui-monospace,Menlo,Consolas,monospace; }
+  .seg { display:flex; gap:14px; margin-bottom:20px; }
+  .gutter { width:64px; flex-shrink:0; text-align:right; padding-top:3px;
+            font-family:ui-monospace,Menlo,Consolas,monospace; font-size:10px; letter-spacing:.06em; }
+  .g-narr { color:#c4b5fd; } .g-prot { color:#fbbf24; }
+  .seg-body { flex:1; min-width:0; }
+  .seg-text { font-size:14.5px; line-height:1.72; color:#d6d6dc; }
+  .seg-text i { color:#b9b9c2; }
+  .chip-row { display:flex; gap:6px; margin-top:7px; }
+  .chip { font-size:10px; font-weight:600; padding:2px 8px; border-radius:5px;
+          border:1px solid rgba(245,158,11,.4); background:rgba(245,158,11,.1); color:#fbbf24; }
+  .chip.foley { border-color:rgba(139,140,248,.4); background:rgba(139,140,248,.12); color:#a5a6fa; }
+  .chip.audio-ok { border-color:rgba(52,211,153,.4); background:rgba(52,211,153,.1); color:#6ee7b7; }
+  .chip.audio-stale { border-color:rgba(251,191,36,.4); background:rgba(251,191,36,.1); color:#fcd34d; }
+  .autosave { position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+              font-size:10.5px; color:#8a8a94; background:var(--panel2); border:1px solid var(--line);
+              padding:4px 12px; border-radius:14px; }
+  .autosave .okdot { display:inline-block; width:6px; height:6px; border-radius:50%;
+                     background:var(--ok); margin-right:5px; }
+
+  /* Inspector pane */
+  .inspector { width:300px; flex-shrink:0; background:var(--panel); border-left:1px solid var(--line);
+               overflow:hidden; }
+  .i-card { margin:0 12px 10px; border:1px solid var(--line); border-radius:9px;
+            background:var(--panel2); padding:10px 12px; }
+  .i-row { display:flex; justify-content:space-between; align-items:center; padding:4px 0;
+           font-size:11.5px; color:var(--mut); }
+  .i-row .v { color:var(--ink); font-size:11.5px; text-align:right; }
+  .i-row .v.mono { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:10.5px; color:#a1a1aa; }
+  .e-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; margin-top:7px; }
+  .e-chip { font-size:9.5px; text-align:center; padding:3.5px 2px; border-radius:5px;
+            border:1px solid var(--line2); color:var(--mut); background:var(--panel3); }
+  .e-chip.on { border-color:rgba(245,158,11,.5); color:#fbbf24; background:rgba(245,158,11,.1); }
+  select-bar { }
+
+  .statusbar { height:30px; display:flex; align-items:center; gap:14px; padding:0 14px;
+               background:var(--panel); border-top:1px solid var(--line);
+               font-family:ui-monospace,Menlo,Consolas,monospace; font-size:10.5px; color:#6e6e78; }
+  .statusbar .right { margin-left:auto; display:flex; gap:12px; }
+
+  /* Callout badges on mockup */
+  .cbadge { position:absolute; width:22px; height:22px; border-radius:50%; background:#fff;
+            border:2px solid var(--b-accent); color:var(--b-accent); font-size:12px; font-weight:700;
+            display:flex; align-items:center; justify-content:center; z-index:5;
+            box-shadow:0 2px 6px rgba(0,0,0,.25); }
+
+  /* Callout cards */
+  .callouts { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:18px; width:1560px; }
+  .co { background:var(--b-surface); border:1px solid var(--b-border); border-radius:10px; padding:14px 16px; }
+  .co-head { display:flex; align-items:center; gap:9px; margin-bottom:6px; }
+  .co-num { width:20px; height:20px; border-radius:50%; background:#fff; border:2px solid var(--b-accent);
+            color:var(--b-accent); font-size:11px; font-weight:700; display:flex; align-items:center;
+            justify-content:center; flex-shrink:0; }
+  .co-title { font-size:13px; font-weight:700; }
+  .co-file { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:10.5px; color:var(--b-accent); }
+  .co-desc { font-size:12px; color:var(--b-sub); line-height:1.6; }
+
+  /* Secondary frames */
+  .sec-row { display:flex; gap:20px; width:1560px; }
+  .frame { background:var(--app); border:1px solid #1c1c22; border-radius:11px; overflow:hidden;
+           box-shadow:0 10px 28px rgba(15,23,42,.14); }
+  .frame-titlebar { padding:8px 13px; background:var(--panel); border-bottom:1px solid var(--line);
+                    display:flex; align-items:center; justify-content:space-between; }
+  .ft-name { font-size:11.5px; font-weight:700; color:var(--ink); }
+  .ft-sub { font-size:10px; color:#6e6e78; }
+  .wbody { padding:13px; }
+  .tabs3 { display:flex; border-bottom:1px solid var(--line); margin:-13px -13px 12px; }
+  .tabs3 .t { flex:1; text-align:center; font-size:11px; padding:8px 0; color:var(--mut); }
+  .tabs3 .t.on { color:var(--ink); font-weight:700; border-bottom:2px solid var(--accent);
+                 background:var(--panel2); }
+  .fld { margin-bottom:8px; }
+  .fld label { display:block; font-size:9.5px; letter-spacing:.08em; color:#71717a;
+               text-transform:uppercase; margin-bottom:3px; }
+  .fld .inp { border:1px solid var(--line); border-radius:6px; background:var(--panel2);
+              padding:6px 9px; font-size:12px; color:#a1a1aa; }
+  .cta { margin-top:11px; background:#f59e0b; color:#18120a; font-size:12px; font-weight:700;
+         text-align:center; padding:8px 0; border-radius:7px; }
+  .cta-note { text-align:center; font-family:ui-monospace,Menlo,Consolas,monospace;
+              font-size:9.5px; color:#6e6e78; margin-top:5px; }
+
+  .sec-h { font-size:10px; font-weight:700; letter-spacing:.12em; color:#71717a;
+           text-transform:uppercase; margin:12px 0 7px; }
+  .cast-row { display:flex; align-items:center; gap:8px; padding:6px 8px; border:1px solid var(--line);
+              border-radius:7px; background:var(--panel2); margin-bottom:6px; }
+  .cast-name { font-size:12px; color:var(--ink); font-weight:600; }
+  .cast-eng { margin-left:auto; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:9.5px; color:#8a8a94; }
+  .ipa { font-size:10px; color:#71717a; font-family:ui-monospace,Menlo,Consolas,monospace; }
+
+  .dsp { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-top:4px; }
+  .dsp-cell { border:1px solid var(--line); border-radius:7px; background:var(--panel2);
+              padding:7px 8px; }
+  .dsp-k { font-size:8.5px; letter-spacing:.08em; color:#71717a; text-transform:uppercase; }
+  .dsp-v { font-size:12.5px; font-weight:700; color:var(--ink);
+           font-family:ui-monospace,Menlo,Consolas,monospace; margin-top:2px; }
+
+  .menu { width:230px; }
+  .mi { display:flex; align-items:center; gap:8px; padding:8px 11px; font-size:12px; color:var(--ink); }
+  .mi .cmd { margin-left:auto; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:9.5px; color:#6e6e78; }
+  .mi.danger { color:var(--bad); }
+  .mi-sep { border-top:1px solid var(--line); margin:4px 0; }
+  .menu-wrap { position:relative; }
+  .menu-box { position:absolute; top:26px; right:8px; width:250px; background:var(--panel);
+              border:1px solid var(--line2); border-radius:9px; padding:6px 0;
+              box-shadow:0 14px 34px rgba(0,0,0,.5); }
+
+  .mini-row { display:flex; gap:20px; width:1560px; margin-top:20px; }
+  .mini { flex:1; background:var(--b-surface); border:1px solid var(--b-border); border-radius:10px;
+          padding:13px 16px; }
+  .mini-t { font-size:12.5px; font-weight:700; margin-bottom:2px; }
+  .mini-s { font-size:11px; color:var(--b-sub); line-height:1.55; }
+  .mini-tag { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:10px; color:var(--b-accent); }
+
+  /* Token strip */
+  .tokens { display:flex; gap:14px; width:1560px; margin-top:26px; align-items:stretch; }
+  .tok { flex:1; border:1px solid var(--b-border); border-radius:10px; background:#fff; padding:12px 14px; }
+  .tok-name { font-size:11px; font-weight:700; color:var(--b-sub); margin-bottom:8px; }
+  .sw-row { display:flex; gap:8px; margin-bottom:8px; }
+  .sw { width:34px; height:22px; border-radius:5px; border:1px solid rgba(0,0,0,.12); }
+  .tok-v { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:10px; color:var(--b-muted);
+           line-height:1.7; }
+  .flow-strip { width:1560px; margin-top:18px; background:#fff; border:1px solid var(--b-border);
+                border-radius:10px; padding:13px 18px; font-size:12px; color:var(--b-sub);
+                display:flex; align-items:center; gap:8px; flex-wrap:nowrap; }
+  .fs-node { background:#F1F5F9; border:1px solid #E2E8F0; border-radius:6px; padding:4px 9px;
+             font-size:11px; color:#334155; white-space:nowrap; }
+  .fs-arr { color:#94A3B8; font-size:12px; }
+  .footer { margin-top:22px; font-size:11px; color:var(--b-muted); text-align:center; }
+</style>
+</head>
+<body>
+<div id="root">
+  <div class="board-title">AUTHR_OS Desktop — UI / UX Workspace Design <span style="color:var(--b-muted);font-weight:400;">(draft)</span></div>
+  <div class="board-sub">The Author's Cockpit · dark theme tokens from <span class="mono">src/index.css</span> · component names from <span class="mono">src/components/**</span> · single frozen 56-command dispatcher (<span class="mono">docs/CLI_CONTRACT.md</span> v1.2)</div>
+
+  <div class="section-label">A · Novel Studio — the Cockpit (default workspace)</div>
+  <div style="position:relative; width:1560px;">
+    <div class="cbadge" style="top:-9px; left:196px;">1</div>
+    <div class="cbadge" style="top:96px; left:230px;">2</div>
+    <div class="cbadge" style="top:94px; left:700px;">4</div>
+    <div class="cbadge" style="top:350px; right:-9px;">3</div>
+    <div class="cbadge" style="top:560px; left:253px;">5</div>
+    <div class="cbadge" style="top:-9px; right:60px;">6</div>
+
+    <div class="window">
+      <div class="win-titlebar">
+        <div class="dots"><div class="dot" style="background:#fb7185;"></div><div class="dot" style="background:#fbbf24;"></div><div class="dot" style="background:#34d399;"></div></div>
+        <div class="win-title">AUTHR_OS — Author's Cockpit &nbsp;<span class="mono">1600×1000 · min 1200×720 · tauri.conf.json</span></div>
+      </div>
+
+      <div class="switcher">
+        <div class="wordmark">AUTHR<span class="os">_OS</span></div>
+        <div class="tabs">
+          <div class="tab active">▦ Novel</div><div class="tab-sep">✦</div>
+          <div class="tab">〰 Audio</div><div class="tab-sep">✦</div>
+          <div class="tab">▤ Video</div><div class="tab-sep">✦</div>
+          <div class="tab">文 Localization</div><div class="tab-sep">✦</div>
+          <div class="tab">📣 Marketing</div>
+        </div>
+        <div class="sw-right">
+          <span class="ro-badge" style="display:none;"></span>
+          <span class="sw-title">The Ember Gate</span>
+          <span class="lock"><span class="led"></span>LEASED</span>
+          <span class="sw-path">~/Novels/EmberGate.authr</span>
+          <div class="kebab">⋯</div>
+        </div>
+      </div>
+
+      <div class="panes">
+        <div class="binder">
+          <div class="pane-label">Project Binder</div>
+          <div class="b-search">⌕ Search manuscript segments</div>
+          <div class="b-body">
+            <div class="b-item" style="font-weight:700; font-size:11px; color:#9d9da7; letter-spacing:.1em;">MANUSCRIPT</div>
+            <div class="b-item sub"><span class="cdot" style="background:#3f3f46;"></span>Book 1 · The Ember Gate<span class="n">3 ch</span></div>
+            <div class="b-item sub" style="padding-left:36px;"><span class="cdot" style="background:#fbbf24;"></span>1 · Cold Orbit<span class="n">DRAFTING</span></div>
+            <div class="b-item sub" style="padding-left:36px;"><span class="cdot" style="background:#3f3f46;"></span>2 · Vault of Echoes<span class="n">PLANNED</span></div>
+            <div class="b-item sub" style="padding-left:36px;"><span class="cdot" style="background:#a78bfa;"></span>3 · The Long Dark<span class="n">AUDIO_READY</span></div>
+            <div class="b-item" style="font-weight:700; font-size:11px; color:#9d9da7; letter-spacing:.1em; margin-top:10px;">CAST</div>
+            <div class="b-item sub">Kira Voss<span class="badge bdg-amber">PROTAGONIST</span></div>
+            <div class="b-item sub">Dex Meridian<span class="badge bdg-zinc">SUPPORTING</span></div>
+            <div class="b-item sub">NARRATOR<span class="badge bdg-violet">NARRATOR</span></div>
+            <div class="b-item" style="font-weight:700; font-size:11px; color:#9d9da7; letter-spacing:.1em; margin-top:10px;">LORE</div>
+            <div class="b-item sub">Ninefold Vault<span class="badge bdg-emer">LOCATION</span></div>
+            <div class="b-item sub">Ledger Wardens<span class="badge bdg-amber">FACTION</span></div>
+            <div class="b-item" style="font-weight:700; font-size:11px; color:#9d9da7; letter-spacing:.1em; margin-top:10px;">THREADS</div>
+            <div class="b-item sub">The sealed airlock<span class="badge bdg-violet">CHEKHOV_GUN</span></div>
+          </div>
+        </div>
+
+        <div class="split-h"></div>
+
+        <div class="canvas">
+          <div class="vm-switch"><div class="vm on">clean</div><div class="vm">script</div><div class="vm">read-along</div></div>
+          <div class="pane-label">Manuscript Canvas — Lexical AST</div>
+          <div class="doc">
+            <div class="ch-title">Chapter 1 · Cold Orbit</div>
+            <div class="ch-meta">Act I · 3 segments · status DRAFTING</div>
+            <div class="seg">
+              <div class="gutter g-narr">NARRATOR</div>
+              <div class="seg-body">
+                <div class="seg-text">The station hummed with dormant power, and every vent breathed like a sleeping animal.</div>
+                <div class="chip-row"><span class="chip audio-ok">◉ audio · cached 0:07</span><span class="chip">ambient · cyberpunk_rain_heavy</span></div>
+              </div>
+            </div>
+            <div class="seg">
+              <div class="gutter g-prot">KIRA</div>
+              <div class="seg-body">
+                <div class="seg-text">"We have maybe three minutes before it wakes up."</div>
+                <div class="chip-row"><span class="chip">emotion · Tense</span><span class="chip foley">fx · airlock_cycle</span><span class="chip audio-stale">⟳ audio · stale</span></div>
+              </div>
+            </div>
+            <div class="seg">
+              <div class="gutter g-narr">NARRATOR</div>
+              <div class="seg-body">
+                <div class="seg-text"><i>Three minutes was never going to be enough.</i></div>
+                <div class="chip-row"><span class="chip">internal monologue</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="autosave"><span class="okdot"></span>Saved · shadow .md + .ast.json rendered · git commit <span style="font-family:ui-monospace,Menlo,monospace;">a3f19c2</span></div>
+        </div>
+
+        <div class="split-h"></div>
+
+        <div class="inspector">
+          <div class="pane-label">Dynamic Inspector</div>
+          <div class="i-card">
+            <div class="i-row" style="color:var(--ink); font-weight:700; font-size:10px; letter-spacing:.1em;">SEGMENT INSPECTOR</div>
+            <div class="i-row">segment_id<span class="v mono">seg_00000084</span></div>
+            <div class="i-row">type<span class="v">Dialogue</span></div>
+            <div class="i-row">speaker<span class="v">CHAR_KIRA · Kira Voss</span></div>
+            <div class="i-row">voice<span class="v mono">EDGE_TTS · JennyNeural</span></div>
+            <div class="i-row">ipa<span class="v mono">ˈkɪərə</span></div>
+            <div class="i-row" style="margin-top:6px;">emotion preset</div>
+            <div class="e-grid">
+              <div class="e-chip">Neutral</div><div class="e-chip on">Tense</div><div class="e-chip">Whisper</div>
+              <div class="e-chip">Cold anger</div><div class="e-chip">Joyful</div><div class="e-chip">Defiant</div>
+            </div>
+          </div>
+          <div class="i-card">
+            <div class="i-row" style="color:var(--ink); font-weight:700; font-size:10px; letter-spacing:.1em;">CHAPTER</div>
+            <div class="i-row">status<span class="v">DRAFTING ▾</span></div>
+            <div class="i-row">act<span class="v">Act I ▾</span></div>
+            <div class="i-row">audio state<span class="v mono">2 cached · 1 stale</span></div>
+          </div>
+          <div class="i-card">
+            <div class="i-row" style="color:var(--ink); font-weight:700; font-size:10px; letter-spacing:.1em;">AI CONTEXT</div>
+            <div class="i-row">rag<span class="v mono">hybrid · top 8</span></div>
+            <div class="i-row">llm<span class="v mono">offline fallback ready</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="statusbar">
+        <span>contract v1.2 · 56 commands</span><span>·</span><span>autosave 1.2 s debounce</span>
+        <span class="right"><span>theme dark ▾</span><span>LEASED · pid 4123 @ local</span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="callouts">
+    <div class="co"><div class="co-head"><div class="co-num">1</div><div><div class="co-title">Workstation switcher</div><div class="co-file">layout/WorkstationSwitcher.tsx</div></div></div>
+      <div class="co-desc">Five studios separated by ✦. Right cluster: bundle title, lease LED (green = live lease, amber = READ-ONLY foreign lease), bundle path, maintenance kebab. Lock dot re-probes <b>project_lock_status</b> on click.</div></div>
+    <div class="co"><div class="co-head"><div class="co-num">2</div><div><div class="co-title">Project Binder</div><div class="co-file">layout/ProjectBinder.tsx</div></div></div>
+      <div class="co-desc">Manuscript tree (books → chapters with status dots), cast with role badges, lore categories, story threads. Opens the NewChapter / Character / Lore / Thread modals; chapter search filters segments.</div></div>
+    <div class="co"><div class="co-head"><div class="co-num">3</div><div><div class="co-title">Dynamic Inspector</div><div class="co-file">layout/DynamicInspector.tsx</div></div></div>
+      <div class="co-desc">Contextual rail fed live by the stores: segment prosody chrome (type, speaker, voice, IPA, emotion presets) + chapter meta + AI context. Width persists in <b>workspaceStore.paneWidths</b>.</div></div>
+    <div class="co"><div class="co-head"><div class="co-num">4</div><div><div class="co-title">Manuscript canvas</div><div class="co-file">editor/LexicalCanvas.tsx + nodes/*</div></div></div>
+      <div class="co-desc">Lexical AST editor: SegmentParagraph, SpeakerGutter, EmotionChip, FoleyTrigger nodes. Three view modes — <b>clean · script · read-along</b> — plus typewriter (distraction-free) mode. Autosave per mutation.</div></div>
+    <div class="co"><div class="co-head"><div class="co-num">5</div><div><div class="co-title">Fluid split panes</div><div class="co-file">layout/Cockpit.tsx · SplitHandle</div></div></div>
+      <div class="co-desc">Custom pointer-event splitters (no library): drag to resize, <b>double-click resets</b> to defaults. Binder/inspector can fully collapse; the canvas never re-mounts, so undo history survives.</div></div>
+    <div class="co"><div class="co-head"><div class="co-num">6</div><div><div class="co-title">Maintenance menu</div><div class="co-file">WorkstationSwitcher.tsx:149-209</div></div></div>
+      <div class="co-desc">Kebab actions map 1:1 to core commands — <b>git_snapshot</b>, <b>clean_sweep</b> (FTS rebuild), <b>lock_status</b> re-probe, Close project. Every button surfaces the JSON error envelope on failure.</div></div>
+  </div>
+
+  <div class="section-label">B · Session start &amp; studio surfaces</div>
+  <div class="sec-row">
+    <div class="frame" style="flex:1;">
+      <div class="frame-titlebar"><span class="ft-name">Welcome Screen</span><span class="ft-sub">no bundle open</span></div>
+      <div class="wbody">
+        <div class="tabs3"><div class="t on">CREATE</div><div class="t">OPEN</div><div class="t">IMPORT</div></div>
+        <div class="fld"><label>Working title</label><div class="inp">The Ninefold Vault</div></div>
+        <div class="fld"><label>Author</label><div class="inp">A. Merchant</div></div>
+        <div class="fld"><label>Bundle path</label><div class="inp">sandbox.authr</div></div>
+        <div class="cta">Initialize bundle</div>
+        <div class="cta-note">project_init · project_open · project_import</div>
+      </div>
+    </div>
+    <div class="frame" style="flex:1.35;">
+      <div class="frame-titlebar"><span class="ft-name">Audio Studio</span><span class="ft-sub">voice profiling · casting · pronunciation · 3-layer DSP rack preview</span></div>
+      <div class="wbody">
+        <div class="sec-h">Voice Cast Rack — profiling</div>
+        <div class="cast-row"><span class="cast-name">Kira Voss</span><span class="badge bdg-amber">PROTAG</span><span class="ipa">ˈkɪərə</span><span class="cast-eng">EDGE_TTS · en-US-JennyNeural</span></div>
+        <div class="cast-row"><span class="cast-name">Dex Meridian</span><span class="badge bdg-zinc">SUPPORT</span><span class="ipa">dɛks</span><span class="cast-eng">ELEVEN_LABS · continuity on</span></div>
+        <div class="sec-h">3-layer DSP rack (preview)</div>
+        <div class="dsp">
+          <div class="dsp-cell"><div class="dsp-k">Music bed</div><div class="dsp-v">−28 dB</div></div>
+          <div class="dsp-cell"><div class="dsp-k">Duck</div><div class="dsp-v">−18 dB · 120/750 ms</div></div>
+          <div class="dsp-cell"><div class="dsp-k">Master</div><div class="dsp-v">−20.0 RMS · −3.1 dBFS</div></div>
+        </div>
+        <div class="cta-note" style="text-align:left; margin-top:8px;">core: audio_plan → audio_synthesize → audio_master (contract §4.11) · studio wiring pending</div>
+      </div>
+    </div>
+    <div class="frame" style="flex:1;">
+      <div class="frame-titlebar"><span class="ft-name">Maintenance menu</span><span class="ft-sub">kebab open state</span></div>
+      <div class="wbody menu-wrap" style="padding-bottom:34px;">
+        <div class="kebab" style="margin-left:auto;">⋯</div>
+        <div class="menu-box menu">
+          <div class="mi">⎇ Git snapshot<span class="cmd">git_snapshot</span></div>
+          <div class="mi">✦ Clean sweep + FTS rebuild<span class="cmd">clean_sweep</span></div>
+          <div class="mi">🔒 Re-probe lock status<span class="cmd">lock_status</span></div>
+          <div class="mi-sep"></div>
+          <div class="mi danger">⏻ Close project<span class="cmd">project_close</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mini-row">
+    <div class="mini"><div class="mini-t">Video Studio</div><div class="mini-s">Slide pacing timeline · focal points · FFmpeg MP4 rendering (Phase 6)</div><div class="mini-tag">studios/VideoStudio.tsx</div></div>
+    <div class="mini"><div class="mini-t">Localization Studio</div><div class="mini-s">Multilingual translation drafts · YouTube script import · sync-ready segment tables</div><div class="mini-tag">studios/LocalizationStudio.tsx</div></div>
+    <div class="mini"><div class="mini-t">Marketing Studio</div><div class="mini-s">Blurb / ad-copy surfaces over the same segment store</div><div class="mini-tag">studios/MarketingStudio.tsx</div></div>
+    <div class="mini"><div class="mini-t">Shared shell</div><div class="mini-s">Every studio mounts StudioShell (title · subtitle · actions) + AudioStateBadge + Skeleton + EmptyState + Toaster</div><div class="mini-tag">shared/StudioShell.tsx</div></div>
+  </div>
+
+  <div class="section-label">C · Theme tokens &amp; data path</div>
+  <div class="tokens">
+    <div class="tok">
+      <div class="tok-name">DARK (default)</div>
+      <div class="sw-row"><div class="sw" style="background:#09090b;"></div><div class="sw" style="background:#101013;"></div><div class="sw" style="background:#1d1d22;"></div><div class="sw" style="background:#f59e0b;"></div><div class="sw" style="background:#8b8cf8;"></div><div class="sw" style="background:#34d399;"></div></div>
+      <div class="tok-v">app #09090b · panel #101013 · panel3 #1d1d22<br>accent #f59e0b · accent2 #8b8cf8 · ok #34d399</div>
+    </div>
+    <div class="tok">
+      <div class="tok-name">MIDNIGHT</div>
+      <div class="sw-row"><div class="sw" style="background:#04060f;"></div><div class="sw" style="background:#080d1c;"></div><div class="sw" style="background:#111a36;"></div><div class="sw" style="background:#f59e0b;"></div><div class="sw" style="background:#7c8cff;"></div><div class="sw" style="background:#34d399;"></div></div>
+      <div class="tok-v">app #04060f · panel #080d1c · panel3 #111a36<br>accent #f59e0b · accent2 #7c8cff</div>
+    </div>
+    <div class="tok">
+      <div class="tok-name">SEPIA (light)</div>
+      <div class="sw-row"><div class="sw" style="background:#f6f1e7;"></div><div class="sw" style="background:#fbf7ee;"></div><div class="sw" style="background:#e9dfc9;"></div><div class="sw" style="background:#b45309;"></div><div class="sw" style="background:#6d5bb8;"></div><div class="sw" style="background:#0f8a5f;"></div></div>
+      <div class="tok-v">app #f6f1e7 · panel #fbf7ee · panel3 #e9dfc9<br>accent #b45309 · accent2 #6d5bb8</div>
+    </div>
+    <div class="tok" style="flex:1.3;">
+      <div class="tok-name">Typography</div>
+      <div class="tok-v" style="font-size:12px; color:var(--b-text);">UI: system sans (−apple-system / Segoe UI / Roboto)</div>
+      <div style="font-family:'Iowan Old Style',Palatino,Georgia,serif; font-size:14.5px; color:var(--b-text); margin-top:6px;">Manuscript: literary serif (Iowan Old Style / Palatino / Georgia)</div>
+      <div class="tok-v" style="margin-top:6px;">Mono: JetBrains Mono / Menlo / Consolas — ids, commands, paths</div>
+    </div>
+  </div>
+
+  <div class="flow-strip">
+    <b style="color:#334155;">Data path</b><span class="fs-arr">→</span>
+    <span class="fs-node">components</span><span class="fs-arr">→</span>
+    <span class="fs-node">zustand stores ×8</span><span class="fs-arr">→</span>
+    <span class="fs-node">src/ipc/api.ts</span><span class="fs-arr">→</span>
+    <span class="fs-node">bridge.ts</span><span class="fs-arr">→</span>
+    <span class="fs-node">Tauri invoke | dev-bridge POST /api/ipc</span><span class="fs-arr">→</span>
+    <span class="fs-node">single dispatcher (56 cmds)</span><span class="fs-arr">→</span>
+    <span class="fs-node">SQLite · git · shadow · audio cache</span>
+  </div>
+
+  <div class="footer">FACT-sourced draft — every label maps to a real component/command in the v3.0.0 tree · generated 2026-11-09</div>
+</div>
+</body>
+</html>

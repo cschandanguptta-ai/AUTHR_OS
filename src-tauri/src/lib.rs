@@ -7,6 +7,7 @@ pub mod craft;
 pub mod error;
 pub mod ipc;
 pub mod localai;
+pub mod media;
 pub mod providers;
 pub mod publish;
 pub mod rag;
@@ -19,7 +20,7 @@ pub mod video;
 pub mod shell;
 
 pub const CONTRACT_VERSION: &str = "1.6";
-pub const COMMAND_COUNT: usize = 72;
+pub const COMMAND_COUNT: usize = 74;
 
 /// The frozen command surface (docs/CLI_CONTRACT.md §4).
 pub const COMMANDS: &[&str] = &[
@@ -112,4 +113,8 @@ pub const COMMANDS: &[&str] = &[
     "provider_get",
     "provider_set",
     "provider_test",
+    // 4.18 art style catalog + per-book selection (v1.6, novelcast parity)
+    "video_style",
+    // 4.19 media read access — bundle-scoped, read-only (v1.6)
+    "media_read",
 ];

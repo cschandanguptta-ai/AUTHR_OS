@@ -13,11 +13,15 @@
 //                  embedded 5×7 font, seeded palettes, scene cards /
 //                  R2I-style reference sheets / title cards
 //   render.rs    — engine negotiation (SCRIPTED | R2I_ENDPOINT fail-closed
-//                  seam) + the `video_assets` registry
+//                  seam) + the `video_assets` registry; scene frames honor the
+//                  live tier too, art-style-seeded (v1.6, ADR-0012)
+//   style.rs     — the shared art-style catalog (novelcast parity) and the
+//                  per-book selection (§4.18 `video_style`)
 //   plan.rs      — read-only plan over derived state (ladder, narration
 //                  readiness, timings)
 //   assemble.rs  — one-pass ffmpeg MP4 (Ken Burns + focal anchors + narration
-//                  reuse + SRT soft-mux), M4B-identical binary resolution
+//                  reuse + SRT soft-mux), M4B-identical binary resolution;
+//                  clips are registry-driven (BMP/PNG/JPEG alike, v1.6)
 //   validate.rs  — kdp_check-shaped gate: plan vs registry vs encoded file
 //
 // Storage is additive only (`video_scenes`, `video_assets` — eager idempotent
@@ -30,4 +34,5 @@ pub mod derive;
 pub mod frame;
 pub mod plan;
 pub mod render;
+pub mod style;
 pub mod validate;

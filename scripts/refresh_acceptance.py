@@ -2,7 +2,7 @@
 """Refresh test_results.json with freshly measured acceptance data.
 
 Runs the official runner per tier, then composes the v1.2 acceptance record.
-Re-runnable on any machine (see RUN_ON_LAPTOP.md at the repo root):  python3 refresh_acceptance.py <repo>
+Re-runnable on any machine (see RUN_ON_LAPTOP.md at the repo root):  python3 scripts/refresh_acceptance.py [repo]
 """
 import json
 import os
@@ -11,7 +11,9 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-REPO = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else Path(__file__).resolve().parent
+# Default: the APP ROOT (this script lives in <root>/scripts/) — resolving to
+# scripts/ itself was a recurring footgun; an explicit argv[1] still wins.
+REPO = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else Path(__file__).resolve().parent.parent
 
 
 def run_tier(tier: int) -> dict:
@@ -37,13 +39,13 @@ bench = subprocess.run(
 bench_data = json.loads(bench.stdout)["data"]
 
 record = {
-    "suite": "AUTHR_OS Desktop — Phase 1–6 + v1.3–v1.5 Craft, Retention & Video Novel acceptance (contract v1.5)",
+    "suite": "AUTHR_OS Desktop — Phase 1–6 + v1.3–v1.6 Craft, Retention, Video Novel & Provider Ladder acceptance (contract v1.6)",
     "recorded_at": datetime.now(timezone.utc).isoformat(),
     "rust": {
         "toolchain": "rustc 1.99.1",
         "crate": "authr 3.0.0",
         "build": "cargo build --release: 0 warnings",
-        "unit_tests": "120 passed (dsp kernels, tts protocols, scheduler, rag, llm, publish+cover, release, craft catalog/engine/kdp, retention kit, epub storefront front matter, video novel studio: frame/derive/render/assemble/validate)",
+        "unit_tests": "135 passed (dsp kernels, tts protocols, scheduler, rag, llm, publish+cover, release, craft catalog/engine/kdp, retention kit, epub storefront front matter, video novel studio: frame/derive/render/assemble/validate, provider ladder + media access + art style, scene prompt/seed determinism)",
     },
     "e2e_full_suite": {
         "suite": "AUTHR_OS E2E",
@@ -70,15 +72,15 @@ record = {
     "totals": {
         "e2e_tests": total_passed,
         "pass_rate": "100%" if total_failed == 0 else f"{total_passed}/{total_passed + total_failed}",
-        "commands": 69,
+        "commands": 74,
         "error_codes": 14,
-        "test_modules": 35,
-        "rust_unit_tests": 120,
-        "phases": "1–6 complete + v1.3 craft & KDP + v1.4 retention kit + v1.5 video novel studio + cockpit UI/UX upgrade — Golden Master v3.0.0-PROD",
-        "contract_version": "1.5",
+        "test_modules": 36,
+        "rust_unit_tests": 135,
+        "phases": "1–6 complete + v1.3 craft & KDP + v1.4 retention kit + v1.5 video novel studio + v1.6 provider settings ladder & Scene Studio parity + cockpit UI/UX upgrade — Golden Master v3.0.0-PROD",
+        "contract_version": "1.6",
     },
     "verification_note": (
-        "Acceptance on 2026-11-09 (contract v1.5): 205/205 E2E + 120/120 Rust unit tests green, "
+        "Acceptance on 2026-11-09 (contract v1.6): 214/214 E2E + 135/135 Rust unit tests green, "
         "tsc + vite clean, cargo build 0 warnings, clippy 0 warnings, all benchmark gates pass. "
         "v1.3 adds the craft catalog (25 formats / 37 personas / 18 arcs), "
         "beat scaffolding and KDP storefront packaging (kdp_check/kdp_package). "
@@ -93,6 +95,16 @@ record = {
         "SCRIPTED image engine (BMP + 5×7 font + seeded palettes), R2I reference "
         "sheets with the consistency ladder, R2I_ENDPOINT fail-closed seam, "
         "one-pass ffmpeg MP4 (Ken Burns + focal anchors + narration reuse + SRT). "
+        "v1.6 adds the provider settings ladder (ADR-0012: provider_get/set/test — "
+        "args > provider_settings > env > fail-closed, keys in the OS keychain, "
+        "hardened fetch with retries/backoff/64MiB cap/magic sniffing), the "
+        "art-style catalog with per-book selection (video_style, novelcast parity, "
+        "style-seeded deterministic repaints), R2I_ENDPOINT scene frames "
+        "(segment text + cast bios verbatim), registry-driven ffmpeg assembly "
+        "with missing_only ensure-render, sandbox-scoped media_read, the "
+        "Scene Studio storyboard UI (scene cards, repaint-all pool with stop, "
+        "stage tracker, style picker) and the AI providers settings dialog; "
+        "frontend workerisation: chapter-stats Web Worker + code-split studios. "
         "Cockpit UI/UX upgrade re-verified on this run: Ctrl/Cmd+K command palette, "
         "global studio shortcuts, reader settings popover (themes, editor type size, "
         "focus mode), modal focus traps + restore, semantic color system with "

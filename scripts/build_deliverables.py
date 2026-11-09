@@ -15,9 +15,10 @@ import sys
 import zipfile
 from pathlib import Path
 
-# APP may be passed explicitly; default = <script_dir>/../download/AUTHR_OS
+# APP may be passed explicitly; default = the app root this script ships in
+# (<app>/scripts/build_deliverables.py → <app>).
 _here = Path(__file__).resolve().parent
-APP = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else (_here.parent / "download" / "AUTHR_OS").resolve()
+APP = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else _here.parent
 OUT = APP.parent
 assert (APP / "src-tauri" / "Cargo.toml").exists(), f"not an AUTHR_OS app dir: {APP}"
 

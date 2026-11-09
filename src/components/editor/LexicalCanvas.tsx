@@ -27,7 +27,8 @@ import { useManuscriptStore } from '../../stores/manuscriptStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore, type ViewMode } from '../../stores/workspaceStore';
 import { useAutosave } from '../../hooks/useAutosave';
-import { cn, wordCount } from '../../lib/utils';
+import { useChapterStats } from '../../hooks/useChapterStats';
+import { cn } from '../../lib/utils';
 import { CHAPTER_STATUSES } from '../../lib/constants';
 import type { ChapterStatus, NarrativeSegmentAst, SegmentType } from '../../types/ast';
 import { SpeakerGutterNode, $createSpeakerGutterNode } from './nodes/SpeakerGutterNode';
@@ -240,7 +241,9 @@ function CanvasInner() {
     [onChange],
   );
 
-  const liveWords = segments.reduce((acc, s) => acc + wordCount(s.text_content), 0);
+  // Off-main-thread chapter stats (workerisation, ADR-0008) — the live word
+  // counter no longer re-walks every segment's text on every render.
+  const stats = useChapterStats(segments);
 
   return (
     <div className="flex-1 min-h-0 flex flex-col min-w-0">
@@ -278,7 +281,7 @@ function CanvasInner() {
         )}
 
         <span className="font-mono text-2xs text-mut tabular-nums whitespace-nowrap">
-          {liveWords.toLocaleString('en-US')} words
+          {stats.words.toLocaleString('en-US')} words
         </span>
 
         {/* Triple-view switcher */}

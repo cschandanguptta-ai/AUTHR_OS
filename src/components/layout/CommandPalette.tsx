@@ -76,7 +76,7 @@ function buildCommands(): Command[] {
   return [
     studio('novel', 'Novel', BookOpen, `${MOD_ALT}1`, 'Manuscript AST canvas, binder, inspector'),
     studio('audio', 'Audio', AudioLines, `${MOD_ALT}2`, 'Voice cast, synthesis and mastering'),
-    studio('video', 'Video', Clapperboard, `${MOD_ALT}3`, 'Video-novel scenes, render and MP4'),
+    studio('video', 'Scene Studio', Clapperboard, `${MOD_ALT}3`, 'Storyboard cards, art styles, repaint and MP4'),
     studio('localization', 'Localization', Languages, `${MOD_ALT}4`, 'Translation passes and locale QA'),
     studio('marketing', 'Marketing', Megaphone, `${MOD_ALT}5`, 'Blurb, hooks and platform copy'),
     studio('craft', 'Craft', PenTool, `${MOD_ALT}6`, 'Formats, personas, arcs, retention, KDP'),

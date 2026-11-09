@@ -15,6 +15,9 @@ secret scan). All runtime configuration is environment-driven or arg-driven.
 | `OPENAI_API_KEY` | OpenAI `/v1/audio/speech` auth | `tts.rs:354` | For `OPENAI_TTS` | `AUDIO_ENGINE_UNAVAILABLE` |
 | `HUGGINGFACE_API_KEY` | HF inference (facebook/mms-tts-*) auth | `tts.rs:365` | For `HF_MMS` | `AUDIO_ENGINE_UNAVAILABLE` |
 | `AUTHR_LLAMA_SERVER` | Default llama-server endpoint for `local_llm_generate` | `localai/llm.rs` (`DEFAULT_SERVER_URL` fallback `http://127.0.0.1:8080`, `llm.rs:16`) | No | Offline `OFFLINE_GRAMMAR` engine answers instead |
+| `AUTHR_IMG_ENDPOINT` | Env tier of the image-provider ladder (§4.17): OpenAI-compatible `/images/generations` URL | `providers.rs::effective_image` (settings beat env) | No | Resolved endpoint absent ⇒ R2I tier fails CLOSED `AI_ENGINE_UNAVAILABLE`; SCRIPTED engine unaffected |
+| `AUTHR_IMG_MODEL` | Env tier for the image model id | `providers.rs::effective_image` | No | Request omits `model` |
+| `AUTHR_IMG_API_KEY` | Env tier for the image API key (beats keychain) | `providers.rs::effective_image` | No | Keychain `authr_img/api_key` consulted; absent ⇒ probe/renders send no Authorization header |
 | `AUTHR_RELEASE_KEY_HEX` | 32-byte ed25519 seed (hex) for release signing | `publish/release.rs::seed32/45` | For real releases | Ephemeral key generated and returned as `generated_key_hex` (CI-only mode) |
 | `AUTHR_FFMPEG_BIN` | ffmpeg path override for `publish_m4b` | `publish/m4b.rs::ffmpeg_bin:139-146` | No | PATH lookup; absent ⇒ `BUNDLE_ERROR` with install guidance |
 | `AUTHR_TYPST_BIN` | typst path override for `publish_typst` PDF compile | `publish/typst.rs:29-41` | No | `.typ` still emitted; `compiled:false` + guidance |
@@ -24,6 +27,11 @@ secret scan). All runtime configuration is environment-driven or arg-driven.
 
 Edge TTS uses **no key** (the Sec-MS-GEC token is computed,
 `tts.rs:172-191`).
+
+**v1.6 provider ladder note**: `AUTHR_IMG_*` and `AUTHR_LLAMA_SERVER` are the
+ENV tier of the ADR-0012 ladder — a stored `provider_settings` row (edited in
+the cockpit via Settings → AI providers) always outranks them. See
+`docs/CLI_CONTRACT.md §4.17`.
 
 ## 2. Cargo features (compile-time flags)
 

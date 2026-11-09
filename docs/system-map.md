@@ -17,7 +17,7 @@ flowchart LR
         BIN["authr binary<br/>main.rs (clap)"]
     end
 
-    DISP["FROZEN DISPATCHER<br/>ipc/mod.rs::dispatch<br/>69 commands · WRITER_COMMANDS lease gate"]
+    DISP["FROZEN DISPATCHER<br/>ipc/mod.rs::dispatch<br/>74 commands · WRITER_COMMANDS lease gate"]
 
     subgraph Core["Rust core (crate authr)"]
         LIFE["bundle/: manifest v1,<br/>.authr_lock lease (120s),<br/>zip export/import"]

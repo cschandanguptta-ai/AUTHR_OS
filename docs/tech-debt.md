@@ -114,6 +114,35 @@ labeled. IDs are stable for reference from other docs and commits.
   docs; nothing enforces it per commit.
 - **Direction**: wire the §6 recipe from `docs/testing.md` into CI.
 
+## T-15 — v1.6 provider surface shipped without docs or UI — RESOLVED 2026-11-09
+- **Where (was)**: `providers.rs` + `provider_get/set/test` landed in commit
+  `1ee64d0` with the contract doc still at v1.5/69 commands, `main.rs`
+  about-stale ("69-command"), no settings UI consuming the IPC, and no E2E.
+- **Impact**: the resolution ladder was invisible to users (the question
+  "does settings contain image-generation endpoints?" had the answer "in the
+  backend only"), and the frozen-contract doc under-counted its own surface.
+- **Resolution**: contract v1.6 documents §4.17–4.19 (74 commands,
+  `COMMAND_COUNT` constant guard), `main.rs`/README counts regenerated, the
+  AI providers settings dialog ships (Settings → AI providers: image
+  endpoint/model/timeout/retries, API key → keychain, LLM server URL, live
+  probe), and T1.PV1–PV9 E2E lock the ladder (redaction, validation, ladder
+  order, fail-closed probe, style catalog, media sandbox).
+
+## T-16 — Repository-root clutter: stale phase zips, one-off scripts, junk files — RESOLVED 2026-11-09
+- **Where (was)**: `download/AUTHR_OS_phase3..6.zip` (stale intermediate
+  deliverables, superseded by the two canonical zips), one-off root
+  `scripts/patch_clippy.py` / `render_diagrams.py` + duplicated design
+  HTMLs, an empty `download/README.md`, a stray root `.env` (novelcast
+  `DATABASE_URL` leftover), and the `upload/` novelcast reference snapshot
+  tracked wholesale in git.
+- **Impact**: `git ls-files` (the PROD zip's single source of truth via
+  `scripts/build_deliverables.py`) shipped stale artifacts; workspace
+  ambiguity about what is canonical.
+- **Resolution**: phase zips deleted (git + disk), one-off scripts
+  untracked, design artifacts moved under `docs/design/`, `upload/`
+  untracked (drop-zone, gitignored, files kept on disk), `.env` removed,
+  `download/README.md` rewritten as a deliverables index.
+
 ## Scaling limits (documented, by design)
 - One SQLite file per project; no multi-user concurrency (lease = single
   writer).

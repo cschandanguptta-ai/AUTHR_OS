@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --text:#111827; --text-sub:#6B7280; --text-muted:#9CA3AF;
+    --bg:#FFFFFF; --border:#E5E7EB; --connector:#94A3B8;
+  }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,system-ui,sans-serif;
+         background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased; }
+  #root { width:fit-content; min-width:900px; margin:0 auto; padding:48px 44px; background:var(--bg); }
+
+  .flow-title { font-size:24px; font-weight:700; text-align:center; }
+  .flow-subtitle { font-size:13.5px; color:var(--text-sub); text-align:center; margin-top:8px; margin-bottom:36px; }
+  .flow-subtitle .mono { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; }
+
+  .phase-group { width:980px; background:#F8FAFC; border:1px solid #EDF1F5; border-radius:12px;
+                 padding:18px 22px 16px; }
+  .phase-title { display:flex; align-items:baseline; gap:10px; font-size:16px; font-weight:700;
+                 padding:10px 16px; border-radius:8px; margin-bottom:13px; }
+  .phase-surface { margin-left:auto; font-family:ui-monospace,Menlo,Consolas,monospace;
+                   font-size:11px; font-weight:500; opacity:.75; }
+  .phase-steps { display:flex; flex-direction:column; gap:7px; padding-left:10px; }
+  .phase-step { display:flex; align-items:flex-start; gap:10px; font-size:14px; color:var(--text);
+                padding:9px 14px; background:#fff; border-radius:7px; border:1px solid var(--border);
+                line-height:1.5; }
+  .step-num { flex-shrink:0; width:22px; height:22px; line-height:20px; text-align:center;
+              border-radius:50%; font-size:12px; font-weight:700; margin-top:1px; }
+  .step-body { flex:1; min-width:0; }
+  .step-title { font-weight:600; font-size:14px; }
+  .step-desc { font-size:12.5px; color:var(--text-sub); margin-top:2px; }
+  .cmd { display:inline-block; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+         font-size:11px; background:#F1F5F9; border:1px solid #E2E8F0; color:#334155;
+         border-radius:5px; padding:1.5px 7px; margin-left:6px; white-space:nowrap; }
+  .note { margin-top:9px; margin-left:10px; font-size:12px; color:#7C5E1F; background:#FFFBEB;
+          border:1px dashed #F5D58B; border-radius:7px; padding:7px 12px; }
+  .note.neutral { color:#475569; background:#F8FAFC; border-color:#CBD5E1; }
+
+  /* Scheme B — neutral gray base, blue accent progression (6 phases) */
+  .phase-1 .phase-title { background:#F8FAFC; color:#334155; border-left:4px solid #94A3B8; }
+  .phase-1 .step-num { background:#F1F5F9; color:#475569; border:1px solid #E2E8F0; }
+  .phase-2 .phase-title { background:#F1F5F9; color:#334155; border-left:4px solid #7B8FA3; }
+  .phase-2 .step-num { background:#E2E8F0; color:#475569; border:1px solid #D6DEE8; }
+  .phase-3 .phase-title { background:#E8EDF3; color:#2D4156; border-left:4px solid #6B809A; }
+  .phase-3 .step-num { background:#DBEAFE; color:#2D4156; border:1px solid #C3D5F0; }
+  .phase-4 .phase-title { background:#E2E8F0; color:#283C52; border-left:4px solid #5B7590; }
+  .phase-4 .step-num { background:#D0D9E4; color:#283C52; border:1px solid #BCC9D9; }
+  .phase-5 .phase-title { background:#DAE1EB; color:#23364D; border-left:4px solid #4B6A87; }
+  .phase-5 .step-num { background:#C7D2E0; color:#23364D; border:1px solid #B4C2D3; }
+  .phase-6 .phase-title { background:#D2DAE5; color:#1E3048; border-left:4px solid #3B5F7D; }
+  .phase-6 .step-num { background:#BFC9D8; color:#1E3048; border:1px solid #ACBAD0; }
+
+  .arrow { text-align:center; color:var(--connector); font-size:22px; line-height:1; margin:9px 0; }
+
+  .st-badge { display:inline-block; font-size:10px; font-weight:700; letter-spacing:.06em;
+              padding:1.5px 7px; border-radius:5px; border:1px solid; vertical-align:1px; }
+  .st-draft { border-color:#F5D58B; background:#FFFBEB; color:#92400E; }
+  .st-polished { border-color:#C7D2FE; background:#EEF2FF; color:#3730A3; }
+  .st-audio { border-color:#DDD6FE; background:#F5F3FF; color:#5B21B6; }
+  .st-published { border-color:#A7F3D0; background:#ECFDF5; color:#065F46; }
+  .st-planned { border-color:#D4D4D8; background:#FAFAFA; color:#52525B; }
+
+  .legend { display:flex; gap:22px; justify-content:center; align-items:center; margin-top:34px; padding:14px 24px;
+            background:#F9FAFB; border-radius:9px; border:1px solid #E5E7EB; width:980px; }
+  .legend-item { display:flex; align-items:center; gap:8px; font-size:12.5px; color:#4B5563; white-space:nowrap; }
+  .lg-cmd { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11px; background:#F1F5F9;
+            border:1px solid #E2E8F0; color:#334155; border-radius:5px; padding:1.5px 7px; }
+  .lg-dot { width:11px; height:11px; border-radius:3px; border:2px solid #64748B; background:#F1F5F9; }
+  .footer { margin-top:16px; font-size:11px; color:var(--text-muted); text-align:center; width:980px; }
+</style>
+</head>
+<body>
+<div id="root">
+  <div class="flow-title">AUTHR_OS — Author &amp; Work Flow</div>
+  <div class="flow-subtitle">Local-first, single-writer (120 s lease) · every save = one git commit inside the <span class="mono">.authr</span> bundle · all 56 commands pass through one frozen dispatcher (<span class="mono">CLI_CONTRACT.md v1.2</span>)</div>
+
+  <div class="phase-group phase-1">
+    <div class="phase-title">1 · SESSION START<span class="phase-surface">Welcome Screen</span></div>
+    <div class="phase-steps">
+      <div class="phase-step"><span class="step-num">1</span><div class="step-body"><span class="step-title">Create a new bundle</span><span class="cmd">project_init</span><div class="step-desc">Working title + author + path → scaffolds SQLite schema, embedded git, shadow layout, empty audio cache.</div></div></div>
+      <div class="phase-step"><span class="step-num">2</span><div class="step-body"><span class="step-title">Open an existing bundle</span><span class="cmd">project_open</span><div class="step-desc">Acquires the write lease; bootstrap loads manifest, books, chapters, cast, lore, threads into the stores.</div></div></div>
+      <div class="phase-step"><span class="step-num">3</span><div class="step-body"><span class="step-title">Import a portable archive</span><span class="cmd">project_import</span><div class="step-desc">Zip-slip-validated <span class="cmd">.authr</span> package (export excludes .git and the lease by design).</div></div></div>
+      <div class="note">Fresh lease held elsewhere → project mounts <b>READ-ONLY</b> (amber LED); wait ≤ 120 s or close the other session.</div>
+    </div>
+  </div>
+  <div class="arrow">↓</div>
+
+  <div class="phase-group phase-2">
+    <div class="phase-title">2 · SET THE STAGE<span class="phase-surface">Project Binder + modals</span></div>
+    <div class="phase-steps">
+      <div class="phase-step"><span class="step-num">4</span><div class="step-body"><span class="step-title">Cast the voices</span><span class="cmd">character_upsert</span><div class="step-desc">Role + voice engine (KOKORO_LOCAL · EDGE_TTS · ELEVEN_LABS · CARTESIA · OPENAI_TTS) + voice_id + IPA phonetic. Cast keys are FK targets for every dialogue segment.</div></div></div>
+      <div class="phase-step"><span class="step-num">5</span><div class="step-body"><span class="step-title">Seed world facts &amp; threads</span><span class="cmd">lore_upsert</span><span class="cmd">thread_open</span><div class="step-desc">Lore categories (location/faction/magic-tech/history) feed RAG; threads (Chekhov gun · mystery · subplot · promise) track INTRODUCED → ESCALATED → RESOLVED.</div></div></div>
+      <div class="phase-step"><span class="step-num">6</span><div class="step-body"><span class="step-title">Scaffold book &amp; chapters</span><span class="cmd">book_create</span><span class="cmd">chapter_create</span><div class="step-desc">Chapters are born <span class="st-badge st-planned">PLANNED</span> with act number and status.</div></div></div>
+    </div>
+  </div>
+  <div class="arrow">↓</div>
+
+  <div class="phase-group phase-3">
+    <div class="phase-title">3 · WRITE THE SCENE<span class="phase-surface">Cockpit — Lexical canvas</span></div>
+    <div class="phase-steps">
+      <div class="phase-step"><span class="step-num">7</span><div class="step-body"><span class="step-title">Type in clean / script / read-along view</span><span class="cmd">typewriter mode</span><div class="step-desc">Segments are AST nodes: speaker gutter, emotion chip (10 presets), foley trigger, ambient cue — audio intent is captured while writing.</div></div></div>
+      <div class="phase-step"><span class="step-num">8</span><div class="step-body"><span class="step-title">Autosave persists each mutation</span><span class="cmd">segment_append</span><span class="cmd">sync_lexical_ast_mutation</span><div class="step-desc">Debounced save writes the segment row and the AST delta; chapter status moves to <span class="st-badge st-draft">DRAFTING</span>.</div></div></div>
+      <div class="phase-step"><span class="step-num">9</span><div class="step-body"><span class="step-title">Write pipeline (same order, every save)</span><div class="step-desc">manifest touch → cloud WAL checkpoint → shadow <span class="cmd">manuscript/chNN.md + .ast.json</span> → git commit. Content is time-travelable via the bundle's git log.</div></div></div>
+      <div class="note neutral">Polish pass complete → set <span class="st-badge st-polished">POLISHED</span> in the chapter inspector.</div>
+    </div>
+  </div>
+  <div class="arrow">↓</div>
+
+  <div class="phase-group phase-4">
+    <div class="phase-title">4 · VOICE &amp; RENDER AUDIO<span class="phase-surface">Audio Studio</span></div>
+    <div class="phase-steps">
+      <div class="phase-step"><span class="step-num">10</span><div class="step-body"><span class="step-title">Plan the chapter</span><span class="cmd">audio_plan</span><div class="step-desc">DAG lookahead schedule: per-segment engine, est. durations, same-speaker continuity chain, cache-hit preview.</div></div></div>
+      <div class="phase-step"><span class="step-num">11</span><div class="step-body"><span class="step-title">Synthesize</span><span class="cmd">audio_synthesize</span><div class="step-desc">Content-addressed cache keyed sha256(engine|voice|rate|ipa|text); Edge TTS token math, ElevenLabs continuity ids, offline SCRIPTED fallback — zero network needed.</div></div></div>
+      <div class="phase-step"><span class="step-num">12</span><div class="step-body"><span class="step-title">Master the mix</span><span class="cmd">audio_master</span><div class="step-desc">3-layer mix (music / sfx / voice) with sidechain ducking −18 dB, 120/750 ms → EBU R128 two-pass normalize to −20.0 dB RMS, ceiling −3.1 dBFS, ACX validation.</div></div></div>
+      <div class="note">Chapter reaches <span class="st-badge st-audio">AUDIO_READY</span> · core commands live in contract §4.11; studio UI wiring is logged as tech-debt.</div>
+    </div>
+  </div>
+  <div class="arrow">↓</div>
+
+  <div class="phase-group phase-5">
+    <div class="phase-title">5 · AI ASSIST<span class="phase-surface">any surface · offline-first</span></div>
+    <div class="phase-steps">
+      <div class="phase-step"><span class="step-num">13</span><div class="step-body"><span class="step-title">Index the manuscript</span><span class="cmd">rag_index</span><div class="step-desc">Chunks embedded (384-dim) + FTS5; snapshots keyed by source so stale rows self-heal on the next index run.</div></div></div>
+      <div class="phase-step"><span class="step-num">14</span><div class="step-body"><span class="step-title">Ask the canon</span><span class="cmd">rag_search</span><div class="step-desc">dense | fts | hybrid (RRF fusion) over chapters, lore, threads — continuity checks without leaving the draft.</div></div></div>
+      <div class="phase-step"><span class="step-num">15</span><div class="step-body"><span class="step-title">Draft with the local LLM</span><span class="cmd">local_llm_generate</span><div class="step-desc">Deterministic offline engine by default; auto-upgrades to llama-server when one is running. <span class="cmd">local_tts_generate</span> answers Kokoro availability with placement guidance (<span class="cmd">AI_ENGINE_UNAVAILABLE</span>).</div></div></div>
+    </div>
+  </div>
+  <div class="arrow">↓</div>
+
+  <div class="phase-group phase-6">
+    <div class="phase-title">6 · PUBLISH &amp; MAINTAIN<span class="phase-surface">Publish suite + kebab</span></div>
+    <div class="phase-steps">
+      <div class="phase-step"><span class="step-num">16</span><div class="step-body"><span class="step-title">Cut the editions</span><span class="cmd">publish_epub</span><span class="cmd">publish_docx</span><span class="cmd">publish_typst</span><span class="cmd">publish_captions</span><span class="cmd">publish_m4b</span><div class="step-desc">EPUB 3 + SMIL overlays · DOCX manuscript · Typst print/PDF · synced .lrc/.vtt · ACX M4B with chapter atoms (ffmpeg). Titles are slug-sanitized against traversal.</div></div></div>
+      <div class="phase-step"><span class="step-num">17</span><div class="step-body"><span class="step-title">Hand off</span><span class="cmd">project_export</span><span class="cmd">release_manifest</span><span class="cmd">release_verify</span><div class="step-desc">Portable .authr zip for backup/transfer; ed25519-signed release manifest verifies artifacts + tamper. Status <span class="st-badge st-published">PUBLISHED</span>.</div></div></div>
+      <div class="phase-step"><span class="step-num">18</span><div class="step-body"><span class="step-title">Housekeeping</span><span class="cmd">git_snapshot</span><span class="cmd">clean_sweep</span><span class="cmd">project_close</span><div class="step-desc">Manual snapshot commit · FTS rebuild + purge · releases the write lease and returns to the Welcome Screen.</div></div></div>
+      <div class="note neutral">Revision loop: re-open → edit (step 7) → audio flags flip ⟳ stale → re-master → re-publish.</div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><span class="lg-cmd">command</span>&nbsp;= IPC verb on the frozen 56-command surface</div>
+    <div class="legend-item"><span class="lg-dot"></span>&nbsp;phase card = UI surface where the work happens</div>
+    <div class="legend-item"><span class="st-badge st-draft" style="border-color:#F5D58B; background:#FFFBEB; color:#92400E;">DRAFTING</span>&nbsp;chapter status lifecycle</div>
+  </div>
+  <div class="footer">Flow derived from src/ipc/api.ts, stores/*, ipc/mod.rs after_commit ordering, and CLI_CONTRACT.md v1.2 · draft 2026-11-09</div>
+</div>
+</body>
+</html>

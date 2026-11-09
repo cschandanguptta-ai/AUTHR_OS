@@ -107,8 +107,66 @@ fn abs_escape(p: &std::path::Path) -> String {
     p.to_string_lossy().replace('\'', "'\\''")
 }
 
-/// §4.16 `video_assemble` — render any missing SCRIPTED assets (ensure), then
-/// one ffmpeg pass to `exports/video_ch{n}.mp4`.
+struct ClipPaths {
+    title: String,
+    /// segment_id → registry-relative path (media/video/b{n}/ch{n}/scene_*).
+    scenes: std::collections::HashMap<String, String>,
+}
+
+/// Read the clip table from `video_assets` (kind TITLE + kind SCENE keyed by
+/// segment_id). Returns `None` when ANY expected clip is missing or its file
+/// is gone — the caller runs the SCRIPTED `missing_only` ensure-render.
+fn registry_clip_paths(
+    conn: &rusqlite::Connection,
+    root: &std::path::Path,
+    book_id: i64,
+    chapter_number: i64,
+    scenes: &[super::derive::SceneRow],
+) -> Result<Option<ClipPaths>, AppError> {
+    let mut stmt = conn.prepare(
+        "SELECT kind, ref_key, path FROM video_assets
+         WHERE book_id = ?1 AND chapter_number IN (0, ?2) AND kind IN ('TITLE', 'SCENE')",
+    )?;
+    let rows = stmt
+        .query_map(rusqlite::params![book_id, chapter_number], |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, String>(2)?,
+            ))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut title: Option<String> = None;
+    let mut map = std::collections::HashMap::new();
+    for (kind, ref_key, path) in rows {
+        if !root.join(&path).is_file() {
+            continue; // registry row points at a vanished file → gap
+        }
+        match kind.as_str() {
+            "TITLE" => title = Some(path),
+            "SCENE" => {
+                map.insert(ref_key, path);
+            }
+            _ => {}
+        }
+    }
+    let Some(title) = title else {
+        return Ok(None);
+    };
+    if scenes
+        .iter()
+        .any(|s| !map.contains_key(&s.segment_id))
+    {
+        return Ok(None);
+    }
+    Ok(Some(ClipPaths { title, scenes: map }))
+}
+
+/// §4.16 `video_assemble` — ensure every clip exists (SCRIPTED auto-render,
+/// `missing_only` so live endpoint art is never clobbered), then one ffmpeg
+/// pass to `exports/video_ch{n}.mp4`. Clips are registry-driven (v1.6):
+/// whatever the painter produced — SCRIPTED BMPs or R2I PNG/JPEGs — is what
+/// gets encoded (novelcast storyboard-painter parity).
 pub fn video_assemble(ctx: &mut Ctx, a: &Value) -> Result<Value, AppError> {
     let chapter_id = args::req_i64(a, "chapter_id")?;
     let fps = args::get_i64(a, "fps").unwrap_or(DEFAULT_FPS as i64) as u32;
@@ -128,40 +186,41 @@ pub fn video_assemble(ctx: &mut Ctx, a: &Value) -> Result<Value, AppError> {
         |r| Ok((r.get(0)?, r.get(1)?)),
     )?;
 
-    // Ensure every asset exists (SCRIPTED auto-render for anything missing —
-    // novelcast `ensureReferenceImages` semantics, offline tier). One
-    // idempotent full render covers title + scenes; unchanged inputs rewrite
-    // byte-identical files.
-    let base_check = ctx
-        .root
-        .join("media/video")
-        .join(format!("b{book_id}"))
-        .join(format!("ch{chapter_number}"));
-    let title_missing = !base_check.join("title.bmp").is_file();
-    if title_missing
-        || scenes.iter().any(|s| {
-            !base_check
-                .join(format!("scene_{}.bmp", s.scene_index))
-                .is_file()
-        })
-    {
-        super::render::video_render(ctx, &json!({ "chapter_id": chapter_id, "engine": "SCRIPTED" }))?;
+    // Registry-driven clip table: title + one clip per scene in plan order.
+    // A gap (no registry row, or the backing file vanished) triggers the
+    // idempotent SCRIPTED ensure-render with `missing_only: true` — which
+    // paints ONLY the gaps, leaving live R2I_ENDPOINT art untouched.
+    let clip_paths = registry_clip_paths(&ctx.conn, &ctx.root, book_id, chapter_number, &scenes)?;
+    if clip_paths.is_none() {
+        super::render::video_render(
+            ctx,
+            &json!({ "chapter_id": chapter_id, "engine": "SCRIPTED", "missing_only": true }),
+        )?;
     }
+    let clip_paths = registry_clip_paths(&ctx.conn, &ctx.root, book_id, chapter_number, &scenes)?
+        .ok_or_else(|| AppError::bundle(
+            "video assembly: registry gaps remain after the ensure-render — media tree is not writable?",
+        ))?;
 
     // Clips: title card first, then scenes (plan order, persisted focals).
-    let base = ctx
-        .root
-        .join("media/video")
-        .join(format!("b{book_id}"))
-        .join(format!("ch{chapter_number}"));
     let mut clips = vec![Clip {
-        path: base.join("title.bmp").to_string_lossy().into_owned(),
+        path: ctx.root.join(&clip_paths.title).to_string_lossy().into_owned(),
         duration_ms: TITLE_MS,
         focal: "center".into(),
     }];
     for s in &scenes {
+        let path = clip_paths
+            .scenes
+            .get(&s.segment_id)
+            .ok_or_else(|| {
+                AppError::bundle(format!(
+                    "video assembly: no registered frame for scene {} ({})",
+                    s.scene_index, s.segment_id
+                ))
+            })?
+            .clone();
         clips.push(Clip {
-            path: base.join(format!("scene_{}.bmp", s.scene_index)).to_string_lossy().into_owned(),
+            path: ctx.root.join(path).to_string_lossy().into_owned(),
             duration_ms: s.duration_ms,
             focal: s.focal.clone(),
         });

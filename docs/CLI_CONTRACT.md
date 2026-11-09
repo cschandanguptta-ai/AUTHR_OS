@@ -1,4 +1,4 @@
-# AUTHR_OS — Frozen IPC / CLI Contract (v1.5)
+# AUTHR_OS — Frozen IPC / CLI Contract (v1.6)
 
 **Status**: v1 sections are FROZEN. v1.1 (Phases 4–5) extended the surface
 **additively**: 13 new commands (§4.11–4.12) and 4 new error codes in two new
@@ -11,7 +11,11 @@ schema changes to frozen tables (additive `chapter_retention` only). v1.5
 (Video Novel Studio) adds 4 commands (§4.16) — **no new codes** (reuses
 `AUDIO_ERROR` / `BUNDLE_ERROR` / `AI_ENGINE_UNAVAILABLE`), additive storage
 only (`video_scenes`, `video_assets`). Every v1–v1.4 command, code and
-semantic is untouched.
+semantic is untouched. v1.6 (Provider Settings Ladder, ADR-0012) documents
+the 3 shipped provider commands (§4.17) and adds 2 (§4.18 `video_style`,
+§4.19 `media_read`) — **no new codes** (reuses `AI_ERROR` /
+`AI_ENGINE_UNAVAILABLE` / `PATH_TRAVERSAL_VIOLATION` / `CRAFT_ERROR` /
+`ENTITY_NOT_FOUND`), additive storage only (`provider_settings`).
 
 **Applies to**: Phase 1 (Storage Core), Phase 3 (Author's Cockpit UI),
 Phase 4 (Audio Studio), Phase 5 (Local-First AI & Vector RAG),
@@ -76,7 +80,7 @@ Exactly **one line** of JSON on stdout. Exit code `0` on success, `1` on failure
 |------|----------|-------------|
 | `CRAFT_ERROR` | craft | Invalid craft/KDP/retention args: unknown format/arc/persona id, >7 keywords, >2 categories, description outside 20–4000 chars, price outside 0.99–200, unknown catalog `kind`, malformed QC scores (≠7 or outside 0–2), unknown `ending_type`, `chapter_number` < 1, notes > 2000 chars |
 
-## 4. Command Surface (69 commands)
+## 4. Command Surface (74 commands)
 
 ### 4.1 Project lifecycle
 
@@ -313,10 +317,16 @@ eager idempotent migrations; `chapter_number = 0` is the book-level sheet
 sentinel (one reference sheet per character per book). Engines mirror the
 TTS negotiation: `SCRIPTED` (deterministic offline BMP painter with an
 embedded 5×7 font, seeded palettes — always available) and `R2I_ENDPOINT`
-(OpenAI-compatible image endpoint via `AUTHR_IMG_ENDPOINT`, the novelcast
-ADR-0002 custom tier — fails CLOSED with `AI_ENGINE_UNAVAILABLE` when
-unset). The consistency ladder (novelcast ADR-0004): appearance bio text
-rides verbatim on every tier; multi-reference editing is the documented
+(OpenAI-compatible image endpoint through the provider settings ladder
+(§4.17, ADR-0012): per-call args > `provider_settings` > env
+`AUTHR_IMG_ENDPOINT` > fail-closed — fails CLOSED with
+`AI_ENGINE_UNAVAILABLE` when nothing resolves). v1.6: SCENE frames honor the
+`R2I_ENDPOINT` tier too (prompt = segment text verbatim + every in-frame
+character's bio verbatim + the book's art-style fragment), and the resolved
+art style (§4.18) joins the SHA-256 seed material of every rendered asset —
+a style switch deterministically repaints, a given style stays
+byte-identical. The consistency ladder (novelcast ADR-0004): appearance bio
+text rides verbatim on every tier; multi-reference editing is the documented
 future seam. Assembly is one ffmpeg pass (`ffmpeg_bin` resolution identical
 to `publish_m4b`: args → `AUTHR_FFMPEG_BIN` → PATH, missing ⇒ `BUNDLE_ERROR`):
 1280×720 @ 30 fps, Ken Burns zoompan per scene (alternating push-in/pull-out,
@@ -328,9 +338,63 @@ never redone) and SRT soft-mux. `video_validate` gates the chain
 | # | Command | Args (JSON) | Result `data` |
 |---|---------|-------------|---------------|
 | 66 | `video_plan` | `{chapter_id}` | `{chapter_id, book_id, chapter_number, derived:{refreshed, durations_filled, source}, scenes:[{scene_index, segment_id, sequence_order, speaker_id, text_chars, duration_ms, characters[], focal, narration_path?, ladder REFS_READY|PARTIAL|TEXT_ONLY}], scene_count, total_ms, title_ms, fps, resolution, ladder:{refs_ready, partial, text_only}, missing_sheets[], narration_ready}` — read-only over the draft-time derived rows |
-| 67 | `video_render` | `{chapter_id, engine?=SCRIPTED, scene_index?, sheets_only?, characters?, focal?{scene_index:center|left|right|top|bottom}}` | `{chapter_id, book_id, chapter_number, engine, rendered:[{kind, ref, scene_index?, path, sha256, width, height, bytes, characters?}], reused, assets?}` — writer (lease enforced); idempotent (byte-deterministic SCRIPTED output, registry upsert); focal map persists into `video_scenes.focal` (user state, inherited across re-derives) |
-| 68 | `video_assemble` | `{chapter_id, narration?(bundle-relative), srt?, fps?(12–60, default 30), ffmpeg_bin?}` | `{out exports/video_ch{NN}.mp4, bytes, scenes, clips, duration_ms, fps, resolution, narration (""/"auto:pipeline-audio"/path), srt, codec "h264 yuv420p + aac 96k mono 44.1kHz", ffmpeg}` — writer; auto-renders missing SCRIPTED assets first (ensure semantics) |
+| 67 | `video_render` | `{chapter_id, engine?=SCRIPTED, scene_index?, sheets_only?, missing_only?, characters?, focal?{scene_index:center|left|right|top|bottom}}` | `{chapter_id, book_id, chapter_number, engine, style, rendered:[{kind, ref, scene_index?, path, sha256, width, height, bytes, characters?}], reused, assets?}` — writer (lease enforced); idempotent (byte-deterministic SCRIPTED output, registry upsert); `missing_only` renders only assets missing from the registry (assembler ensure path — never clobbers live endpoint art); scene frames honor `engine=R2I_ENDPOINT`; focal map persists into `video_scenes.focal` (user state, inherited across re-derives) |
+| 68 | `video_assemble` | `{chapter_id, narration?(bundle-relative), srt?, fps?(12–60, default 30), ffmpeg_bin?}` | `{out exports/video_ch{NN}.mp4, bytes, scenes, clips, duration_ms, fps, resolution, narration (""/"auto:pipeline-audio"/path), srt, codec "h264 yuv420p + aac 96k mono 44.1kHz", ffmpeg}` — writer; clip table is registry-driven (BMP/PNG/JPEG alike); gaps fall back to the SCRIPTED ensure-render with `missing_only` |
 | 69 | `video_validate` | `{chapter_id, ffmpeg_bin?}` | `{ok, checks:[{name, status PASS|WARN|FAIL, detail}], plan:{chapter_id, chapter_number, book_id, scenes, total_ms, resolution}}` — read-only; duration probe tolerance 1500 ms (AAC priming) |
+
+### 4.17 Provider Settings Ladder (v1.6, ADR-0012)
+
+One resolution ladder for every live AI endpoint the runtime talks to:
+**per-call args > project settings (SQLite `provider_settings`) > env
+(`AUTHR_IMG_ENDPOINT` / `AUTHR_IMG_MODEL` / `AUTHR_IMG_API_KEY` /
+`AUTHR_LLAMA_SERVER`) > fail-closed**. API keys NEVER live in the settings
+table (bundles travel: export/import, git shadow layer) — keychain (service
+`authr_img`) or env only. `provider_get` redacts the key to a
+`key_configured` + `key_source` badge; `provider_set` validates (http(s)
+only, no userinfo, no whitespace, ≤2048 chars; timeout 5–300 s; retries
+0–3) and persists; `provider_test` runs ONE real generation against the
+resolved (or arg-overridden) endpoint — never writes assets — and fails
+CLOSED with `AI_ENGINE_UNAVAILABLE` when nothing resolves. The hardened
+fetch (shared by the R2I render tier and the probe): bounded retries with
+exponential backoff on transport faults and 429/5xx, per-attempt timeout,
+64 MiB response cap, PNG/JPEG magic-byte sniffing.
+
+| # | Command | Args (JSON) | Result `data` |
+|---|---------|-------------|---------------|
+| 70 | `provider_get` | `{}` | `{image:{settings:{endpoint_url?, model?, timeout_s?, retries?}, resolved:{endpoint_url?, endpoint_source settings\|env\|none, model?, model_source, timeout_s, retries, key_configured, key_source env\|keychain\|none}}, llm:{settings:{server_url?}, resolved:{server_url?, source settings\|env\|offline}}, ladder}` — read-only; never echoes the key |
+| 71 | `provider_set` | `{endpoint_url?, model?, timeout_s?, retries?, server_url?}` (null clears the stored value) | same shape as `provider_get` + `applied:[section.key]` — writer; validation failures are `AI_ERROR`, nothing partial is persisted |
+| 72 | `provider_test` | `{endpoint_url?, model?, timeout_s?, retries?, size?(default 1024x1024)}` | `{ok:true, latency_ms, bytes, ext, size, model?, endpoint_source, key_source, retries, note}` — one real generation probe; no assets written; `AI_ENGINE_UNAVAILABLE` when no endpoint resolves |
+
+### 4.18 Art Style Catalog & Per-Book Selection (v1.6, novelcast parity)
+
+The shared style catalog (10 styles: cinematic, storybook, manhwa, anime,
+manga-ink, oil, comic, pixar, dark-fantasy, pulp) is injected into every
+image prompt — scenes and character reference sheets — so a book shares one
+coherent look on every tier of the ladder. Selection persists per book in
+`provider_settings` (section `art`, key `book:<id>`); unknown stored ids
+fall back to the default (`cinematic`) so catalog renames never strand old
+bundles. The style id joins the render seed material (deterministic
+repaint-on-switch).
+
+| # | Command | Args (JSON) | Result `data` |
+|---|---------|-------------|---------------|
+| 73 | `video_style` | `{book_id, style_id?}` | `{book_id, style_id, label, prompt, styles:[{id, label, tagline, prompt}]}` — read without `style_id`; with it, validates against the catalog (unknown ⇒ `CRAFT_ERROR`) and persists |
+
+### 4.19 Media Read Access (v1.6)
+
+Read-only accessor for bundle-local media assets so the Scene Studio
+storyboard paints real pixels without exposing the filesystem: relative
+path only (absolute paths and `..` ⇒ `PATH_TRAVERSAL_VIOLATION`), `media/`
+prefix enforced, canonicalized containment inside the bundle root AND the
+media tree (symlink escapes included), image containers only (`.bmp`,
+`.png`, `.jpg`, `.jpeg`), 32 MiB cap (`SECURITY_ERROR` beyond it). Response
+carries base64 + mime + sha256 so both transports serve it; the UI builds a
+`data:` URL keyed by (path, sha256) — a re-render with new pixels refetches,
+unchanged art is a free cache hit.
+
+| # | Command | Args (JSON) | Result `data` |
+|---|---------|-------------|---------------|
+| 74 | `media_read` | `{path}` (bundle-relative, `media/**`) | `{path, mime image/bmp\|image/png\|image/jpeg, bytes, sha256, data_b64}` — read-only |
 
 ## 5. Row Shapes (camel-free — snake_case exactly as SQLite)
 
@@ -345,6 +409,8 @@ never redone) and SRT soft-mux. `video_validate` gates the chain
 `thread`: `{id, thread_title, thread_type, introduced_in_chapter, resolved_in_chapter, status, payoff_requirement, created_at, last_modified_at}`
 
 `segment`: `{segment_id, chapter_id, sequence_order, segment_type, speaker_id, emotion, prosody_rate, prosody_pitch, text_content, ambient_cue, sfx_cue, prev_request_id, audio_hash, audio_cache_path, audio_start_ms, audio_duration_ms, created_at, last_modified_at}`
+
+`provider_settings` (v1.6, additive): `{section, key, value, updated_at}` — PK (`section`, `key`); sections `image` (endpoint_url, model, timeout_s, retries), `llm` (server_url), `art` (`book:<id>` → style_id). Generic (section, key, value) shape — never carries API keys.
 
 ## 6. Bundle & Lease Semantics
 

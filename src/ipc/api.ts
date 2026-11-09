@@ -577,6 +577,7 @@ export function videoRender(args: {
   engine?: 'SCRIPTED' | 'R2I_ENDPOINT';
   scene_index?: number;
   sheets_only?: boolean;
+  missing_only?: boolean;
   characters?: string[];
   focal?: Record<string, string>;
 }) {
@@ -694,6 +695,55 @@ export function providerTest(args: {
   retries?: number;
 }) {
   return invoke<ProviderTestResult>('provider_test', args);
+}
+
+// ── 4.18 Art style catalog + per-book selection (v1.6, novelcast parity) ────
+
+export interface ArtStyleDef {
+  id: string;
+  label: string;
+  tagline: string;
+  prompt: string;
+}
+
+export function videoStyle(args: { book_id: number; style_id?: string }) {
+  return invoke<{
+    book_id: number;
+    style_id: string;
+    label: string;
+    prompt: string;
+    styles: ArtStyleDef[];
+  }>('video_style', args);
+}
+
+// ── 4.19 Media read access — bundle-scoped, read-only (v1.6) ────────────────
+
+export interface MediaReadResult {
+  path: string;
+  mime: string;
+  bytes: number;
+  sha256: string;
+  data_b64: string;
+}
+
+export function mediaRead(args: { path: string }) {
+  return invoke<MediaReadResult>('media_read', args);
+}
+
+/** Module-level data-URL cache: one IPC fetch per (path, sha) per session.
+ *  `bust` is the asset sha256 — novelcast's `?v=cacheKey` semantics: the same
+ *  file path carries new pixels after a re-render, and a changed sha refetches
+ *  while an unchanged one stays a free cache hit. */
+const mediaUrlCache = new Map<string, string>();
+
+export async function mediaDataUrl(path: string, bust: string | number = ''): Promise<string> {
+  const cacheKey = `${path}?${bust}`;
+  const hit = mediaUrlCache.get(cacheKey);
+  if (hit) return hit;
+  const res = await mediaRead({ path });
+  const url = `data:${res.mime};base64,${res.data_b64}`;
+  mediaUrlCache.set(cacheKey, url);
+  return url;
 }
 
 // Convenience re-export of the segment AST type for API consumers.

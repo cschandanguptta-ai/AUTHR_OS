@@ -40,6 +40,7 @@ FEATURE_MAP = {
     "kdp": "tier1_features/test_t1_kdp.py",
     "retention": "tier1_features/test_t1_retention.py",
     "video": "tier1_features/test_t1_video.py",
+    "provider": "tier1_features/test_t1_provider.py",
     "audio_ai_boundaries": "tier2_boundaries/test_t2_audio_ai_boundaries.py",
     "audio_rag_scenario": "tier4_scenarios/test_t4_audio_rag_scenario.py",
     "path_traversal": "tier2_boundaries/test_t2_path_traversal.py",

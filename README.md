@@ -20,12 +20,13 @@ Tailwind CSS / Meta's Lexical AST** under a Zero-Double-Work paradigm.
 | v1.3 — Craft Catalog & Storefront Packaging | ✅ 25 project formats · 37 bestseller-archetype style personas (LLM prompt directives) · 18 plot arcs with beat sheets + deterministic scaffolding · beat progress fused with the Chekhov ledger · KDP compliance scoring (`kdp_check`) and storefront packages (`kdp_package`: metadata.json, KDP-safe description.html, copyright page, launch checklist, royalty projection) — see `docs/GO_TO_MARKET.md` |
 | v1.4 — Retention & Serialization Kit | ✅ SFB-2.0 as executable craft machinery (`craft_catalog kind=retention`): seven-beat chapter model, six ending types with last-3 rotation blocking, 10–15 chapter micro-arc cycle, 7×0–2 QC rubric with zero-flag rule, A–E drafting worksheet, cadence/buffer arithmetic from the real chapter pipeline — see `docs/GO_TO_MARKET.md` §6 |
 | v1.5 — Video Novel Studio | ✅ draft-time media derivation (audio/video/image state computed ONCE on the write path — the no-double-work contract) · deterministic offline SCRIPTED image engine (BMP + embedded 5×7 font + SHA-256-seeded palettes, byte-identical re-renders) · R2I character reference sheets with the consistency ladder (novelcast ADR-0004) · `R2I_ENDPOINT` fail-closed seam (`AUTHR_IMG_ENDPOINT`) · one-pass ffmpeg MP4 (1280×720@30, Ken Burns with persisted focal anchors, narration auto-reused from the audio pipeline, SRT soft-mux) · `video_validate` gate (plan vs registry vs encoded file) — see `docs/decisions/ADR-0011-video-novel-studio.md` |
+| v1.6 — Provider Settings Ladder & Scene Studio parity | ✅ one resolution ladder for every live AI endpoint (per-call args > `provider_settings` table > env > fail-closed, ADR-0012) · settings UI: Settings → AI providers (image endpoint/model/timeout/retries, API key → OS keychain `authr_img`, local LLM server URL, one-real-generation probe with latency) · hardened R2I fetch (bounded retries + backoff, 64 MiB cap, PNG/JPEG sniffing, fail-closed `AI_ENGINE_UNAVAILABLE`) · scene frames honor the R2I tier (segment text + cast bios verbatim + style fragment) · shared 10-style art catalog (`video_style`, novelcast parity, style-seeded deterministic repaints) · registry-driven ffmpeg assembly (`missing_only` ensure-render never clobbers live endpoint art) · `media_read` sandbox-scoped storyboard pixels · frontend workerisation (chapter-stats Web Worker + code-split studios) — see `docs/decisions/ADR-0012-provider-settings-ladder.md` |
 
 ## Layout
 
 ```
 AUTHR_OS/
-├── docs/CLI_CONTRACT.md      # FROZEN 69-command IPC surface v1.5 (all transports obey)
+├── docs/CLI_CONTRACT.md      # FROZEN 74-command IPC surface v1.6 (all transports obey)
 ├── docs/GO_TO_MARKET.md      # one-person authoring/publishing house playbook (KDP etc.)
 ├── docs/LOCAL_AI.md          # Phase-5 extension points (ort / llama.cpp / models/)
 ├── docs/PACKAGING.md         # Phase-6 installer matrix, signing, auto-updater
@@ -101,7 +102,7 @@ Theming rule: components use the semantic utilities (`text-ok`, `bg-accent/10`,
 …) — never hardcoded spectrum classes; see `docs/invariants-and-gotchas.md`
 §1.14–1.15.
 
-### 3. E2E test suite (205 tests · 35 modules)
+### 3. E2E test suite (214 tests · 36 modules)
 
 ```bash
 python tests/run_e2e.py                 # all 4 tiers
@@ -118,7 +119,7 @@ Headless environments: the suite sets `AUTHR_MOCK_KEYCHAIN=1`
 
 Every transport — `#[tauri::command]`, the CLI, and the browser dev bridge —
 dispatches through one frozen surface: **`docs/CLI_CONTRACT.md`**
-(v1.5: 69 commands · `{ok,data}` / `{ok:false,error{code,message,category}}` envelopes ·
+(v1.6: 74 commands · `{ok,data}` / `{ok:false,error{code,message,category}}` envelopes ·
 14 canonical error codes across 6 categories · 120 s lease TTL · shadow-format &
 git-message rules). The 9 v1 codes and 35 v1 commands are untouched; v1.1 adds
 the Phase 4/5 studio surface, v1.2 the Phase 6 publishing surface, v1.3 the

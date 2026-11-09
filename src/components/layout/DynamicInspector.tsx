@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Activity, ChevronDown, Gauge, ScrollText, SlidersHorizontal, Volume2 } from 'lucide-react';
 import { useManuscriptStore } from '../../stores/manuscriptStore';
 import { useVoiceCastStore } from '../../stores/voiceCastStore';
+import { useChapterStats } from '../../hooks/useChapterStats';
 import {
   CHAPTER_STATUSES,
   CHAPTER_STATUS_DOTS,
@@ -9,7 +10,7 @@ import {
   SEGMENT_TYPE_LABELS,
   emotionLabel,
 } from '../../lib/constants';
-import { cn, formatNumber, formatMs, wordCount } from '../../lib/utils';
+import { cn, formatNumber, formatMs } from '../../lib/utils';
 import { AudioStateBadge } from '../shared/AudioStateBadge';
 import { inputClass } from './Modal';
 import type { SegmentType } from '../../types/ast';
@@ -51,10 +52,10 @@ export function DynamicInspector() {
     [chapters, activeChapterId],
   );
 
-  const actualWords = useMemo(
-    () => segments.reduce((acc, s) => acc + wordCount(s.text_content), 0),
-    [segments],
-  );
+  // Worker-backed aggregates (ADR-0008): the progress bar reads worker output
+  // instead of re-counting every segment on the main thread.
+  const stats = useChapterStats(segments);
+  const actualWords = stats.words;
   const target = chapter?.target_word_count ?? 0;
   const pct = target > 0 ? Math.min(100, Math.round((actualWords / target) * 100)) : 0;
 

@@ -52,7 +52,7 @@ CODE_CATEGORY = {
     "CRAFT_ERROR": "craft",
 }
 
-# Contract §4 command surface (v1.3 — 62 commands).
+# Contract §4 command surface (v1.6 — 74 commands).
 CONTRACT_COMMANDS = [
     "project_init", "project_open", "project_close", "project_lock_status",
     "project_export", "project_import",
@@ -82,9 +82,13 @@ CONTRACT_COMMANDS = [
     "craft_retention_check", "craft_retention_report", "craft_retention_worksheet",
     # v1.5 — video novel studio (§4.16)
     "video_plan", "video_render", "video_assemble", "video_validate",
+    # v1.6 — provider settings ladder (§4.17, ADR-0012)
+    "provider_get", "provider_set", "provider_test",
+    # v1.6 — art style catalog + media read (§4.18–4.19)
+    "video_style", "media_read",
 ]
 
-EXPECTED_COMMAND_COUNT = 69
+EXPECTED_COMMAND_COUNT = 74
 
 ROW_FIELDS = {
     "book": ["id", "title", "author", "genre", "premise", "theme", "narrative_structure",
