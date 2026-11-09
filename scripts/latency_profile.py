@@ -234,7 +234,10 @@ def profile(scale: int) -> tuple[dict, dict]:
     step("publish_captions", 1, a("publish_captions", chapter_id=chapters[0]))
     step("publish_epub", 2, a("publish_epub", book_id=book_id))
     step("publish_docx", 2, a("publish_docx", book_id=book_id))
-    step("project_export", 2, a("project_export", out="probe_export.zip"))
+    # `out` for project_export resolves against the CLI's CWD when relative —
+    # always pass an ABSOLUTE path inside the throwaway tmp root so profiling
+    # never writes an ~90 MB bundle export into the repo (Phase 7 lesson).
+    step("project_export", 2, a("project_export", out=str(tmp_root / "probe_export.zip")))
     step("git_snapshot", 2, a("git_snapshot", message="chore: manual snapshot"))
     step("clean_sweep", 1, a("clean_sweep"))
 

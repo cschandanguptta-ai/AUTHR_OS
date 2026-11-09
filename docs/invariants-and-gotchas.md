@@ -62,6 +62,10 @@ needs no human but is not literal code text. Past bugs are at §5.
 - **PID liveness is `/proc`-based and Linux-only** (`lock.rs:124-141`): on
   non-Linux, a same-host lease is always considered alive while fresh. Porting
   the check requires a platform backend. FACT.
+- **`project_export` `out` resolves against the CLI's CWD when relative** —
+  bundle exports can therefore land anywhere the process can write (Phase 7
+  lesson: a profiler dumped an ~90 MB export into the repo). Scripts must
+  pass absolute paths; E2E always does. FACT.
 - **Cloud-sync guard** (`is_cloud_sync_path`, `sandbox.rs:211-218`) is a
   substring match on the bundle path (`onedrive`, `dropbox`,
   `google drive`/`_drive`/`googledrive`). A project *named* "MyDropboxNotes"
