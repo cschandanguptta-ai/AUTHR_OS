@@ -59,7 +59,7 @@ pub fn min_print_price(kind: &str, pages: i64) -> f64 {
 
 fn royalties_block(price: f64, pages: i64, file_mb: f64) -> Value {
     let (eb70, rate, delivery) = royalty_ebook(price, file_mb);
-    let (eb35, _, _) = royalty_ebook(if price >= 2.99 && price <= 9.99 { 0.0 } else { price }, file_mb);
+    let (eb35, _, _) = royalty_ebook(if (2.99..=9.99).contains(&price) { 0.0 } else { price }, file_mb);
     let pb_print = print_cost("paperback", pages);
     let hc_print = print_cost("hardcover", pages);
     json!({
@@ -291,7 +291,7 @@ pub fn kdp_check(ctx: &mut crate::ipc::Ctx, a: &Value) -> crate::error::IpcResul
     };
 
     // Scoring (weights sum to 100).
-    let manuscript_score = if chapters.len() > 0 && words > 0 {
+    let manuscript_score = if !chapters.is_empty() && words > 0 {
         25u32
     } else if !chapters.is_empty() {
         10

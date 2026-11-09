@@ -310,7 +310,7 @@ fn build_epub(
   </spine>
 </package>
 "##,
-        xml_escape(&dc["identifier"].as_str().unwrap_or("urn:uuid:0")),
+        xml_escape(dc["identifier"].as_str().unwrap_or("urn:uuid:0")),
         xml_escape(title),
         xml_escape(author),
         xml_escape(dc["language"].as_str().unwrap_or("en")),

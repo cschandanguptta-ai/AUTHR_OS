@@ -606,7 +606,7 @@ pub fn craft_retention_report(ctx: &mut crate::ipc::Ctx, a: &Value) -> crate::er
             let zero_flagged = flags
                 .iter()
                 .zip(QC_CRITERIA.iter())
-                .any(|(s, c)| *s == 0 && ZERO_FLAG_CRITERIA.contains(&*c));
+                .any(|(s, c)| *s == 0 && ZERO_FLAG_CRITERIA.contains(c));
             if zero_flagged {
                 revision_required += 1;
             }
@@ -749,7 +749,7 @@ pub fn craft_retention_worksheet(ctx: &mut crate::ipc::Ctx, a: &Value) -> crate:
                 let zero = scores
                     .iter()
                     .zip(QC_CRITERIA.iter())
-                    .any(|(s, c)| *s == 0 && ZERO_FLAG_CRITERIA.contains(&*c));
+                    .any(|(s, c)| *s == 0 && ZERO_FLAG_CRITERIA.contains(c));
                 Ok((total, band, zero))
             },
         )
@@ -785,9 +785,7 @@ pub fn craft_retention_worksheet(ctx: &mut crate::ipc::Ctx, a: &Value) -> crate:
                     .unwrap_or_default();
                 format!("Phase goals: {}", goals.join(" "))
             }
-            "reader_experience" => format!(
-                "Blueprint word-range for serial chapters: 1000–2000 (project target may differ). Cadence: 2–3 chapters/week with a 4–8 chapter buffer."
-            ),
+            "reader_experience" => "Blueprint word-range for serial chapters: 1000–2000 (project target may differ). Cadence: 2–3 chapters/week with a 4–8 chapter buffer.".into(),
             "chapter_ending" => format!(
                 "Selection rules: {}. Suggested types now: {}.",
                 ending_rules().join(" "),

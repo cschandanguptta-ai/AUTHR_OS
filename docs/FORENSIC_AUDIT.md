@@ -150,3 +150,69 @@ gates still pass with headroom.
 | `npm run build` (tsc + vite) | clean |
 | `benchmark_run` | **pass** — cold 1.9 ms / RSS 6.2 MB / binary 10.4 MB |
 | `scripts/refresh_acceptance.py` | `test_results.json` regenerated from live runs |
+
+## 7. Re-verification — post-v1.3/v1.4 delta (this audit's session, 2026-11-09)
+
+Phase 7 audited the tree as of contract v1.2 (170 E2E). The v1.3/v1.4
+craft/retention/storefront work added ~1,850 lines **not** covered by that
+sweep. This section re-runs the full audit method over the current tree.
+
+**Trigger delta**: `craft/retention.rs` (983 lines), `craft/catalog.rs`
+(25 formats / 37 personas / 18 arcs — counts verified live via
+`craft_catalog`), `craft/kdp.rs` royalties, `publish/epub.rs` storefront
+rewrite, CraftStudio Retention panel, `api.ts` v1.4 wrappers.
+
+### 7.1 Marker sweep — PASS
+- `grep -iE "mock|stub|fake|dummy|todo!|unimplemented!|FIXME|XXX|HACK"` over
+  `src-tauri/src` + `src`: all hits re-classified, nothing new. K-1 hardening
+  intact (`keychain.rs:137-152` — mock compiled only without `os-keychain`),
+  `spawn_stub` still inside `#[cfg(test)]` (`llm.rs:233+`), catalog comment is
+  self-description, frontend hit is the RFC-4122 UUID template string only.
+- Delta code (retention/catalog/kdp/epub) contains **zero** markers, zero
+  `TODO`/`FIXME`/`todo!()`/`unimplemented!()`.
+- `scripts/`: zero hits outside the documented `AUTHR_MOCK_KEYCHAIN` seam.
+
+### 7.2 Offline-first endpoint sweep — PASS
+All `http(s)://` occurrences re-inventoried: XML namespaces (DOCX/SSML), the
+documented cloud-TTS engine seams (ElevenLabs/Cartesia/OpenAI/HF — every one
+optional and offline-negotiated per ADR-0005), Typst install hint. **The
+v1.3/v1.4 delta introduces zero network calls**; craft/retention/KDP/EPUB
+paths are pure offline computation.
+
+### 7.3 Clippy regression found and fixed — 6 → 0
+The delta introduced 6 warnings (Phase 7 had driven the lib to 0):
+`manual_range_contains` + `len_zero` (`craft/kdp.rs:62,294`),
+`borrow_deref_ref` ×2 (`craft/retention.rs:609,752`), `useless_format`
+(`retention.rs:788`), `needless_borrow` (`publish/epub.rs:313`). All six
+fixed behavior-preservingly this session; `cargo clippy --release` is back
+to **0 warnings** and `cargo build --release` stays clean.
+
+### 7.4 Dependency audit — 1 unused crate removed
+New shipped tool `scripts/dep_audit.py` (usage-check per declared dep).
+Result: the direct `serde` dependency was **genuinely unused** — zero
+`serde::` qualified paths and zero `Serialize`/`Deserialize` derives in the
+tree (the codebase is `serde_json::Value`/`json!`-centric; serde_json pulls
+serde transitively). Removed from `Cargo.toml`; rebuild + 100/100 units +
+195/195 E2E green after removal. Remaining 19 crates + 16 npm packages all
+referenced (NONE unused).
+
+### 7.5 Latency — hot paths untouched
+`scripts/latency_profile.py` re-run post-fix (fresh machine, no paired
+baseline available after the environment recycle): rag hybrid p95 ≈ 12.7 ms,
+dense ≈ 10.2 ms, bulk AST upsert ≈ 197 ms, `publish_epub`/`project_export`
+still linear-in-segments as documented in the Scaling-limits register. The
+ADR-0008 optimizations' paired-run deltas (§4) remain the authoritative
+measurement; the cosmetic clippy fixes cannot alter codegen paths, and
+`benchmark_run` gates pass with headroom (cold ≈ 1.95 ms / RSS ≈ 6.4 MB /
+binary ≈ 11.0 MB — limits 1500/50/25).
+
+### 7.6 Verification gate (all green, this machine)
+| Gate | Result |
+|---|---|
+| `cargo clippy --release` | **0 warnings** (delta regression fixed) |
+| `cargo build --release` | clean, 0 warnings |
+| `cargo test --release --lib` | **100/100** |
+| `AUTHR_MOCK_KEYCHAIN=1` full E2E | **195/195** (tiers 119+62+6+8) |
+| `benchmark_run` | **pass** |
+| `npm run build` (tsc + vite) | clean |
+| `scripts/refresh_acceptance.py` | `test_results.json` regenerated |

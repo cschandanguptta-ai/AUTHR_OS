@@ -152,7 +152,6 @@ dependencies = [
  "rayon",
  "rubato",
  "rusqlite",
- "serde",
  "serde_json",
  "sha2",
  "symphonia",
