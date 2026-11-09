@@ -660,7 +660,6 @@ mod tests {
     }
 
     fn wav_bytes() -> Vec<u8> {
-        use std::io::Seek;
         let spec = hound::WavSpec { channels: 1, sample_rate: 24000, bits_per_sample: 16, sample_format: hound::SampleFormat::Int };
         let mut cur = std::io::Cursor::new(Vec::new());
         {

@@ -117,3 +117,36 @@ run the QC gate → keep the buffer ≥ 4 → publish on cadence → package wit
 (the blueprint's own caveat), not a guarantee — but it is now enforced,
 logged and queryable inside the bundle instead of living in the author's
 head.
+
+## 7. The video-novel product line (v1.5)
+
+NovelCast Studio's method — a voiced, illustrated, timed video per chapter —
+now ships inside the same offline runtime as the audio pipeline (ADR-0011),
+which opens a third storefront lane beside the ebook and the audiobook:
+faceless "video novel" channels (YouTube/TikTok serialized fiction, Patreon
+early-access screenings) monetize the same manuscript a third time.
+
+- **One derivation, three media**: the draft-time hook
+  (`video::derive::refresh_chapter_media`, wired into `segment_append` and
+  `sync_lexical_ast_mutation`) computes scenes, durations, cast mentions and
+  narration paths once per change — audio, image and video stages consume the
+  same rows, so the LLM (or the author) never re-analyzes a chapter to plan
+  another medium.
+- **Consistency ladder**: every principal character owns an R2I-style
+  reference sheet (book-level, 1024×1024); scene frames embed the appearance
+  bio verbatim on every tier (multi-ref → text-only degradation), so faces
+  and palettes stay stable across a chapter — the #1 reported failure of
+  naive text-to-scene pipelines.
+- **SCRIPTED engine is the default**: fully offline, deterministic,
+  zero-dependency (BMP + embedded 5×7 font + seeded palettes) — the video
+  pipeline works on a plane. `AUTHR_IMG_ENDPOINT` upgrades sheets/scenes to a
+  hosted image model when one is configured, and fails closed when it is not.
+- **Narration reuse**: `video_assemble` auto-concatenates the per-scene audio
+  the TTS pipeline already produced (`auto:pipeline-audio`) — the audiobook
+  and the video novel share one voice track; silent track only when no
+  synthesis has run.
+- **Workflow**: draft (derivation happens on save) → `video_plan` (ladder +
+  missing sheets) → `video_render` (sheets first, then scenes) →
+  `video_assemble` (MP4 with Ken Burns focal anchors + subtitles) →
+  `video_validate` (plan-vs-file gate, 1.5 s tolerance) → upload per the
+  platform's specs.

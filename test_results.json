@@ -1,16 +1,16 @@
 {
- "suite": "AUTHR_OS Desktop \u2014 Phase 1\u20136 + v1.3/v1.4 Craft & Retention acceptance (contract v1.4)",
- "recorded_at": "2026-11-09T11:51:23.334430+00:00",
+ "suite": "AUTHR_OS Desktop \u2014 Phase 1\u20136 + v1.3\u2013v1.5 Craft, Retention & Video Novel acceptance (contract v1.5)",
+ "recorded_at": "2026-11-09T13:05:15.202423+00:00",
  "rust": {
   "toolchain": "rustc 1.99.1",
   "crate": "authr 3.0.0",
   "build": "cargo build --release: 0 warnings",
-  "unit_tests": "100 passed (dsp kernels, tts protocols, scheduler, rag, llm, publish+cover, release, craft catalog/engine/kdp, retention kit, epub storefront front matter)"
+  "unit_tests": "120 passed (dsp kernels, tts protocols, scheduler, rag, llm, publish+cover, release, craft catalog/engine/kdp, retention kit, epub storefront front matter, video novel studio: frame/derive/render/assemble/validate)"
  },
  "e2e_full_suite": {
   "suite": "AUTHR_OS E2E",
   "exit_code": 0,
-  "passed": 195,
+  "passed": 205,
   "failed": 0,
   "tier": null,
   "feature": null,
@@ -18,27 +18,27 @@
  },
  "tiers": {
   "tier1": {
-   "passed": 119,
+   "passed": 129,
    "failed": 0,
-   "duration_s": 8.87,
-   "modules": 19
+   "duration_s": 12.16,
+   "modules": 20
   },
   "tier2": {
    "passed": 62,
    "failed": 0,
-   "duration_s": 3.62,
+   "duration_s": 3.63,
    "modules": 10
   },
   "tier3": {
    "passed": 6,
    "failed": 0,
-   "duration_s": 2.51,
+   "duration_s": 2.76,
    "modules": 1
   },
   "tier4": {
    "passed": 8,
    "failed": 0,
-   "duration_s": 3.47,
+   "duration_s": 3.8,
    "modules": 4
   }
  },
@@ -50,29 +50,29 @@
  },
  "benchmark_gates": {
   "cold_start": {
-   "median_ms": 1.897,
-   "p95_ms": 2.246,
+   "median_ms": 1.947,
+   "p95_ms": 2.233,
    "limit_ms": 1500.0
   },
   "rss": {
-   "peak_mb": 6.28,
+   "peak_mb": 6.12,
    "limit_mb": 50.0
   },
   "binary": {
-   "mb": 11.02,
+   "mb": 11.22,
    "limit_mb": 25.0
   },
   "pass": true
  },
  "totals": {
-  "e2e_tests": 195,
+  "e2e_tests": 205,
   "pass_rate": "100%",
-  "commands": 65,
+  "commands": 69,
   "error_codes": 14,
-  "test_modules": 34,
-  "rust_unit_tests": 100,
-  "phases": "1\u20136 complete + v1.3 craft & KDP + v1.4 retention kit \u2014 Golden Master v3.0.0-PROD",
-  "contract_version": "1.4"
+  "test_modules": 35,
+  "rust_unit_tests": 120,
+  "phases": "1\u20136 complete + v1.3 craft & KDP + v1.4 retention kit + v1.5 video novel studio \u2014 Golden Master v3.0.0-PROD",
+  "contract_version": "1.5"
  },
- "verification_note": "Acceptance on 2026-11-09 (contract v1.4): 195/195 E2E + 100/100 Rust unit tests green, tsc + vite clean, cargo build 0 warnings, all benchmark gates pass. v1.3 adds the craft catalog (25 formats / 37 personas / 18 arcs), beat scaffolding and KDP storefront packaging (kdp_check/kdp_package). Storefront-grade EPUB: cover embedding with dimension validation, title/copyright front matter, DC metadata from the KDP payload. v1.4 adds the SFB-2.0 retention kit (craft_retention_check/report/worksheet, craft_catalog kind=retention): seven-beat chapter model, six ending types with last-3 rotation, 10\u201315 chapter micro-arc cycle, 7\u00d70\u20132 QC rubric with zero-flag rule, A\u2013E worksheet, 1000\u20132000 word guidance and cadence arithmetic."
+ "verification_note": "Acceptance on 2026-11-09 (contract v1.5): 205/205 E2E + 120/120 Rust unit tests green, tsc + vite clean, cargo build 0 warnings, clippy 0 warnings, all benchmark gates pass. v1.3 adds the craft catalog (25 formats / 37 personas / 18 arcs), beat scaffolding and KDP storefront packaging (kdp_check/kdp_package). Storefront-grade EPUB: cover embedding with dimension validation, title/copyright front matter, DC metadata from the KDP payload. v1.4 adds the SFB-2.0 retention kit (craft_retention_check/report/worksheet, craft_catalog kind=retention): seven-beat chapter model, six ending types with last-3 rotation, 10\u201315 chapter micro-arc cycle, 7\u00d70\u20132 QC rubric with zero-flag rule, A\u2013E worksheet, 1000\u20132000 word guidance and cadence arithmetic. v1.5 adds the video novel studio (video_plan/render/assemble/validate): draft-time media derivation (no-double-work contract), deterministic SCRIPTED image engine (BMP + 5\u00d77 font + seeded palettes), R2I reference sheets with the consistency ladder, R2I_ENDPOINT fail-closed seam, one-pass ffmpeg MP4 (Ken Burns + focal anchors + narration reuse + SRT)."
 }

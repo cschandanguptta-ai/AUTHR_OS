@@ -1,4 +1,4 @@
-# AUTHR_OS — Frozen IPC / CLI Contract (v1.4)
+# AUTHR_OS — Frozen IPC / CLI Contract (v1.5)
 
 **Status**: v1 sections are FROZEN. v1.1 (Phases 4–5) extended the surface
 **additively**: 13 new commands (§4.11–4.12) and 4 new error codes in two new
@@ -7,8 +7,11 @@ categories (§3). v1.2 (Phase 6) extends it further: 8 new commands (§4.13),
 extends it additively once more: 6 new commands (§4.14) and **one** new error
 code (`CRAFT_ERROR`, category `craft`). v1.4 (Retention & Serialization)
 adds 3 commands (§4.15) and a `retention` catalog kind — **no new codes**, no
-schema changes to frozen tables (additive `chapter_retention` only). Every
-v1/v1.1/v1.2/v1.3 command, code and semantic is untouched.
+schema changes to frozen tables (additive `chapter_retention` only). v1.5
+(Video Novel Studio) adds 4 commands (§4.16) — **no new codes** (reuses
+`AUDIO_ERROR` / `BUNDLE_ERROR` / `AI_ENGINE_UNAVAILABLE`), additive storage
+only (`video_scenes`, `video_assets`). Every v1–v1.4 command, code and
+semantic is untouched.
 
 **Applies to**: Phase 1 (Storage Core), Phase 3 (Author's Cockpit UI),
 Phase 4 (Audio Studio), Phase 5 (Local-First AI & Vector RAG),
@@ -73,7 +76,7 @@ Exactly **one line** of JSON on stdout. Exit code `0` on success, `1` on failure
 |------|----------|-------------|
 | `CRAFT_ERROR` | craft | Invalid craft/KDP/retention args: unknown format/arc/persona id, >7 keywords, >2 categories, description outside 20–4000 chars, price outside 0.99–200, unknown catalog `kind`, malformed QC scores (≠7 or outside 0–2), unknown `ending_type`, `chapter_number` < 1, notes > 2000 chars |
 
-## 4. Command Surface (65 commands)
+## 4. Command Surface (69 commands)
 
 ### 4.1 Project lifecycle
 
@@ -289,6 +292,45 @@ always present ahead of the chapters; the OPF gains `dc:description`
 {embedded, path?, media?, width?, height?, ratio?, warnings[], hint?}` and
 `front_matter: ["title.xhtml", "copyright.xhtml"]` and extends `dc` with
 `description, subject, subtitle`.
+
+### 4.16 Video Novel Studio (v1.5)
+
+The audio pipeline's architecture applied to images: NovelCast Studio's
+method (text → scenes/characters → speech + character reference sheets →
+scene art → timed video) folded into the offline-first runtime. **No double
+work**: `segment_append` and `sync_lexical_ast_mutation` carry a draft-time
+media-derivation hook (`video::derive::refresh_chapter_media`) that computes
+and persists — exactly once per change — the canonical `video_scenes` rows
+(one scene per narration segment, canonical duration = stored
+`audio_duration_ms` or the shared `estimate_duration_ms`, deterministic ≤3-
+character mention scan, focal defaults). Every stage below consumes those
+rows; nothing re-derives. Storage is additive:
+`video_scenes(chapter_id, book_id, scene_index, segment_id, sequence_order,
+speaker_id, text_chars, duration_ms, characters_json, focal,
+audio_cache_path)` and `video_assets(book_id, chapter_number, kind
+TITLE|SHEET|SCENE, ref_key, engine, path, sha256, width, height, bytes)` —
+eager idempotent migrations; `chapter_number = 0` is the book-level sheet
+sentinel (one reference sheet per character per book). Engines mirror the
+TTS negotiation: `SCRIPTED` (deterministic offline BMP painter with an
+embedded 5×7 font, seeded palettes — always available) and `R2I_ENDPOINT`
+(OpenAI-compatible image endpoint via `AUTHR_IMG_ENDPOINT`, the novelcast
+ADR-0002 custom tier — fails CLOSED with `AI_ENGINE_UNAVAILABLE` when
+unset). The consistency ladder (novelcast ADR-0004): appearance bio text
+rides verbatim on every tier; multi-reference editing is the documented
+future seam. Assembly is one ffmpeg pass (`ffmpeg_bin` resolution identical
+to `publish_m4b`: args → `AUTHR_FFMPEG_BIN` → PATH, missing ⇒ `BUNDLE_ERROR`):
+1280×720 @ 30 fps, Ken Burns zoompan per scene (alternating push-in/pull-out,
+anchored on the persisted focal point), hard cuts, optional narration
+(auto-concatenated per-scene pipeline audio when present — audio work is
+never redone) and SRT soft-mux. `video_validate` gates the chain
+(kdp_check-shaped).
+
+| # | Command | Args (JSON) | Result `data` |
+|---|---------|-------------|---------------|
+| 66 | `video_plan` | `{chapter_id}` | `{chapter_id, book_id, chapter_number, derived:{refreshed, durations_filled, source}, scenes:[{scene_index, segment_id, sequence_order, speaker_id, text_chars, duration_ms, characters[], focal, narration_path?, ladder REFS_READY|PARTIAL|TEXT_ONLY}], scene_count, total_ms, title_ms, fps, resolution, ladder:{refs_ready, partial, text_only}, missing_sheets[], narration_ready}` — read-only over the draft-time derived rows |
+| 67 | `video_render` | `{chapter_id, engine?=SCRIPTED, scene_index?, sheets_only?, characters?, focal?{scene_index:center|left|right|top|bottom}}` | `{chapter_id, book_id, chapter_number, engine, rendered:[{kind, ref, scene_index?, path, sha256, width, height, bytes, characters?}], reused, assets?}` — writer (lease enforced); idempotent (byte-deterministic SCRIPTED output, registry upsert); focal map persists into `video_scenes.focal` (user state, inherited across re-derives) |
+| 68 | `video_assemble` | `{chapter_id, narration?(bundle-relative), srt?, fps?(12–60, default 30), ffmpeg_bin?}` | `{out exports/video_ch{NN}.mp4, bytes, scenes, clips, duration_ms, fps, resolution, narration (""/"auto:pipeline-audio"/path), srt, codec "h264 yuv420p + aac 96k mono 44.1kHz", ffmpeg}` — writer; auto-renders missing SCRIPTED assets first (ensure semantics) |
+| 69 | `video_validate` | `{chapter_id, ffmpeg_bin?}` | `{ok, checks:[{name, status PASS|WARN|FAIL, detail}], plan:{chapter_id, chapter_number, book_id, scenes, total_ms, resolution}}` — read-only; duration probe tolerance 1500 ms (AAC priming) |
 
 ## 5. Row Shapes (camel-free — snake_case exactly as SQLite)
 

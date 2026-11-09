@@ -12,12 +12,13 @@ pub mod rag;
 pub mod security;
 pub mod shadow;
 pub mod storage;
+pub mod video;
 
 #[cfg(feature = "gui")]
 pub mod shell;
 
-pub const CONTRACT_VERSION: &str = "1.4";
-pub const COMMAND_COUNT: usize = 65;
+pub const CONTRACT_VERSION: &str = "1.5";
+pub const COMMAND_COUNT: usize = 69;
 
 /// The frozen command surface (docs/CLI_CONTRACT.md §4).
 pub const COMMANDS: &[&str] = &[
@@ -101,4 +102,9 @@ pub const COMMANDS: &[&str] = &[
     "craft_retention_check",
     "craft_retention_report",
     "craft_retention_worksheet",
+    // 4.16 video novel studio (v1.5)
+    "video_plan",
+    "video_render",
+    "video_assemble",
+    "video_validate",
 ];

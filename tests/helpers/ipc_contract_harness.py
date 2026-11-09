@@ -8,6 +8,9 @@ category; 6 new commands (§4.14).
 Contract v1.4 (retention & serialization): no new codes; 3 new commands
 (§4.15) and a `retention` catalog kind. Storage stays additive
 (`chapter_retention`).
+Contract v1.5 (video novel studio): no new codes (reuses AUDIO_ERROR /
+BUNDLE_ERROR / AI_ENGINE_UNAVAILABLE); 4 new commands (§4.16). Storage
+stays additive (`video_scenes`, `video_assets`).
 """
 
 CANONICAL_CODES = {
@@ -77,9 +80,11 @@ CONTRACT_COMMANDS = [
     "kdp_check", "kdp_package",
     # v1.4 — retention & serialization kit (§4.15)
     "craft_retention_check", "craft_retention_report", "craft_retention_worksheet",
+    # v1.5 — video novel studio (§4.16)
+    "video_plan", "video_render", "video_assemble", "video_validate",
 ]
 
-EXPECTED_COMMAND_COUNT = 65
+EXPECTED_COMMAND_COUNT = 69
 
 ROW_FIELDS = {
     "book": ["id", "title", "author", "genre", "premise", "theme", "narrative_structure",

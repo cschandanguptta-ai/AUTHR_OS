@@ -103,6 +103,13 @@ pub fn update(ctx: &mut crate::ipc::Ctx, a: &Value) -> Result<Value, AppError> {
 pub fn delete(ctx: &mut crate::ipc::Ctx, id: i64) -> Result<Value, AppError> {
     let row = get(&ctx.conn, id)?;
     ctx.conn.execute("DELETE FROM chapters WHERE id = ?1", rusqlite::params![id])?;
+    // v1.5 (ADR-0011): purge the derived media rows — no orphan scenes.
+    if let (Some(b), Some(n)) = (
+        row.get("book_id").and_then(|v| v.as_i64()),
+        row.get("chapter_number").and_then(|v| v.as_i64()),
+    ) {
+        let _ = crate::video::derive::purge_chapter(&ctx.conn, id, b, n);
+    }
     // Tech-debt T-4: deletions follow the same bookkeeping as every other
     // mutation — manifest touch BEFORE shadow/git sync (invariant §1.2),
     // then a contract-locked snapshot commit (§8 message reused) so the

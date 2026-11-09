@@ -61,7 +61,7 @@ the payload is applied (verified by `tests/tier1_features/test_t1_release_bench.
 ## Golden Master checklist (Sprint 16)
 
 1. `cargo build --release` — zero warnings
-2. `python3 tests/run_e2e.py` — full suite green (contract harness asserts the 65-command surface)
+2. `python3 tests/run_e2e.py` — full suite green (contract harness asserts the 69-command surface)
 3. `authr benchmark_run --args '{}'` — `pass:true` (cold start / RSS / binary)
 4. `authr release_manifest` with the production key → `latest.json` + signature
 5. `authr release_verify` → `valid:true`

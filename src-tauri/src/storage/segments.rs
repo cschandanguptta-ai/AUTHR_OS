@@ -40,6 +40,11 @@ pub fn append(ctx: &mut crate::ipc::Ctx, a: &Value) -> Result<Value, AppError> {
                           rate, pitch, text, ambient, sfx],
     )?;
     super::chapters::refresh_word_count(&ctx.conn, chapter_id)?;
+    // Draft-time media derivation (v1.5, ADR-0011): durations, scenes, cast
+    // mentions computed HERE so audio/video/image stages never re-derive.
+    // Best-effort: a derivation failure must not block the draft write —
+    // stage entry-points re-run it as catch-up (documented in ADR-0011).
+    let _ = crate::video::derive::refresh_chapter_media(&ctx.conn, chapter_id);
     let row = get(&ctx.conn, &segment_id)?;
     ctx.after_commit()?; // manifest touch BEFORE shadow/git sync
     crate::shadow::render_chapter(ctx, chapter_id)?;
@@ -217,6 +222,8 @@ pub fn apply_mutation(ctx: &mut crate::ipc::Ctx, a: &Value) -> Result<Value, App
         .map_err(|e| AppError::storage(format!("commit: {e}")))?;
 
     super::chapters::refresh_word_count(&ctx.conn, chapter_id)?;
+    // Draft-time media derivation (see `append`) — best-effort catch-up.
+    let _ = crate::video::derive::refresh_chapter_media(&ctx.conn, chapter_id);
     ctx.after_commit()?; // manifest touch BEFORE shadow/git sync
     crate::shadow::render_chapter(ctx, chapter_id)?;
     let commit = crate::storage::git::auto_sync_commit(ctx, chapter_id)?;

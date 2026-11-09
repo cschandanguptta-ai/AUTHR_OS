@@ -79,9 +79,11 @@ pub const WRITER_COMMANDS: &[&str] = &[
     "craft_scaffold",
     "kdp_package",
     "craft_retention_check",
+    "video_render",
+    "video_assemble",
 ];
 
-/// Full contract dispatch (§4, 65 commands). `root` is the `--bundle` value.
+/// Full contract dispatch (§4, 69 commands). `root` is the `--bundle` value.
 pub fn dispatch(root: Option<&Path>, command: &str, args: &Value) -> IpcResult {
     // ── Bundle-free commands ────────────────────────────────────────────────
     match command {
@@ -222,6 +224,12 @@ pub fn dispatch(root: Option<&Path>, command: &str, args: &Value) -> IpcResult {
         "craft_retention_check" => crate::craft::retention::craft_retention_check(&mut ctx, args),
         "craft_retention_report" => crate::craft::retention::craft_retention_report(&mut ctx, args),
         "craft_retention_worksheet" => crate::craft::retention::craft_retention_worksheet(&mut ctx, args),
+
+        // ── 4.16 video novel studio (v1.5) ─────────────────────────
+        "video_plan" => crate::video::plan::video_plan(&ctx, args),
+        "video_render" => crate::video::render::video_render(&mut ctx, args),
+        "video_assemble" => crate::video::assemble::video_assemble(&mut ctx, args),
+        "video_validate" => crate::video::validate::video_validate(&ctx, args),
 
         other => Err(AppError::bundle(format!(
             "unknown command `{other}` — see docs/CLI_CONTRACT.md §4"

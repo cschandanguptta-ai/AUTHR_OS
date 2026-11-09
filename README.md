@@ -18,12 +18,14 @@ Tailwind CSS / Meta's Lexical AST** under a Zero-Double-Work paradigm.
 | Phase 5 — Local-First AI & Vector RAG | ✅ hashing-384 embedder (+ONNX seam), dense/FTS5/hybrid-RRF retrieval, `rag_chunks` store, offline grammar LLM + llama-server client (`cache_prompt`, `keep_alive:-1`), Kokoro-82M availability path |
 | Phase 6 — Publishing & Hardening | ✅ EPUB 3 compiler with SMIL overlays, DOCX manuscript, Typst print engine (.typ + optional PDF), synced .lrc/.vtt captions, ACX M4B audiobook (ffmpeg AAC + chapter atoms), ed25519 release signing/verification, Tauri bundler + updater config, benchmark gates (cold start 1.7 ms / RSS 6.2 MB / binary 10.1 MB) |
 | v1.3 — Craft Catalog & Storefront Packaging | ✅ 25 project formats · 37 bestseller-archetype style personas (LLM prompt directives) · 18 plot arcs with beat sheets + deterministic scaffolding · beat progress fused with the Chekhov ledger · KDP compliance scoring (`kdp_check`) and storefront packages (`kdp_package`: metadata.json, KDP-safe description.html, copyright page, launch checklist, royalty projection) — see `docs/GO_TO_MARKET.md` |
+| v1.4 — Retention & Serialization Kit | ✅ SFB-2.0 as executable craft machinery (`craft_catalog kind=retention`): seven-beat chapter model, six ending types with last-3 rotation blocking, 10–15 chapter micro-arc cycle, 7×0–2 QC rubric with zero-flag rule, A–E drafting worksheet, cadence/buffer arithmetic from the real chapter pipeline — see `docs/GO_TO_MARKET.md` §6 |
+| v1.5 — Video Novel Studio | ✅ draft-time media derivation (audio/video/image state computed ONCE on the write path — the no-double-work contract) · deterministic offline SCRIPTED image engine (BMP + embedded 5×7 font + SHA-256-seeded palettes, byte-identical re-renders) · R2I character reference sheets with the consistency ladder (novelcast ADR-0004) · `R2I_ENDPOINT` fail-closed seam (`AUTHR_IMG_ENDPOINT`) · one-pass ffmpeg MP4 (1280×720@30, Ken Burns with persisted focal anchors, narration auto-reused from the audio pipeline, SRT soft-mux) · `video_validate` gate (plan vs registry vs encoded file) — see `docs/decisions/ADR-0011-video-novel-studio.md` |
 
 ## Layout
 
 ```
 AUTHR_OS/
-├── docs/CLI_CONTRACT.md      # FROZEN 62-command IPC surface v1.3 (all transports obey)
+├── docs/CLI_CONTRACT.md      # FROZEN 69-command IPC surface v1.5 (all transports obey)
 ├── docs/GO_TO_MARKET.md      # one-person authoring/publishing house playbook (KDP etc.)
 ├── docs/LOCAL_AI.md          # Phase-5 extension points (ort / llama.cpp / models/)
 ├── docs/PACKAGING.md         # Phase-6 installer matrix, signing, auto-updater
@@ -44,6 +46,9 @@ AUTHR_OS/
 │       │                     #          ed25519 release signing, benchmark gates
 │       ├── craft/            # v1.3/v1.4: formats/personas/arcs catalogs, beat engine,
 │       │                     #          retention kit (SFB-2.0), KDP check + package builder
+│       ├── video/            # v1.5: draft-time media derivation, SCRIPTED BMP engine
+│       │                     #          (5×7 font, seeded palettes), R2I sheets + ladder,
+│       │                     #          ffmpeg MP4 assembly (Ken Burns + narration reuse)
 │       ├── ipc/              # dispatcher — CLI, Tauri and dev bridge share it
 │       ├── shell/            # Tauri v2 window builder (feature = "gui")
 │       └── main.rs           # `authr` CLI (single-line JSON envelope)
@@ -86,7 +91,7 @@ npm run dev                    # http://localhost:5173
 envelope, so Lexical edits, binder trees and studio tables drive the actual
 Rust core. No Tauri required until packaging.
 
-### 3. E2E test suite (195 tests · 34 modules)
+### 3. E2E test suite (205 tests · 35 modules)
 
 ```bash
 python tests/run_e2e.py                 # all 4 tiers
@@ -103,9 +108,9 @@ Headless environments: the suite sets `AUTHR_MOCK_KEYCHAIN=1`
 
 Every transport — `#[tauri::command]`, the CLI, and the browser dev bridge —
 dispatches through one frozen surface: **`docs/CLI_CONTRACT.md`**
-(v1.4: 65 commands · `{ok,data}` / `{ok:false,error{code,message,category}}` envelopes ·
+(v1.5: 69 commands · `{ok,data}` / `{ok:false,error{code,message,category}}` envelopes ·
 14 canonical error codes across 6 categories · 120 s lease TTL · shadow-format &
 git-message rules). The 9 v1 codes and 35 v1 commands are untouched; v1.1 adds
 the Phase 4/5 studio surface, v1.2 the Phase 6 publishing surface, v1.3 the
-craft/KDP surface and v1.4 the retention/serialization surface — all
-additively. Changes require a contract version bump.
+craft/KDP surface, v1.4 the retention/serialization surface and v1.5 the video
+novel studio — all additively. Changes require a contract version bump.

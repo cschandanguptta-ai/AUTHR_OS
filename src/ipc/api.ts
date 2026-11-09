@@ -526,5 +526,107 @@ export function localLlmGenerate(args: {
   );
 }
 
+// ── 4.16 Video novel studio (v1.5) ───────────────────────────────────────────
+
+export interface VideoScene {
+  scene_index: number;
+  segment_id: string;
+  sequence_order: number;
+  speaker_id: string;
+  text_chars: number;
+  duration_ms: number;
+  characters: string[];
+  focal: 'center' | 'left' | 'right' | 'top' | 'bottom';
+  narration_path: string | null;
+  ladder: 'REFS_READY' | 'PARTIAL' | 'TEXT_ONLY';
+}
+
+export function videoPlan(args: { chapter_id: number }) {
+  return invoke<{
+    chapter_id: number;
+    book_id: number;
+    chapter_number: number;
+    derived: { refreshed: boolean; durations_filled: number; source: string };
+    scenes: VideoScene[];
+    scene_count: number;
+    total_ms: number;
+    title_ms: number;
+    fps: number;
+    resolution: string;
+    ladder: { refs_ready: number; partial: number; text_only: number };
+    missing_sheets: string[];
+    narration_ready: boolean;
+  }>('video_plan', args);
+}
+
+export interface VideoAsset {
+  kind: 'TITLE' | 'SHEET' | 'SCENE';
+  ref: string;
+  scene_index?: number;
+  path: string;
+  sha256: string;
+  width: number;
+  height: number;
+  bytes: number;
+  engine: string;
+  characters?: string[];
+}
+
+export function videoRender(args: {
+  chapter_id: number;
+  engine?: 'SCRIPTED' | 'R2I_ENDPOINT';
+  scene_index?: number;
+  sheets_only?: boolean;
+  characters?: string[];
+  focal?: Record<string, string>;
+}) {
+  return invoke<{
+    chapter_id: number;
+    book_id: number;
+    chapter_number: number;
+    engine: string;
+    rendered: VideoAsset[];
+    reused: number;
+    assets?: VideoAsset[];
+  }>('video_render', args);
+}
+
+export function videoAssemble(args: {
+  chapter_id: number;
+  narration?: string;
+  srt?: string;
+  fps?: number;
+  ffmpeg_bin?: string;
+}) {
+  return invoke<{
+    out: string;
+    bytes: number;
+    scenes: number;
+    clips: number;
+    duration_ms: number;
+    fps: number;
+    resolution: string;
+    narration: string;
+    srt: string;
+    codec: string;
+    ffmpeg: string;
+  }>('video_assemble', args);
+}
+
+export function videoValidate(args: { chapter_id: number; ffmpeg_bin?: string }) {
+  return invoke<{
+    ok: boolean;
+    checks: Array<{ name: string; status: 'PASS' | 'WARN' | 'FAIL'; detail: string }>;
+    plan: {
+      chapter_id: number;
+      chapter_number: number;
+      book_id: number;
+      scenes: number;
+      total_ms: number;
+      resolution: string;
+    };
+  }>('video_validate', args);
+}
+
 // Convenience re-export of the segment AST type for API consumers.
 export type { NarrativeSegmentAst };

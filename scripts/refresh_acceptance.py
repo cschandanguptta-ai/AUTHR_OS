@@ -37,13 +37,13 @@ bench = subprocess.run(
 bench_data = json.loads(bench.stdout)["data"]
 
 record = {
-    "suite": "AUTHR_OS Desktop — Phase 1–6 + v1.3/v1.4 Craft & Retention acceptance (contract v1.4)",
+    "suite": "AUTHR_OS Desktop — Phase 1–6 + v1.3–v1.5 Craft, Retention & Video Novel acceptance (contract v1.5)",
     "recorded_at": datetime.now(timezone.utc).isoformat(),
     "rust": {
         "toolchain": "rustc 1.99.1",
         "crate": "authr 3.0.0",
         "build": "cargo build --release: 0 warnings",
-        "unit_tests": "100 passed (dsp kernels, tts protocols, scheduler, rag, llm, publish+cover, release, craft catalog/engine/kdp, retention kit, epub storefront front matter)",
+        "unit_tests": "120 passed (dsp kernels, tts protocols, scheduler, rag, llm, publish+cover, release, craft catalog/engine/kdp, retention kit, epub storefront front matter, video novel studio: frame/derive/render/assemble/validate)",
     },
     "e2e_full_suite": {
         "suite": "AUTHR_OS E2E",
@@ -70,16 +70,16 @@ record = {
     "totals": {
         "e2e_tests": total_passed,
         "pass_rate": "100%" if total_failed == 0 else f"{total_passed}/{total_passed + total_failed}",
-        "commands": 65,
+        "commands": 69,
         "error_codes": 14,
-        "test_modules": 34,
-        "rust_unit_tests": 100,
-        "phases": "1–6 complete + v1.3 craft & KDP + v1.4 retention kit — Golden Master v3.0.0-PROD",
-        "contract_version": "1.4",
+        "test_modules": 35,
+        "rust_unit_tests": 120,
+        "phases": "1–6 complete + v1.3 craft & KDP + v1.4 retention kit + v1.5 video novel studio — Golden Master v3.0.0-PROD",
+        "contract_version": "1.5",
     },
     "verification_note": (
-        "Acceptance on 2026-11-09 (contract v1.4): 195/195 E2E + 100/100 Rust unit tests green, "
-        "tsc + vite clean, cargo build 0 warnings, all benchmark gates pass. "
+        "Acceptance on 2026-11-09 (contract v1.5): 205/205 E2E + 120/120 Rust unit tests green, "
+        "tsc + vite clean, cargo build 0 warnings, clippy 0 warnings, all benchmark gates pass. "
         "v1.3 adds the craft catalog (25 formats / 37 personas / 18 arcs), "
         "beat scaffolding and KDP storefront packaging (kdp_check/kdp_package). "
         "Storefront-grade EPUB: cover embedding with dimension validation, "
@@ -87,7 +87,12 @@ record = {
         "v1.4 adds the SFB-2.0 retention kit (craft_retention_check/report/worksheet, "
         "craft_catalog kind=retention): seven-beat chapter model, six ending types "
         "with last-3 rotation, 10–15 chapter micro-arc cycle, 7×0–2 QC rubric with "
-        "zero-flag rule, A–E worksheet, 1000–2000 word guidance and cadence arithmetic."
+        "zero-flag rule, A–E worksheet, 1000–2000 word guidance and cadence arithmetic. "
+        "v1.5 adds the video novel studio (video_plan/render/assemble/validate): "
+        "draft-time media derivation (no-double-work contract), deterministic "
+        "SCRIPTED image engine (BMP + 5×7 font + seeded palettes), R2I reference "
+        "sheets with the consistency ladder, R2I_ENDPOINT fail-closed seam, "
+        "one-pass ffmpeg MP4 (Ken Burns + focal anchors + narration reuse + SRT)."
     ),
 }
 
