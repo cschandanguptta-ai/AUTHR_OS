@@ -3,7 +3,7 @@
 // authoring + publishing house.
 //
 //   FORMATS   — 25 project formats (novel → picture book → screenplay → memoir)
-//   PERSONAS  — 36 bestseller-archetype style personas (craft DNA, not
+//   PERSONAS  — 37 bestseller-archetype style personas (craft DNA, not
 //               impersonation: POV, tense, rhythm, pacing, an LLM directive)
 //   ARCS      — 18 plot structures with real beat sheets (Save the Cat,
 //               Hero's Journey, Kishōtenketsu, Story Circle, nonfiction…)

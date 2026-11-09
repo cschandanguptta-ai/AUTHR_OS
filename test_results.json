@@ -1,6 +1,6 @@
 {
  "suite": "AUTHR_OS Desktop \u2014 Phase 1\u20136 + v1.3/v1.4 Craft & Retention acceptance (contract v1.4)",
- "recorded_at": "2026-11-09T09:25:54.029257+00:00",
+ "recorded_at": "2026-11-09T11:18:00.928394+00:00",
  "rust": {
   "toolchain": "rustc 1.99.1",
   "crate": "authr 3.0.0",
@@ -20,25 +20,25 @@
   "tier1": {
    "passed": 119,
    "failed": 0,
-   "duration_s": 11.08,
+   "duration_s": 9.27,
    "modules": 19
   },
   "tier2": {
    "passed": 62,
    "failed": 0,
-   "duration_s": 4.16,
+   "duration_s": 3.41,
    "modules": 10
   },
   "tier3": {
    "passed": 6,
    "failed": 0,
-   "duration_s": 2.71,
+   "duration_s": 2.41,
    "modules": 1
   },
   "tier4": {
    "passed": 8,
    "failed": 0,
-   "duration_s": 3.86,
+   "duration_s": 3.49,
    "modules": 4
   }
  },
@@ -50,12 +50,12 @@
  },
  "benchmark_gates": {
   "cold_start": {
-   "median_ms": 1.954,
-   "p95_ms": 2.378,
+   "median_ms": 1.915,
+   "p95_ms": 2.21,
    "limit_ms": 1500.0
   },
   "rss": {
-   "peak_mb": 6.39,
+   "peak_mb": 6.36,
    "limit_mb": 50.0
   },
   "binary": {
