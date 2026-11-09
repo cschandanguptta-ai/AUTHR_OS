@@ -1,0 +1,2 @@
+# Prebuilt test binary ships only in the workspace zip, never in source exports.
+src-tauri/target/release/authr export-ignore
