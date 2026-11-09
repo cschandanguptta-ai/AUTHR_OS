@@ -628,5 +628,73 @@ export function videoValidate(args: { chapter_id: number; ffmpeg_bin?: string })
   }>('video_validate', args);
 }
 
+// ── 4.17 Provider settings ladder (v1.6, ADR-0012) ───────────────────────────
+
+export interface ProviderGetResult {
+  image: {
+    settings: {
+      endpoint_url: string | null;
+      model: string | null;
+      timeout_s: number | null;
+      retries: number | null;
+    };
+    resolved: {
+      endpoint_url: string | null;
+      endpoint_source: 'settings' | 'env' | 'none';
+      model: string | null;
+      model_source: 'settings' | 'env' | 'none';
+      timeout_s: number;
+      retries: number;
+      key_configured: boolean;
+      key_source: 'env' | 'keychain' | 'none';
+    };
+  };
+  llm: {
+    settings: { server_url: string | null };
+    resolved: {
+      server_url: string | null;
+      source: 'settings' | 'env' | 'offline';
+    };
+  };
+  ladder: string;
+}
+
+export interface ProviderTestResult {
+  ok: boolean;
+  latency_ms: number;
+  bytes: number;
+  ext: string;
+  size: string;
+  model: string | null;
+  endpoint_source: 'args' | 'settings' | 'env';
+  key_source: 'env' | 'keychain' | 'none';
+  retries: number;
+  note: string;
+}
+
+export function providerGet() {
+  return invoke<ProviderGetResult>('provider_get', {});
+}
+
+export function providerSet(args: {
+  endpoint_url?: string | null;
+  model?: string | null;
+  timeout_s?: number | null;
+  retries?: number | null;
+  server_url?: string | null;
+}) {
+  return invoke<ProviderGetResult & { applied: string[] }>('provider_set', args);
+}
+
+export function providerTest(args: {
+  endpoint_url?: string;
+  model?: string;
+  size?: string;
+  timeout_s?: number;
+  retries?: number;
+}) {
+  return invoke<ProviderTestResult>('provider_test', args);
+}
+
 // Convenience re-export of the segment AST type for API consumers.
 export type { NarrativeSegmentAst };

@@ -66,7 +66,8 @@ pub fn generate(bundle_root: &Path, text: &str, voice: &str) -> Result<Value, Ap
 }
 
 /// `local_ai_status` — one umbrella probe for the local AI stack.
-pub fn status(bundle_root: &Path) -> Value {
+/// `llm_resolved` comes from the provider ladder (ADR-0012: settings > env).
+pub fn status(bundle_root: &Path, llm_resolved: Option<String>) -> Value {
     json!({
         "embedder": "hashing-384",
         "minilm_model_present": bundle_root.join("models").join("all-MiniLM-L6-v2.onnx").exists(),
@@ -75,7 +76,7 @@ pub fn status(bundle_root: &Path) -> Value {
             "model_present": model_present(bundle_root),
             "voices": KOKORO_VOICES,
         },
-        "llm": crate::localai::llm::status(),
+        "llm": crate::localai::llm::status(llm_resolved),
         "fallbacks": {
             "tts": "SCRIPTED",
             "llm": "OFFLINE_GRAMMAR",

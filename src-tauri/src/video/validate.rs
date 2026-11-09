@@ -171,6 +171,9 @@ mod tests {
     }
 
     #[test]
+    // Const contract guard: the bounds are deliberately compile-time values,
+    // so clippy's constant-assertion lint is silenced on purpose.
+    #[allow(clippy::assertions_on_constants)]
     fn tolerance_is_reasonable_for_aac_padding() {
         assert!(DURATION_TOLERANCE_MS >= 1000, "AAC priming samples shift durations");
         assert!(DURATION_TOLERANCE_MS <= 2500);

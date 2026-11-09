@@ -231,6 +231,11 @@ pub fn dispatch(root: Option<&Path>, command: &str, args: &Value) -> IpcResult {
         "video_assemble" => crate::video::assemble::video_assemble(&mut ctx, args),
         "video_validate" => crate::video::validate::video_validate(&ctx, args),
 
+        // ── 4.17 provider settings ladder (v1.6, ADR-0012) ─────────
+        "provider_get" => crate::ipc::studio::provider_get(&ctx, args),
+        "provider_set" => crate::ipc::studio::provider_set(&mut ctx, args),
+        "provider_test" => crate::ipc::studio::provider_test(&ctx, args),
+
         other => Err(AppError::bundle(format!(
             "unknown command `{other}` — see docs/CLI_CONTRACT.md §4"
         ))),

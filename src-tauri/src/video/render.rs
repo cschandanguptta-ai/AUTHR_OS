@@ -1,12 +1,13 @@
-// AUTHR_OS — Video asset rendering (contract v1.5, ADR-0011).
+// AUTHR_OS — Video asset rendering (contract v1.6, ADR-0011 + ADR-0012).
 //
 // Engines mirror the audio stack's negotiation pattern exactly:
 //   SCRIPTED      — deterministic offline painter (`video::frame`), the
 //                   default that always works headless (like scripted TTS)
-//   R2I_ENDPOINT  — OpenAI-compatible image endpoint via `AUTHR_IMG_ENDPOINT`
-//                   (the novelcast ADR-0002 "custom provider" tier). Fails
-//                   CLOSED with the canonical `AI_ENGINE_UNAVAILABLE` error
-//                   when the endpoint is not configured — never fakes output.
+//   R2I_ENDPOINT  — OpenAI-compatible image endpoint through the provider
+//                   settings ladder (ADR-0012: args > provider_settings table
+//                   > env `AUTHR_IMG_ENDPOINT` > fail-closed). Fails CLOSED
+//                   with the canonical `AI_ENGINE_UNAVAILABLE` error when no
+//                   live provider resolves — never fakes output.
 //
 // Assets are registered in `video_assets` (kind: TITLE | SHEET | SCENE; the
 // book-level sheet sentinel is chapter_number = 0). Rendering is idempotent:
@@ -24,7 +25,6 @@ use crate::error::AppError;
 use crate::ipc::args;
 use crate::ipc::Ctx;
 use serde_json::{json, Value};
-use std::io::Read as _;
 use sha2::{Digest, Sha256};
 use std::path::PathBuf;
 
@@ -250,7 +250,8 @@ pub fn video_render(ctx: &mut Ctx, a: &Value) -> Result<Value, AppError> {
             }
             Engine::Endpoint => {
                 let prompt = sheet_prompt(&c.display, &c.role, &c.bio);
-                let (bytes, ext) = endpoint_image(&prompt, "1024x1024")?;
+                let (bytes, ext, _cfg) =
+                    crate::providers::fetch_image_resolved(&ctx.conn, &prompt, "1024x1024")?;
                 let p = sheet_path.with_extension(ext);
                 std::fs::create_dir_all(sheet_path.parent().unwrap_or(p.as_path()))?;
                 std::fs::write(&p, &bytes)?;
@@ -368,88 +369,6 @@ fn sheet_prompt(name: &str, role: &str, bio: &str) -> String {
     )
 }
 
-/// OpenAI-compatible image endpoint (`AUTHR_IMG_ENDPOINT`): POST
-/// `{model?, prompt, size, n:1, response_format:"b64_json"}` → `data[0]`.
-/// Fails CLOSED when unset; never fakes a frame.
-fn endpoint_image(prompt: &str, size: &str) -> Result<(Vec<u8>, &'static str), AppError> {
-    let url = std::env::var("AUTHR_IMG_ENDPOINT").map_err(|_| {
-        AppError::ai_engine_unavailable(
-            "video image engine `R2I_ENDPOINT` requires AUTHR_IMG_ENDPOINT (OpenAI-compatible \
-             images endpoint); offline builds use engine=SCRIPTED",
-        )
-    })?;
-    let model = std::env::var("AUTHR_IMG_MODEL").unwrap_or_default();
-    let mut body = json!({
-        "prompt": prompt,
-        "size": size,
-        "n": 1,
-        "response_format": "b64_json",
-    });
-    if !model.is_empty() {
-        body["model"] = json!(model);
-    }
-    let resp = ureq::post(&url)
-        .timeout(std::time::Duration::from_secs(120))
-        .set("Content-Type", "application/json")
-        .send_string(&body.to_string())
-        .map_err(|e| AppError::ai_engine_unavailable(format!("image endpoint {url}: {e}")))?;
-    let mut bytes = Vec::new();
-    resp.into_reader()
-        .take(64 * 1024 * 1024)
-        .read_to_end(&mut bytes)
-        .map_err(|e| AppError::ai_engine_unavailable(format!("image endpoint read: {e}")))?;
-    let v: Value = serde_json::from_slice(&bytes)
-        .map_err(|e| AppError::ai_engine_unavailable(format!("image endpoint json: {e}")))?;
-    let b64 = v["data"][0]["b64_json"]
-        .as_str()
-        .ok_or_else(|| AppError::ai_engine_unavailable("image endpoint returned no data[0].b64_json"))?;
-    use base64_decode::decode_b64;
-    let raw = decode_b64(b64).ok_or_else(|| {
-        AppError::ai_engine_unavailable("image endpoint b64_json failed to decode")
-    })?;
-    // Sniff the container: PNG or JPEG only (validated again by the caller).
-    let ext = if raw.starts_with(&[0x89, b'P', b'N', b'G']) {
-        "png"
-    } else if raw.starts_with(&[0xFF, 0xD8]) {
-        "jpg"
-    } else {
-        return Err(AppError::ai_engine_unavailable(
-            "image endpoint returned neither PNG nor JPEG — refusing to register it",
-        ));
-    };
-    Ok((raw, ext))
-}
-
-/// Minimal base64 decoder (std-only; the runtime carries no base64 crate).
-mod base64_decode {
-    pub fn decode_b64(s: &str) -> Option<Vec<u8>> {
-        const T: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-        let mut table = [255u8; 256];
-        for (i, c) in T.iter().enumerate() {
-            table[*c as usize] = i as u8;
-        }
-        let mut out = Vec::with_capacity(s.len() / 4 * 3);
-        let mut acc: u32 = 0;
-        let mut bits = 0u32;
-        for ch in s.bytes() {
-            if ch == b'=' || ch == b'\n' || ch == b'\r' || ch == b' ' {
-                continue;
-            }
-            let v = table[ch as usize];
-            if v == 255 {
-                return None;
-            }
-            acc = (acc << 6) | v as u32;
-            bits += 6;
-            if bits >= 8 {
-                bits -= 8;
-                out.push((acc >> bits) as u8);
-            }
-        }
-        Some(out)
-    }
-}
-
 fn rel_of(root: &std::path::Path, p: &std::path::Path) -> String {
     p.strip_prefix(root)
         .map(|r| r.to_string_lossy().replace('\\', "/"))
@@ -470,15 +389,6 @@ mod tests {
         assert_eq!(Engine::parse("DEVICE").unwrap(), Engine::Scripted);
         assert_eq!(Engine::parse("R2I_ENDPOINT").unwrap(), Engine::Endpoint);
         assert!(Engine::parse("WARP_DRIVE").is_err());
-    }
-
-    #[test]
-    fn base64_decoder_handles_standard_and_padded_input() {
-        let d = super::base64_decode::decode_b64;
-        assert_eq!(d("TWFpbg==").unwrap(), b"Main".to_vec());
-        assert_eq!(d("TQ==").unwrap(), b"M".to_vec());
-        assert_eq!(d("TW Fp\nbg").unwrap(), b"Main".to_vec());
-        assert!(d("!!!!").is_none());
     }
 
     #[test]

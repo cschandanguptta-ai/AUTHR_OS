@@ -215,13 +215,15 @@ fn llama_server_generate(url: &str, req: &GenerateRequest) -> Result<Value, AppE
     }))
 }
 
-/// `local_llm_status` payload.
-pub fn status() -> Value {
-    let server = std::env::var("AUTHR_LLAMA_SERVER").ok();
+/// `local_llm_status` payload. `resolved` comes from the provider ladder
+/// (ADR-0012: settings > env); `None` keeps the offline grammar engine.
+pub fn status(resolved: Option<String>) -> Value {
+    let source = if resolved.is_some() { "settings_or_env" } else { "offline" };
     json!({
         "default_backend": "OFFLINE_GRAMMAR",
-        "server_configured": server.is_some(),
-        "server_url": server,
+        "server_configured": resolved.is_some(),
+        "server_url": resolved,
+        "resolved_source": source,
         "capabilities": {
             "grammar_constrained_output": true,
             "prompt_prefix_kv_cache": true,

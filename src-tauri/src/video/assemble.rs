@@ -318,7 +318,7 @@ mod tests {
         assert!(zout.contains("max(1.001,zoom-0.0006)"), "odd scenes pull out");
         assert!(zin.contains("x='iw*0.5-(iw/zoom)*0.5'"));
         assert!(zout.contains("x='iw*0.66-(iw/zoom)*0.66'"), "focal anchor rides into the graph");
-        assert!(zin.contains("s=1280x1280") == false);
+        assert!(!zin.contains("s=1280x1280"));
         assert!(zin.contains("s=1280x720"));
     }
 

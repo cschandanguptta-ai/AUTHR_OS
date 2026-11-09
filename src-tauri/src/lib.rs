@@ -7,6 +7,7 @@ pub mod craft;
 pub mod error;
 pub mod ipc;
 pub mod localai;
+pub mod providers;
 pub mod publish;
 pub mod rag;
 pub mod security;
@@ -17,8 +18,8 @@ pub mod video;
 #[cfg(feature = "gui")]
 pub mod shell;
 
-pub const CONTRACT_VERSION: &str = "1.5";
-pub const COMMAND_COUNT: usize = 69;
+pub const CONTRACT_VERSION: &str = "1.6";
+pub const COMMAND_COUNT: usize = 72;
 
 /// The frozen command surface (docs/CLI_CONTRACT.md §4).
 pub const COMMANDS: &[&str] = &[
@@ -107,4 +108,8 @@ pub const COMMANDS: &[&str] = &[
     "video_render",
     "video_assemble",
     "video_validate",
+    // 4.17 provider settings ladder (v1.6, ADR-0012)
+    "provider_get",
+    "provider_set",
+    "provider_test",
 ];

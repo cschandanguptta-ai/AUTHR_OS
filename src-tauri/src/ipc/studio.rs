@@ -421,8 +421,9 @@ pub fn rag_status(ctx: &Ctx, _a: &Value) -> IpcResult {
     }))
 }
 
-/// #45 local_llm_generate
-pub fn local_llm_generate(_ctx: &Ctx, a: &Value) -> IpcResult {
+/// #45 local_llm_generate — the server_url ladder lives here: explicit arg
+/// > provider settings (ADR-0012) > env `AUTHR_LLAMA_SERVER` > offline engine.
+pub fn local_llm_generate(ctx: &Ctx, a: &Value) -> IpcResult {
     let mut prompt = args::req_str(a, "prompt")?;
     if prompt.trim().is_empty() {
         return Err(AppError::ai("prompt must not be empty"));
@@ -447,7 +448,7 @@ pub fn local_llm_generate(_ctx: &Ctx, a: &Value) -> IpcResult {
             prompt);
         persona_used = Some(pid);
     }
-    let req = crate::localai::llm::GenerateRequest {
+    let mut req = crate::localai::llm::GenerateRequest {
         prompt,
         max_tokens: args::get_i64(a, "max_tokens").unwrap_or(64).clamp(1, 4096) as usize,
         temperature: args::get_f64(a, "temperature").unwrap_or(0.7),
@@ -455,6 +456,9 @@ pub fn local_llm_generate(_ctx: &Ctx, a: &Value) -> IpcResult {
         grammar: args::get_str(a, "grammar"),
         server_url: args::get_str(a, "server_url"),
     };
+    if req.server_url.is_none() {
+        req.server_url = crate::providers::resolve_llm_server(&ctx.conn);
+    }
     let mut out = crate::localai::llm::generate(&req)?;
     if let Some(pid) = persona_used {
         out["style_persona"] = json!(pid);
@@ -463,8 +467,29 @@ pub fn local_llm_generate(_ctx: &Ctx, a: &Value) -> IpcResult {
 }
 
 /// #46 local_llm_status
-pub fn local_llm_status(_ctx: &Ctx, _a: &Value) -> IpcResult {
-    Ok(crate::localai::llm::status())
+pub fn local_llm_status(ctx: &Ctx, _a: &Value) -> IpcResult {
+    Ok(crate::localai::llm::status(crate::providers::resolve_llm_server(
+        &ctx.conn,
+    )))
+}
+
+/// #49 provider_get (contract v1.6, ADR-0012)
+pub fn provider_get(ctx: &Ctx, _a: &Value) -> IpcResult {
+    crate::providers::get(&ctx.conn)
+}
+
+/// #49 provider_set (contract v1.6, ADR-0012) — validate + persist; keys stay
+/// in the keychain/env, never in the settings table.
+pub fn provider_set(ctx: &mut Ctx, a: &Value) -> IpcResult {
+    let out = crate::providers::set(&ctx.conn, a)?;
+    ctx.after_commit()?;
+    Ok(out)
+}
+
+/// #49 provider_test (contract v1.6, ADR-0012) — one real generation probe;
+/// arg overrides ride the ladder above settings. No assets are written.
+pub fn provider_test(ctx: &Ctx, a: &Value) -> IpcResult {
+    crate::providers::test(&ctx.conn, a)
 }
 
 /// #47 local_tts_generate
@@ -476,7 +501,8 @@ pub fn local_tts_generate(ctx: &mut Ctx, a: &Value) -> IpcResult {
 
 /// #48 local_ai_status
 pub fn local_ai_status(ctx: &Ctx, _a: &Value) -> IpcResult {
-    let mut out = crate::localai::tts::status(&ctx.root);
+    let llm = crate::providers::resolve_llm_server(&ctx.conn);
+    let mut out = crate::localai::tts::status(&ctx.root, llm);
     if let Ok(status) = crate::audio::cache::AudioCache::new(&ctx.root).stats() {
         out["audio_cache"] = json!({ "chunks": status.chunks, "bytes": status.bytes });
     }

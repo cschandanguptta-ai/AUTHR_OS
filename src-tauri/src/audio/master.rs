@@ -115,7 +115,7 @@ mod tests {
 
     fn sine(freq: f64, secs: f64, fs: u32, amp: f32) -> Vec<f32> {
         (0..(secs * fs as f64) as usize)
-            .map(|i| (((amp as f64) * (2.0 * std::f64::consts::PI * freq * i as f64 / fs as f64).sin())) as f32)
+            .map(|i| ((amp as f64) * (2.0 * std::f64::consts::PI * freq * i as f64 / fs as f64).sin()) as f32)
             .collect()
     }
 
@@ -168,7 +168,7 @@ mod tests {
         // Trailing 0.6 s of digital silence gives the 500 ms noise-floor
         // window a clean measurement bed without dropping RMS out of range.
         let mut deliverable = out.clone();
-        deliverable.extend(std::iter::repeat(0.0f32).take(44100 * 6 / 10));
+        deliverable.extend(vec![0.0f32; 44100 * 6 / 10]);
         let rep = validate_acx(&deliverable, 44100);
         assert!(rep.pass, "issues={:?}", rep.issues);
         assert!(rep.rms_ok && rep.peak_ok);
