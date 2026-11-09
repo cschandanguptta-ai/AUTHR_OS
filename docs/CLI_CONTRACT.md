@@ -1,15 +1,17 @@
-# AUTHR_OS — Frozen IPC / CLI Contract (v1.2)
+# AUTHR_OS — Frozen IPC / CLI Contract (v1.3)
 
 **Status**: v1 sections are FROZEN. v1.1 (Phases 4–5) extended the surface
 **additively**: 13 new commands (§4.11–4.12) and 4 new error codes in two new
 categories (§3). v1.2 (Phase 6) extends it further: 8 new commands (§4.13),
-**reusing the frozen error taxonomy** — no new codes. Every v1/v1.1 command,
-code and semantic is untouched. Any further change requires a contract
-version bump.
+**reusing the frozen error taxonomy** — no new codes. v1.3 (Craft & KDP)
+extends it additively once more: 6 new commands (§4.14) and **one** new error
+code (`CRAFT_ERROR`, category `craft`). Every v1/v1.1/v1.2 command, code and
+semantic is untouched.
 
 **Applies to**: Phase 1 (Storage Core), Phase 3 (Author's Cockpit UI),
 Phase 4 (Audio Studio), Phase 5 (Local-First AI & Vector RAG),
-Phase 6 (Publishing, Packaging & Hardening).
+Phase 6 (Publishing, Packaging & Hardening), Phase 8 (Craft Catalog &
+Storefront Packaging).
 
 ---
 
@@ -63,7 +65,13 @@ Exactly **one line** of JSON on stdout. Exit code `0` on success, `1` on failure
 | `AI_ERROR` | ai | Invalid RAG/LLM args (unknown source, mode, embedder, voice, empty query) |
 | `AI_ENGINE_UNAVAILABLE` | ai | llama-server unreachable, Kokoro/MiniLM model or runtime missing |
 
-## 4. Command Surface (56 commands)
+### v1.3 — 1 additive code (Craft & KDP)
+
+| Code | Category | Raised when |
+|------|----------|-------------|
+| `CRAFT_ERROR` | craft | Invalid craft/KDP args: unknown format/arc/persona id, >7 keywords, >2 categories, description outside 20–4000 chars, price outside 0.99–200, unknown catalog `kind` |
+
+## 4. Command Surface (62 commands)
 
 ### 4.1 Project lifecycle
 
@@ -211,6 +219,38 @@ that collapses hostile titles to safe bare names — traversal attempts raise
 | 52 | `release_manifest` | `{artifact, version?, url?, key_hex?, out?}` | `{manifest, manifest_data, artifact_bytes, artifact_sha256, generated_key_hex?}` — signs the artifact bytes with **ed25519**; key from `key_hex` / `AUTHR_RELEASE_KEY_HEX` / ephemeral (returned, CI-only); emits the Tauri-updater-shaped `latest.json` |
 | 53 | `release_verify` | `{manifest, artifact?}` | `{valid, checks:{sha256, signature}, artifact, version}` — independent verification; tampered artifacts report `valid:false` (still `ok:true`) |
 | 54 | `benchmark_run` | `{iterations?=7(3–25), cold_start_limit_ms?=1500, rss_limit_mb?=50, binary_limit_mb?=25}` | `{cold_start_ms:{iterations,min,median,p95,max,limit}, rss:{peak_kb,peak_mb,current_kb,limit_mb}, binary:{bytes,mb,limit_mb}, checks, pass}` — Sprint 16 hardening thresholds: median cold start <1.5 s, peak RSS <50 MB, binary <25 MB |
+
+### 4.14 Craft Catalog & Storefront Packaging (v1.3)
+
+The offline craft knowledge base: **25 project formats**, **37 bestseller-
+archetype style personas**, **18 plot-arc structures with beat sheets**, and
+Amazon KDP royalty constants. `craft_catalog` is bundle-free; the writers
+enforce the lease. Storage is purely additive: `craft_state` (per-book
+craft preset + plan + storefront payload) and `chapter_beats` (beat stamps)
+follow the `rag_chunks` idempotent-migration pattern; the frozen §6.1 DDL and
+all §5 row shapes are untouched. `craft_apply` also syncs the legacy visible
+columns `persona_id` (always) and `narrative_structure` (only when the arc
+maps to one of the four frozen CHECK values).
+
+| # | Command | Args (JSON) | Result `data` |
+|---|---------|-------------|---------------|
+| 57 | `craft_catalog` | `{kind?="all\|formats\|personas\|arcs\|pricing"}` | full catalog entries + counts + `pricing` (KDP constants, planning approximation) — bundle-free, deterministic, offline |
+| 58 | `craft_apply` | `{book_id, format_id?, plot_arc_id?, style_persona_id?, adopt_defaults?=false}` | `{book_id, format, plot_arc, style_persona, legacy_sync, state}` — validates ids (`CRAFT_ERROR`), upserts `craft_state`, syncs `persona_id`/`narrative_structure`, optionally adopts the format's default word/chapter targets |
+| 59 | `craft_scaffold` | `{book_id, plot_arc_id?, chapter_count?, start_chapter?=1, per_chapter_words?=3500, overwrite_synopsis?=false}` | `{book_id, plot_arc, arc_label, chapters_total, created, mapped, beats_total, plan[], chapters_created[]}` — deterministic beat mapping: chapter *i* of *n* carries beat `⌊i·b/n⌋` (monotonic, full coverage for any n); missing chapters are created (title = beat label, synopsis = beat guidance, act = 1+⌊3·beat/b⌋ clamped 1–3) |
+| 60 | `craft_progress` | `{book_id}` | `{total_beats, covered_beats, coverage_pct, beats:[{beat_id, label, guidance, chapters[], started}], chapters, total_words, target_words, unresolved_threads, plan}` — beat coverage fused with word counts and the Chekhov ledger |
+| 61 | `kdp_check` | `{book_id, price_usd?=4.99}` | `{pass, readiness_score(0–100), checks:{manuscript, epub, docx, cover, metadata, print, audio, polish}, issues:[{severity:FAIL\|WARN\|INFO, area, message, fix}], pricing_hint:{ebook 70%/35%, paperback, hardcover, audiobook_acx}, est_pages}` — read-only compliance scan over manuscript/exports/cover/metadata |
+| 62 | `kdp_package` | `{book_id, price_usd?=4.99, keywords?[≤7, ≤50 chars], categories?[≤2], description?(20–4000 chars, falls back to `marketing_copy`), subtitle?, language?="en", isbn?, publisher?, edition?, ai_disclosure?=false, drm?=false}` | `{package_dir: exports/kdp/<slug>/, files:[metadata.json, description.html, copyright-page.xhtml, checklist.md], metadata, royalties, issues, words, est_pages}` — writer; persists the storefront payload in `craft_state.storefront_json` |
+
+KDP packaging guarantees: `description.html` is rebuilt by a **whitelist
+sanitizer** (all input escaped; blank-line paragraphs, `- ` bullet lists,
+`*bold*`, `_italic_` only — no source tag can survive); the copyright page is
+a well-formed XHTML fragment with every value XML-escaped; royalty math is an
+offline planning approximation from `catalog::pricing()` — always re-verify
+current rates on kdp.amazon.com before filing real prices.
+
+Persona hooks: `local_llm_generate` accepts an additive `style_persona` arg
+(§4.12) — the persona's craft directive is prepended to the prompt for every
+backend, and the response carries `style_persona`.
 
 ## 5. Row Shapes (camel-free — snake_case exactly as SQLite)
 

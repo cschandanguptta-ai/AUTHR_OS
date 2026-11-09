@@ -25,7 +25,7 @@ test, 🔍 verified by inspection, ⏳ release-machine task (cannot run in CI).
 
 ## 3. IPC surface integrity
 
-- 56-command dispatch is table-driven; unknown commands fail closed
+- 62-command dispatch is table-driven; unknown commands fail closed
   (`BUNDLE_ERROR` + contract pointer) — ✅ contract harness asserts the exact
   frozen surface via `authr --contract` (`test_ip1`).
 - Error taxonomy is closed: 9 v1 codes + 4 v1.1 codes; Phase 6 reuses

@@ -10,6 +10,9 @@ EXPECTED_TABLES = [
     "lorebook",
     "unresolved_threads",
     "chapter_segments",
+    # additive migrations (rag_chunks pattern)
+    "craft_state",
+    "chapter_beats",
 ]
 
 EXPECTED_INDEXES = [
@@ -17,6 +20,8 @@ EXPECTED_INDEXES = [
     "idx_segments_chapter_order",
     "idx_segments_audio_hash",
     "idx_threads_status",
+    # additive (craft v1.3)
+    "idx_chapter_beats_beat",
 ]
 
 EXPECTED_TRIGGERS = [
@@ -59,6 +64,14 @@ TABLE_COLUMNS = {
         "sfx_cue", "prev_request_id", "audio_hash", "audio_cache_path",
         "audio_start_ms", "audio_duration_ms", "created_at", "last_modified_at",
     ],
+    # v1.3 additive craft tables
+    "craft_state": [
+        "book_id", "format_id", "plot_arc_id", "style_persona_id",
+        "plan_json", "storefront_json", "updated_at",
+    ],
+    "chapter_beats": [
+        "chapter_id", "beat_id", "beat_index", "beat_label",
+    ],
 }
 
 # Frozen CHECK enumerations (§6.1 DDL).
@@ -82,6 +95,8 @@ FOREIGN_KEYS = {
     "chapter_segments.speaker_id": ("character_profiles", "character_key", None),  # ON UPDATE CASCADE
     "unresolved_threads.introduced_in_chapter": ("chapters", "id", "CASCADE"),
     "unresolved_threads.resolved_in_chapter": ("chapters", "id", "SET NULL"),
+    "craft_state.book_id": ("books", "id", "CASCADE"),
+    "chapter_beats.chapter_id": ("chapters", "id", "CASCADE"),
 }
 
 PRAGMAS = {

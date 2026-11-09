@@ -161,6 +161,9 @@ pub fn open_db(root: &std::path::Path) -> Result<Connection, AppError> {
     conn.execute_batch(PRAGMAS_SQL)
         .map_err(|e| AppError::storage(format!("pragmas: {e}")))?;
     ensure_schema(&conn)?;
+    // v1.3 additive craft tables (idempotent, eager — every bundle carries
+    // them so the schema reference and craft commands see one stable shape).
+    crate::craft::engine::ensure_craft_schema(&conn)?;
     Ok(conn)
 }
 

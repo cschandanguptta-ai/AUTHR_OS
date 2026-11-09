@@ -423,9 +423,29 @@ pub fn rag_status(ctx: &Ctx, _a: &Value) -> IpcResult {
 
 /// #45 local_llm_generate
 pub fn local_llm_generate(_ctx: &Ctx, a: &Value) -> IpcResult {
-    let prompt = args::req_str(a, "prompt")?;
+    let mut prompt = args::req_str(a, "prompt")?;
     if prompt.trim().is_empty() {
         return Err(AppError::ai("prompt must not be empty"));
+    }
+    // Contract v1.3: optional style persona — its craft directive is
+    // prepended to the prompt so every backend (OFFLINE_GRAMMAR and
+    // llama-server alike) shapes output toward the chosen bestseller voice.
+    let mut persona_used: Option<String> = None;
+    if let Some(pid) = args::get_str(a, "style_persona") {
+        let persona = crate::craft::catalog::persona_by_id(&pid).ok_or_else(|| {
+            AppError::craft(format!(
+                "unknown style_persona `{pid}` — run craft_catalog kind=personas"
+            ))
+        })?;
+        let directive = persona["directive"].as_str().unwrap_or("");
+        prompt = format!("[STYLE PERSONA: {} — {} | POV: {} | Tense: {} | Rhythm: {}]\n{}",
+            persona["label"].as_str().unwrap_or(&pid),
+            directive,
+            persona["pov"].as_str().unwrap_or("—"),
+            persona["tense"].as_str().unwrap_or("—"),
+            persona["rhythm"].as_str().unwrap_or("—"),
+            prompt);
+        persona_used = Some(pid);
     }
     let req = crate::localai::llm::GenerateRequest {
         prompt,
@@ -435,7 +455,11 @@ pub fn local_llm_generate(_ctx: &Ctx, a: &Value) -> IpcResult {
         grammar: args::get_str(a, "grammar"),
         server_url: args::get_str(a, "server_url"),
     };
-    crate::localai::llm::generate(&req)
+    let mut out = crate::localai::llm::generate(&req)?;
+    if let Some(pid) = persona_used {
+        out["style_persona"] = json!(pid);
+    }
+    Ok(out)
 }
 
 /// #46 local_llm_status

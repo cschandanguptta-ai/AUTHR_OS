@@ -254,5 +254,157 @@ export function cleanSweep() {
   );
 }
 
+// ── 4.14 Craft catalog & storefront packaging (contract v1.3) ───────────────
+
+export interface CatalogEntry {
+  id: string;
+  label: string;
+  category?: string;
+  family?: string;
+  default_word_count?: number;
+  default_chapters?: number;
+  unit?: string;
+  kdp_note?: string;
+  pov?: string;
+  tense?: string;
+  rhythm?: string;
+  diction?: string;
+  pacing?: string;
+  signature?: string;
+  directive?: string;
+  lineage?: string;
+  legacy_structure?: string | null;
+  beats?: Array<{ id: string; label: string; guidance: string }>;
+  best_for?: string[];
+}
+
+export interface CraftCatalogResult {
+  kind: string;
+  formats?: CatalogEntry[];
+  personas?: CatalogEntry[];
+  arcs?: CatalogEntry[];
+  pricing?: Record<string, unknown>;
+  counts: { formats: number; personas: number; arcs: number };
+  offline: boolean;
+}
+
+export function craftCatalog(args: { kind?: string } = {}) {
+  return invoke<CraftCatalogResult>('craft_catalog', args);
+}
+
+export function craftApply(args: {
+  book_id: number;
+  format_id?: string;
+  plot_arc_id?: string;
+  style_persona_id?: string;
+  adopt_defaults?: boolean;
+}) {
+  return invoke<{
+    book_id: number;
+    format: CatalogEntry;
+    plot_arc: CatalogEntry;
+    style_persona: CatalogEntry;
+    legacy_sync: Record<string, unknown>;
+  }>('craft_apply', args);
+}
+
+export function craftScaffold(args: {
+  book_id: number;
+  plot_arc_id?: string;
+  chapter_count?: number;
+  start_chapter?: number;
+  per_chapter_words?: number;
+  overwrite_synopsis?: boolean;
+}) {
+  return invoke<{
+    book_id: number;
+    plot_arc: string;
+    arc_label: string;
+    chapters_total: number;
+    created: number;
+    mapped: number;
+    beats_total: number;
+    plan: Array<{ chapter_number: number; beat_id: string; beat_label: string; created: boolean }>;
+  }>('craft_scaffold', args);
+}
+
+export interface CraftProgressResult {
+  book_id: number;
+  format_id: string;
+  plot_arc_id: string;
+  arc_label: string | null;
+  style_persona_id: string;
+  total_beats: number;
+  covered_beats: number;
+  coverage_pct: number;
+  beats: Array<{
+    beat_index: number;
+    beat_id: string;
+    beat_label: string;
+    guidance: string;
+    chapters: Array<{ chapter_id: number; chapter_number: number; title: string; status: string; actual_word_count: number }>;
+    started: boolean;
+  }>;
+  chapters: number;
+  total_words: number;
+  target_words: number;
+  unresolved_threads: number;
+}
+
+export function craftProgress(args: { book_id: number }) {
+  return invoke<CraftProgressResult>('craft_progress', args);
+}
+
+export interface KdpCheckResult {
+  book_id: number;
+  pass: boolean;
+  readiness_score: number;
+  checks: Record<string, Record<string, unknown>>;
+  issues: Array<{ severity: 'FAIL' | 'WARN' | 'INFO'; area: string; message: string; fix?: string }>;
+  pricing_hint: Record<string, Record<string, unknown>>;
+  est_pages: number;
+}
+
+export function kdpCheck(args: { book_id: number; price_usd?: number }) {
+  return invoke<KdpCheckResult>('kdp_check', args);
+}
+
+export function kdpPackage(args: {
+  book_id: number;
+  price_usd?: number;
+  keywords?: string[];
+  categories?: string[];
+  description?: string;
+  subtitle?: string;
+  language?: string;
+  isbn?: string;
+  publisher?: string;
+  edition?: string;
+  ai_disclosure?: boolean;
+  drm?: boolean;
+}) {
+  return invoke<{
+    book_id: number;
+    package_dir: string;
+    files: Array<{ name: string; bytes: number }>;
+    royalties: Record<string, Record<string, unknown>>;
+    issues: Array<{ severity: string; message: string }>;
+    est_pages: number;
+  }>('kdp_package', args);
+}
+
+export function localLlmGenerate(args: {
+  prompt: string;
+  max_tokens?: number;
+  temperature?: number;
+  seed?: number;
+  style_persona?: string;
+}) {
+  return invoke<{ text: string; backend: string; style_persona?: string }>(
+    'local_llm_generate',
+    args,
+  );
+}
+
 // Convenience re-export of the segment AST type for API consumers.
 export type { NarrativeSegmentAst };

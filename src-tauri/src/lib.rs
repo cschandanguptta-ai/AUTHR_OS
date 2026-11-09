@@ -3,6 +3,7 @@
 
 pub mod audio;
 pub mod bundle;
+pub mod craft;
 pub mod error;
 pub mod ipc;
 pub mod localai;
@@ -15,8 +16,8 @@ pub mod storage;
 #[cfg(feature = "gui")]
 pub mod shell;
 
-pub const CONTRACT_VERSION: &str = "1.2";
-pub const COMMAND_COUNT: usize = 56;
+pub const CONTRACT_VERSION: &str = "1.3";
+pub const COMMAND_COUNT: usize = 62;
 
 /// The frozen command surface (docs/CLI_CONTRACT.md §4).
 pub const COMMANDS: &[&str] = &[
@@ -89,4 +90,11 @@ pub const COMMANDS: &[&str] = &[
     "release_manifest",
     "release_verify",
     "benchmark_run",
+    // 4.14 craft catalog & storefront packaging (v1.3)
+    "craft_catalog",
+    "craft_apply",
+    "craft_scaffold",
+    "craft_progress",
+    "kdp_check",
+    "kdp_package",
 ];

@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import { clamp } from '../lib/utils';
 
-export type StudioId = 'novel' | 'audio' | 'video' | 'localization' | 'marketing';
+export type StudioId = 'novel' | 'audio' | 'video' | 'localization' | 'marketing' | 'craft';
 export type ViewMode = 'clean' | 'script' | 'readalong';
 export type PaneKey = 'binder' | 'inspector';
 

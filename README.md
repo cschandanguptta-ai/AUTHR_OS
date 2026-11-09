@@ -17,19 +17,21 @@ Tailwind CSS / Meta's Lexical AST** under a Zero-Double-Work paradigm.
 | Phase 4 — Lookahead TTS & 3-Layer DSP Rack | ✅ content-addressable audio cache, Edge/ElevenLabs/Cartesia/OpenAI/HF-MMS connectors, DAG lookahead scheduler, IPA phonetics, sidechain ducking, EBU R128/BS.1770 mastering, ACX validation |
 | Phase 5 — Local-First AI & Vector RAG | ✅ hashing-384 embedder (+ONNX seam), dense/FTS5/hybrid-RRF retrieval, `rag_chunks` store, offline grammar LLM + llama-server client (`cache_prompt`, `keep_alive:-1`), Kokoro-82M availability path |
 | Phase 6 — Publishing & Hardening | ✅ EPUB 3 compiler with SMIL overlays, DOCX manuscript, Typst print engine (.typ + optional PDF), synced .lrc/.vtt captions, ACX M4B audiobook (ffmpeg AAC + chapter atoms), ed25519 release signing/verification, Tauri bundler + updater config, benchmark gates (cold start 1.7 ms / RSS 6.2 MB / binary 10.1 MB) |
+| v1.3 — Craft Catalog & Storefront Packaging | ✅ 25 project formats · 37 bestseller-archetype style personas (LLM prompt directives) · 18 plot arcs with beat sheets + deterministic scaffolding · beat progress fused with the Chekhov ledger · KDP compliance scoring (`kdp_check`) and storefront packages (`kdp_package`: metadata.json, KDP-safe description.html, copyright page, launch checklist, royalty projection) — see `docs/GO_TO_MARKET.md` |
 
 ## Layout
 
 ```
 AUTHR_OS/
-├── docs/CLI_CONTRACT.md      # FROZEN 56-command IPC surface v1.2 (all transports obey)
+├── docs/CLI_CONTRACT.md      # FROZEN 62-command IPC surface v1.3 (all transports obey)
+├── docs/GO_TO_MARKET.md      # one-person authoring/publishing house playbook (KDP etc.)
 ├── docs/LOCAL_AI.md          # Phase-5 extension points (ort / llama.cpp / models/)
 ├── docs/PACKAGING.md         # Phase-6 installer matrix, signing, auto-updater
 ├── docs/SECURITY_AUDIT.md    # Phase-6 hardening report (credentials, sandbox, IPC)
 ├── docs/BENCHMARKS.md        # Phase-6 measured thresholds (cold start / RSS / size)
 ├── src-tauri/                # Rust core runtime
 │   └── src/
-│       ├── error.rs          # 13-code taxonomy (storage/bundle/security/audio/ai)
+│       ├── error.rs          # 14-code taxonomy (storage/bundle/security/audio/ai/craft)
 │       ├── security/         # OS keychain (+ mock), path sandbox, zip-slip
 │       ├── storage/          # SQLite schema, entity CRUD, git2, cleaner
 │       ├── bundle/           # manifest v1, .authr_lock lease, atomic zip export/import
@@ -40,16 +42,18 @@ AUTHR_OS/
 │       ├── localai/          # Phase 5: offline LLM + llama-server client, Kokoro path
 │       ├── publish/          # Phase 6: EPUB 3/SMIL, DOCX, Typst, captions, M4B,
 │       │                     #          ed25519 release signing, benchmark gates
+│       ├── craft/            # v1.3: formats/personas/arcs catalogs, beat engine,
+│       │                     #          KDP check + storefront package builder
 │       ├── ipc/              # dispatcher — CLI, Tauri and dev bridge share it
 │       ├── shell/            # Tauri v2 window builder (feature = "gui")
 │       └── main.rs           # `authr` CLI (single-line JSON envelope)
 ├── src/                      # React 19 frontend (Author's Cockpit)
 │   ├── components/layout/    # 3-pane cockpit, Project Binder, Dynamic Inspector
 │   ├── components/editor/    # Lexical canvas, custom AST nodes, view modes
-│   ├── components/studios/   # Audio / Video / Localization / Marketing
+│   ├── components/studios/   # Audio / Video / Localization / Marketing / Craft
 │   ├── stores/               # Zustand domain stores
 │   └── ipc/                  # typed contract surface + transport bridge
-├── tests/                    # 30 modules · 168 E2E tests (pytest + run_e2e.py)
+├── tests/                    # 33 modules · 184 E2E tests (pytest + run_e2e.py)
 └── scripts/ipc-proxy.mjs     # browser dev bridge: POST /api/ipc → CLI
 ```
 
@@ -82,7 +86,7 @@ npm run dev                    # http://localhost:5173
 envelope, so Lexical edits, binder trees and studio tables drive the actual
 Rust core. No Tauri required until packaging.
 
-### 3. E2E test suite (168 tests · 30 modules)
+### 3. E2E test suite (184 tests · 33 modules)
 
 ```bash
 python tests/run_e2e.py                 # all 4 tiers
@@ -99,8 +103,8 @@ Headless environments: the suite sets `AUTHR_MOCK_KEYCHAIN=1`
 
 Every transport — `#[tauri::command]`, the CLI, and the browser dev bridge —
 dispatches through one frozen surface: **`docs/CLI_CONTRACT.md`**
-(v1.2: 56 commands · `{ok,data}` / `{ok:false,error{code,message,category}}` envelopes ·
-13 canonical error codes across 5 categories · 120 s lease TTL · shadow-format &
+(v1.3: 62 commands · `{ok,data}` / `{ok:false,error{code,message,category}}` envelopes ·
+14 canonical error codes across 6 categories · 120 s lease TTL · shadow-format &
 git-message rules). The 9 v1 codes and 35 v1 commands are untouched; v1.1 adds
-the Phase 4/5 studio surface and v1.2 the Phase 6 publishing surface, both
-additively. Changes require a contract version bump.
+the Phase 4/5 studio surface, v1.2 the Phase 6 publishing surface and v1.3 the
+craft/KDP surface — all additively. Changes require a contract version bump.

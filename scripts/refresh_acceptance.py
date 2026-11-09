@@ -37,13 +37,13 @@ bench = subprocess.run(
 bench_data = json.loads(bench.stdout)["data"]
 
 record = {
-    "suite": "AUTHR_OS Desktop — Phase 1–6 final acceptance (contract v1.2)",
+    "suite": "AUTHR_OS Desktop — Phase 1–6 + v1.3 Craft acceptance (contract v1.3)",
     "recorded_at": datetime.now(timezone.utc).isoformat(),
     "rust": {
         "toolchain": "rustc 1.99.1",
         "crate": "authr 3.0.0",
         "build": "cargo build --release: 0 warnings",
-        "unit_tests": "67 passed (dsp kernels, tts protocols, scheduler, rag, llm, publish, release)",
+        "unit_tests": "84 passed (dsp kernels, tts protocols, scheduler, rag, llm, publish, release, craft catalog/engine/kdp)",
     },
     "e2e_full_suite": {
         "suite": "AUTHR_OS E2E",
@@ -70,18 +70,18 @@ record = {
     "totals": {
         "e2e_tests": total_passed,
         "pass_rate": "100%" if total_failed == 0 else f"{total_passed}/{total_passed + total_failed}",
-        "commands": 56,
-        "error_codes": 13,
-        "test_modules": 30,
-        "rust_unit_tests": 67,
-        "phases": "1–6 complete — Golden Master v3.0.0-PROD",
-        "contract_version": "1.2",
+        "commands": 62,
+        "error_codes": 14,
+        "test_modules": 33,
+        "rust_unit_tests": 84,
+        "phases": "1–6 complete + v1.3 craft & KDP — Golden Master v3.0.0-PROD",
+        "contract_version": "1.3",
     },
     "verification_note": (
-        "Final acceptance on 2026-11-09: 168/168 E2E + 67/67 Rust unit tests green, "
+        "Acceptance on 2026-11-09 (contract v1.3): 184/184 E2E + 84/84 Rust unit tests green, "
         "tsc + vite clean, cargo build 0 warnings, all benchmark gates pass. "
-        "AI-maintenance doc suite verified: 285 file-path citations resolve, "
-        "40 sampled line-number citations match code exactly (change-impact.md, troubleshooting.md)."
+        "v1.3 adds the craft catalog (25 formats / 37 personas / 18 arcs), "
+        "beat scaffolding and KDP storefront packaging (kdp_check/kdp_package)."
     ),
 }
 

@@ -87,10 +87,13 @@ erDiagram
 | `chapter_segments` | `segment_id` TEXT UUIDv4 | FK chapter CASCADE; FK speaker → character_profiles **ON UPDATE CASCADE** (delete of referenced key blocked ⇒ `FOREIGN_KEY_VIOLATION`, contract #18); `UNIQUE(chapter_id, sequence_order)`; audio columns `prev_request_id`, `audio_hash`, `audio_cache_path`, `audio_start_ms` (default 0), `audio_duration_ms` | primary AST storage; index `idx_segments_audio_hash` |
 | `chapter_segments_fts` | (FTS5) | `segment_id UNINDEXED`, `text_content`, `tokenize='porter unicode61'` | synced by 3 triggers `trg_segments_ai/ad/au` (`db.rs:131-143`); `au` fires only on `UPDATE OF text_content` |
 | `rag_chunks` | `chunk_id` TEXT = `"<source>:<ref_id>"` | `book_id`, `source`, `ref_id`, `content`, `dim`, `embedding` BLOB (little-endian f32, 384) | **no FK** — snapshot rows; created by idempotent migration (`rag/store.rs:35`); upsert keyed on chunk_id (`store.rs:41`) |
+| `craft_state` | `book_id` FK books CASCADE | `format_id` (25 ids), `plot_arc_id` (18 ids), `style_persona_id` (37 ids), `plan_json` TEXT, `storefront_json` TEXT | **v1.3 additive** (`craft/engine.rs::ensure_craft_schema`, executed eagerly from `db::open_db`); idempotent `CREATE TABLE IF NOT EXISTS` — frozen DDL untouched |
+| `chapter_beats` | `chapter_id` FK chapters CASCADE | `beat_id` TEXT, `beat_index` INTEGER, `beat_label` TEXT | **v1.3 additive**; one beat stamp per chapter; `idx_chapter_beats_beat` |
 | `rag_chunks_fts` | (FTS5) | `chunk_id UNINDEXED`, `content`, porter unicode61 | kept in sync by `upsert_chunk`/`clear_source` (`store.rs:41-70,126-133`) |
 
 Indexes: `idx_chapters_book_order`, `idx_segments_chapter_order`,
-`idx_segments_audio_hash`, `idx_threads_status` (`db.rs:119-122`). Index
+`idx_segments_audio_hash`, `idx_threads_status` (`db.rs:119-122`) plus the
+additive `idx_chapter_beats_beat` (craft v1.3). Index
 guarantees are asserted by `tests/tier1_features/test_t1_indexes.py`.
 
 ## 3. Engine PRAGMAs (every connection, `db.rs:147-154`)
@@ -116,9 +119,10 @@ commit when the bundle sits in a cloud-sync folder (`ipc/mod.rs:43-49`,
 1. **Never edit `SCHEMA_SQL`** (`db.rs:9` "Do not edit"; contract §4.12 note).
    It is applied only when the `books` table is absent (`db.rs:168-187`), so
    edits would never reach existing bundles and would fork fresh ones.
-2. **Additive migrations**: follow the `rag_chunks` pattern — an idempotent
-   `CREATE TABLE IF NOT EXISTS`/`CREATE VIRTUAL TABLE IF NOT EXISTS` batch
-   executed per connection (like `ensure_rag_schema`, `rag/store.rs:35-39`),
+2. **Additive migrations**: follow the `rag_chunks` / `craft_state` pattern —
+   an idempotent `CREATE TABLE IF NOT EXISTS`/`CREATE VIRTUAL TABLE IF NOT EXISTS`
+   batch executed per connection (like `ensure_rag_schema`, `rag/store.rs:35-39`,
+   or `ensure_craft_schema`, now called eagerly from `db::open_db`),
    called from every command that needs it (see `studio.rs:381,403,414`).
 3. **Column adds to frozen tables**: if ever required, add a numbered
    `ALTER TABLE` guarded by a `PRAGMA table_info` check inside a new

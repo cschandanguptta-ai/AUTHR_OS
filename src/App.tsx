@@ -9,6 +9,7 @@ import { AudioStudio } from './components/studios/AudioStudio';
 import { VideoStudio } from './components/studios/VideoStudio';
 import { LocalizationStudio } from './components/studios/LocalizationStudio';
 import { MarketingStudio } from './components/studios/MarketingStudio';
+import { CraftStudio } from './components/studios/CraftStudio';
 import { Toaster } from './components/layout/Toaster';
 import { useWorkspaceStore } from './stores/workspaceStore';
 
@@ -47,6 +48,7 @@ export default function App() {
         {activeStudio === 'video' && <VideoStudio />}
         {activeStudio === 'localization' && <LocalizationStudio />}
         {activeStudio === 'marketing' && <MarketingStudio />}
+        {activeStudio === 'craft' && <CraftStudio />}
       </main>
       <Toaster />
     </div>

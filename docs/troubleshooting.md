@@ -85,7 +85,7 @@ security → path/keychain; audio → args/engines; ai → RAG/LLM.
 |---|---|---|---|
 | `cargo build` fails on `tauri`/`keyring` | optional features pulled system deps | `Cargo.toml:15-20` | build without features (default is hermetic) |
 | tests fail: `core binary missing` | binary not built / stale | `tests/conftest.py:24-39` (`AUTHR_BIN` override) | `cd src-tauri && cargo build --release` |
-| 168-test count differs on your machine | parametrized test (`test_t1_audio_surface.py:75`) counts ×2 | `docs/testing.md` | compare against `run_e2e.py --json` totals, not file counts |
+| Test count differs on your machine (184) | parametrized test (`test_t1_audio_surface.py:75`) counts ×2 | `docs/testing.md` | compare against `run_e2e.py --json` totals, not file counts |
 | `test_ip1` (contract surface) fails | `lib.rs::COMMANDS` out of sync with dispatcher/docs | `change-impact.md §5` | reconcile all four lists; bump version if surface changed |
 | Frontend build fails | tsc errors in `src/` | `npm run typecheck` | fix types; row shapes must match contract §5 exactly |
 | `npm run dev` → HTTP 500 on /api/ipc | CLI binary missing | `scripts/ipc-proxy.mjs::resolveBinary` (`AUTHR_CLI` override) | build the binary or set `AUTHR_CLI` |

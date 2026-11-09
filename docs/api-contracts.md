@@ -1,4 +1,4 @@
-# api-contracts.md — the 56-command IPC surface in practice
+# api-contracts.md — the 62-command IPC surface in practice
 
 Authoritative spec: `docs/CLI_CONTRACT.md` (v1.2, FROZEN sections). This file
 maps the contract onto code and consumers; it does not restate every arg.
@@ -88,7 +88,7 @@ The Tauri surface inherits Tauri v2's capability model (none configured in
 | Consumer | Depends on | Guarded by |
 |---|---|---|
 | React frontend | `src/ipc/api.ts` (33 typed wrappers) + `types/ast.ts` row types | `npm run typecheck`; manual dev-bridge smoke |
-| pytest suite | exact envelope, exit codes, every command's negative codes | `tier1_features/test_t1_ipc_contracts.py` (asserts 56-command surface via `--contract`, `test_ip1`) |
+| pytest suite | exact envelope, exit codes, every command's negative codes | `tier1_features/test_t1_ipc_contracts.py` (asserts 62-command surface via `--contract`, `test_ip1`) |
 | Tauri updater | `latest.json` shape from `release_manifest` | `release_bench` tests r1–r3 |
 | llama.cpp `llama-server` | `/completion` with `cache_prompt:true`, `keep_alive:-1`, optional `grammar` | `localai/llm.rs` unit tests (stub server) |
 | Edge TTS service | WebSocket protocol incl. Sec-MS-GEC token (`tts.rs:172-191`) | unit tests with injected transport (no live network in CI) |

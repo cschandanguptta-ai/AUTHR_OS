@@ -2,6 +2,7 @@
 // Contract v1: 9 canonical codes across 3 categories (frozen).
 // Contract v1.1 (Phases 4–5): +4 additive codes in the `audio` and `ai`
 // categories. Existing v1 codes and their semantics are untouched.
+// Contract v1.3 (Craft & KDP): +1 additive code in the `craft` category.
 
 use serde_json::{json, Value};
 
@@ -12,6 +13,7 @@ pub enum Category {
     Security,
     Audio,
     Ai,
+    Craft,
 }
 
 impl Category {
@@ -22,6 +24,7 @@ impl Category {
             Category::Security => "security",
             Category::Audio => "audio",
             Category::Ai => "ai",
+            Category::Craft => "craft",
         }
     }
 }
@@ -85,6 +88,11 @@ impl AppError {
     }
     pub fn ai_engine_unavailable(msg: impl Into<String>) -> Self {
         Self::new("AI_ENGINE_UNAVAILABLE", Category::Ai, msg)
+    }
+
+    // ── craft (contract v1.3) ──────────────────────────────────────────────
+    pub fn craft(msg: impl Into<String>) -> Self {
+        Self::new("CRAFT_ERROR", Category::Craft, msg)
     }
 
     /// Contract envelope fragment (§2): {"code","message","category"}.

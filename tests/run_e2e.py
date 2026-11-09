@@ -36,6 +36,8 @@ FEATURE_MAP = {
     "local_ai": "tier1_features/test_t1_local_ai.py",
     "publish": "tier1_features/test_t1_publish.py",
     "release_bench": "tier1_features/test_t1_release_bench.py",
+    "craft": "tier1_features/test_t1_craft.py",
+    "kdp": "tier1_features/test_t1_kdp.py",
     "audio_ai_boundaries": "tier2_boundaries/test_t2_audio_ai_boundaries.py",
     "audio_rag_scenario": "tier4_scenarios/test_t4_audio_rag_scenario.py",
     "path_traversal": "tier2_boundaries/test_t2_path_traversal.py",
@@ -49,6 +51,7 @@ FEATURE_MAP = {
     "cloud_wal_truncation": "tier2_boundaries/test_t2_cloud_wal_truncation.py",
     "cross_interactions": "tier3_interactions/test_t3_cross_interactions.py",
     "author_scenarios": "tier4_scenarios/test_t4_author_scenarios.py",
+    "one_person_publisher": "tier4_scenarios/test_t4_one_person_publisher.py",
 }
 
 TIER_GLOBS = {

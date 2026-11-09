@@ -3,6 +3,8 @@
 Contract v1.2: the 9 frozen v1 codes remain untouched; 4 additive codes in
 the `audio` and `ai` categories cover the Phase 4/5 studio surface. Phase 6
 (publishing & release) reuses the frozen taxonomy — no new codes.
+Contract v1.3 (craft & KDP): +1 additive code `CRAFT_ERROR` in the `craft`
+category; 6 new commands (§4.14).
 """
 
 CANONICAL_CODES = {
@@ -21,9 +23,11 @@ CANONICAL_CODES = {
     "AUDIO_ENGINE_UNAVAILABLE",
     "AI_ERROR",
     "AI_ENGINE_UNAVAILABLE",
+    # v1.3 additive (Craft & KDP)
+    "CRAFT_ERROR",
 }
 
-CATEGORIES = {"storage", "bundle", "security", "audio", "ai"}
+CATEGORIES = {"storage", "bundle", "security", "audio", "ai", "craft"}
 
 CODE_CATEGORY = {
     "ENTITY_NOT_FOUND": "storage",
@@ -39,9 +43,10 @@ CODE_CATEGORY = {
     "AUDIO_ENGINE_UNAVAILABLE": "audio",
     "AI_ERROR": "ai",
     "AI_ENGINE_UNAVAILABLE": "ai",
+    "CRAFT_ERROR": "craft",
 }
 
-# Contract §4 command surface (v1.2 — 56 commands).
+# Contract §4 command surface (v1.3 — 62 commands).
 CONTRACT_COMMANDS = [
     "project_init", "project_open", "project_close", "project_lock_status",
     "project_export", "project_import",
@@ -64,9 +69,12 @@ CONTRACT_COMMANDS = [
     # v1.2 — publishing & release (Phase 6)
     "publish_epub", "publish_docx", "publish_typst", "publish_captions",
     "publish_m4b", "release_manifest", "release_verify", "benchmark_run",
+    # v1.3 — craft catalog & storefront packaging
+    "craft_catalog", "craft_apply", "craft_scaffold", "craft_progress",
+    "kdp_check", "kdp_package",
 ]
 
-EXPECTED_COMMAND_COUNT = 56
+EXPECTED_COMMAND_COUNT = 62
 
 ROW_FIELDS = {
     "book": ["id", "title", "author", "genre", "premise", "theme", "narrative_structure",

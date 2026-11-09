@@ -75,9 +75,12 @@ pub const WRITER_COMMANDS: &[&str] = &[
     "publish_typst",
     "publish_captions",
     "publish_m4b",
+    "craft_apply",
+    "craft_scaffold",
+    "kdp_package",
 ];
 
-/// Full contract dispatch (§4, 56 commands). `root` is the `--bundle` value.
+/// Full contract dispatch (§4, 62 commands). `root` is the `--bundle` value.
 pub fn dispatch(root: Option<&Path>, command: &str, args: &Value) -> IpcResult {
     // ── Bundle-free commands ────────────────────────────────────────────────
     match command {
@@ -94,6 +97,10 @@ pub fn dispatch(root: Option<&Path>, command: &str, args: &Value) -> IpcResult {
         "release_manifest" => return crate::publish::release::release_manifest(args),
         "release_verify" => return crate::publish::release::release_verify(args),
         "benchmark_run" => return crate::publish::bench::benchmark_run(args),
+        "craft_catalog" => {
+            let kind = args::get_str(args, "kind").unwrap_or_else(|| "all".into());
+            return crate::craft::catalog::catalog_json(&kind).map_err(crate::error::AppError::craft);
+        }
         _ => {}
     }
 
@@ -202,6 +209,13 @@ pub fn dispatch(root: Option<&Path>, command: &str, args: &Value) -> IpcResult {
         "publish_typst" => crate::publish::typst::publish_typst(&mut ctx, args),
         "publish_captions" => crate::publish::captions::publish_captions(&mut ctx, args),
         "publish_m4b" => crate::publish::m4b::publish_m4b(&mut ctx, args),
+
+        // ── 4.14 craft catalog & storefront packaging (v1.3) ─────────
+        "craft_apply" => crate::craft::engine::craft_apply(&mut ctx, args),
+        "craft_scaffold" => crate::craft::engine::craft_scaffold(&mut ctx, args),
+        "craft_progress" => crate::craft::engine::craft_progress(&mut ctx, args),
+        "kdp_check" => crate::craft::kdp::kdp_check(&mut ctx, args),
+        "kdp_package" => crate::craft::kdp::kdp_package(&mut ctx, args),
 
         other => Err(AppError::bundle(format!(
             "unknown command `{other}` — see docs/CLI_CONTRACT.md §4"
