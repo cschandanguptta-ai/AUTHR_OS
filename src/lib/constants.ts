@@ -56,17 +56,17 @@ export const CHARACTER_ROLES = [
 ] as const;
 
 export const ROLE_BADGES: Record<string, string> = {
-  PROTAGONIST: 'border-amber-500/40 bg-amber-500/10 text-amber-300',
-  ANTAGONIST: 'border-rose-500/40 bg-rose-500/10 text-rose-300',
-  SUPPORTING: 'border-zinc-500/40 bg-zinc-500/10 text-zinc-300',
-  NARRATOR: 'border-violet-500/40 bg-violet-500/10 text-violet-300',
+  PROTAGONIST: 'border-amber-500/40 bg-amber-500/10 text-warn',
+  ANTAGONIST: 'border-rose-500/40 bg-rose-500/10 text-bad',
+  SUPPORTING: 'border-zinc-500/40 bg-zinc-500/10 text-mut',
+  NARRATOR: 'border-violet-500/40 bg-violet-500/10 text-accent2',
 };
 
 export const ROLE_SPEAKER_COLORS: Record<string, string> = {
-  PROTAGONIST: 'text-amber-300',
-  ANTAGONIST: 'text-rose-300',
-  SUPPORTING: 'text-zinc-300',
-  NARRATOR: 'text-violet-300',
+  PROTAGONIST: 'text-warn',
+  ANTAGONIST: 'text-bad',
+  SUPPORTING: 'text-mut',
+  NARRATOR: 'text-accent2',
 };
 
 export const LORE_CATEGORIES = [
@@ -78,11 +78,11 @@ export const LORE_CATEGORIES = [
 ] as const;
 
 export const LORE_CATEGORY_BADGES: Record<string, string> = {
-  GENERAL: 'border-zinc-500/40 bg-zinc-500/10 text-zinc-300',
-  LOCATION: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300',
-  FACTION: 'border-amber-500/40 bg-amber-500/10 text-amber-300',
-  MAGIC_TECH: 'border-violet-500/40 bg-violet-500/10 text-violet-300',
-  HISTORICAL: 'border-rose-500/40 bg-rose-500/10 text-rose-300',
+  GENERAL: 'border-zinc-500/40 bg-zinc-500/10 text-mut',
+  LOCATION: 'border-emerald-500/40 bg-emerald-500/10 text-ok',
+  FACTION: 'border-amber-500/40 bg-amber-500/10 text-warn',
+  MAGIC_TECH: 'border-violet-500/40 bg-violet-500/10 text-accent2',
+  HISTORICAL: 'border-rose-500/40 bg-rose-500/10 text-bad',
 };
 
 export const THREAD_STATUSES = ['INTRODUCED', 'ESCALATED', 'RESOLVED'] as const;
@@ -107,68 +107,68 @@ export const EMOTION_PRESETS: EmotionPreset[] = [
     id: 'neutral',
     label: 'Neutral',
     hint: 'Baseline delivery — measured pace, level pitch.',
-    chip: 'border-zinc-500/40 bg-zinc-500/10 text-zinc-300',
+    chip: 'border-zinc-500/40 bg-zinc-500/10 text-mut',
   },
   {
     id: 'tense',
     label: 'Tense',
     hint: 'Ratcheted urgency — slightly fast, clipped breaths.',
-    chip: 'border-amber-500/40 bg-amber-500/10 text-amber-300',
+    chip: 'border-amber-500/40 bg-amber-500/10 text-warn',
   },
   {
     id: 'whisper',
     label: 'Whisper',
     hint: 'Close-mic intimacy — slow, airy, low volume.',
-    chip: 'border-violet-500/40 bg-violet-500/10 text-violet-300',
+    chip: 'border-violet-500/40 bg-violet-500/10 text-accent2',
   },
   {
     id: 'cold_anger',
     label: 'Cold anger',
     hint: 'Constrained fury — very slow, pitch pressed down.',
-    chip: 'border-rose-500/40 bg-rose-500/10 text-rose-300',
+    chip: 'border-rose-500/40 bg-rose-500/10 text-bad',
   },
   {
     id: 'joyful',
     label: 'Joyful',
     hint: 'Bright and lifted — quick, pitch on the rise.',
-    chip: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300',
+    chip: 'border-emerald-500/40 bg-emerald-500/10 text-ok',
   },
   {
     id: 'sorrowful',
     label: 'Sorrowful',
     hint: 'Heavy grief — dragging tempo, softened endings.',
-    chip: 'border-teal-500/40 bg-teal-500/10 text-teal-300',
+    chip: 'border-teal-500/40 bg-teal-500/10 chip-teal',
   },
   {
     id: 'defiant',
     label: 'Defiant',
     hint: 'Chin-up resolve — punchy attacks, firm pitch.',
-    chip: 'border-orange-500/40 bg-orange-500/10 text-orange-300',
+    chip: 'border-orange-500/40 bg-orange-500/10 chip-orange',
   },
   {
     id: 'serene',
     label: 'Serene',
     hint: 'Still water — long pauses, gentle contour.',
-    chip: 'border-lime-500/40 bg-lime-500/10 text-lime-300',
+    chip: 'border-lime-500/40 bg-lime-500/10 chip-lime',
   },
   {
     id: 'urgent',
     label: 'Urgent',
     hint: 'Alarm state — fastest rate, wide pitch swings.',
-    chip: 'border-red-500/40 bg-red-500/10 text-red-300',
+    chip: 'border-red-500/40 bg-red-500/10 text-bad',
   },
   {
     id: 'tender',
     label: 'Tender',
     hint: 'Warm closeness — slow, rounded, low-lit.',
-    chip: 'border-pink-500/40 bg-pink-500/10 text-pink-300',
+    chip: 'border-pink-500/40 bg-pink-500/10 chip-pink',
   },
 ];
 
 export function emotionChipClass(emotion: string): string {
   return (
     EMOTION_PRESETS.find((e) => e.id === emotion)?.chip ??
-    'border-zinc-500/40 bg-zinc-500/10 text-zinc-300'
+    'border-zinc-500/40 bg-zinc-500/10 text-mut'
   );
 }
 

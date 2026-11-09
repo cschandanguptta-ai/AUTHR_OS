@@ -20,7 +20,7 @@ export function AudioStateBadge({
       className={cn(
         'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs font-mono border',
         rendered
-          ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+          ? 'border-emerald-500/40 bg-emerald-500/10 text-ok'
           : 'border-zinc-500/40 bg-zinc-500/5 text-mut',
         className,
       )}
@@ -32,7 +32,7 @@ export function AudioStateBadge({
     >
       {rendered ? (
         <>
-          <Check size={10} className="text-emerald-400" /> Rendered
+          <Check size={10} className="text-ok" /> Rendered
         </>
       ) : (
         <>

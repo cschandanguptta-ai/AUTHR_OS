@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useRef } from 'react';
 import { X } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface ModalProps {
   open: boolean;
@@ -14,20 +15,17 @@ interface ModalProps {
 
 /** Professional, minimal modal — no component library. */
 export function Modal({ open, title, subtitle, onClose, children, footer, width }: ModalProps) {
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Focus discipline: trap Tab inside, focus first control on open, restore
+  // focus to the opener on close (useFocusTrap also handles Escape).
+  useFocusTrap(panelRef, open, onClose);
 
   if (!open) return null;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 anim-fade"
       role="dialog"
       aria-modal="true"
       aria-label={title}
@@ -36,7 +34,9 @@ export function Modal({ open, title, subtitle, onClose, children, footer, width 
       }}
     >
       <div
-        className={`w-full ${width ?? 'max-w-lg'} max-h-[86vh] flex flex-col rounded-xl border border-line2 bg-panel shadow-2xl`}
+        ref={panelRef}
+        tabIndex={-1}
+        className={`anim-modal w-full ${width ?? 'max-w-lg'} max-h-[86vh] flex flex-col rounded-xl border border-line2 bg-panel shadow-2xl`}
       >
         <header className="flex items-start gap-3 px-5 py-4 border-b border-line">
           <div className="min-w-0 flex-1">
@@ -81,7 +81,7 @@ export const btnGhost =
   'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] border border-line bg-panel2 text-ink hover:bg-panel3 hover:border-line2 transition-colors disabled:opacity-50';
 
 export const btnPrimary =
-  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] font-medium bg-accent text-zinc-950 hover:brightness-110 transition-all disabled:opacity-50';
+  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] font-medium bg-accent text-on-accent hover:brightness-110 transition-all disabled:opacity-50';
 
 export const btnDanger =
-  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] border border-rose-500/40 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 transition-colors disabled:opacity-50';
+  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] border border-rose-500/40 bg-rose-500/10 text-bad hover:bg-rose-500/20 transition-colors disabled:opacity-50';

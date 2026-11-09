@@ -7,19 +7,23 @@ export default {
       colors: {
         // Semantic cockpit palette — resolved from CSS variables so the three
         // themes (dark / midnight / sepia) swap without touching components.
-        app: 'var(--app-bg)',
-        panel: 'var(--panel)',
-        panel2: 'var(--panel-2)',
-        panel3: 'var(--panel-3)',
-        line: 'var(--line)',
-        line2: 'var(--line-2)',
-        ink: 'var(--ink)',
-        mut: 'var(--muted)',
-        accent: 'var(--accent)',
-        accent2: 'var(--accent-2)',
-        ok: 'var(--ok)',
-        warn: 'var(--warn)',
-        bad: 'var(--bad)',
+        // Each color is alpha-capable: the theme defines --X-rgb channel
+        // triples, so `bg-accent/10`, `border-accent/40` … compile correctly
+        // (a plain var() color would make Tailwind drop the modifier silently).
+        app: 'rgb(var(--app-rgb) / <alpha-value>)',
+        panel: 'rgb(var(--panel-rgb) / <alpha-value>)',
+        panel2: 'rgb(var(--panel-2-rgb) / <alpha-value>)',
+        panel3: 'rgb(var(--panel-3-rgb) / <alpha-value>)',
+        line: 'rgb(var(--line-rgb) / <alpha-value>)',
+        line2: 'rgb(var(--line-2-rgb) / <alpha-value>)',
+        ink: 'rgb(var(--ink-rgb) / <alpha-value>)',
+        mut: 'rgb(var(--muted-rgb) / <alpha-value>)',
+        accent: 'rgb(var(--accent-rgb) / <alpha-value>)',
+        accent2: 'rgb(var(--accent-2-rgb) / <alpha-value>)',
+        ok: 'rgb(var(--ok-rgb) / <alpha-value>)',
+        warn: 'rgb(var(--warn-rgb) / <alpha-value>)',
+        bad: 'rgb(var(--bad-rgb) / <alpha-value>)',
+        'on-accent': 'rgb(var(--on-accent-rgb) / <alpha-value>)',
       },
       fontFamily: {
         sans: [

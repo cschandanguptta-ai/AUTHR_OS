@@ -425,7 +425,7 @@ export function CraftStudio() {
                         'text-2xs px-2 py-1 rounded border truncate',
                         b.chapters.length > 0
                           ? b.started
-                            ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                            ? 'border-emerald-500/40 bg-emerald-500/10 text-ok'
                             : 'border-line text-mut'
                           : 'border-line/50 text-mut/50',
                       )}
@@ -458,15 +458,15 @@ export function CraftStudio() {
                   className={cn(
                     'px-1.5 py-0.5 rounded border',
                     rtReport.cadence.buffer_healthy
-                      ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
-                      : 'border-amber-500/40 bg-amber-500/10 text-amber-300',
+                      ? 'border-emerald-500/40 bg-emerald-500/10 text-ok'
+                      : 'border-amber-500/40 bg-amber-500/10 text-warn',
                   )}
                 >
                   {rtReport.cadence.buffer_healthy ? 'buffer healthy' : 'buffer < 4'}
                 </span>
                 <span>QC {rtReport.summary.qc_scored}/{rtReport.summary.chapters_total}</span>
                 {rtReport.summary.revision_required > 0 && (
-                  <span className="px-1.5 py-0.5 rounded border border-rose-500/40 bg-rose-500/10 text-rose-300">
+                  <span className="px-1.5 py-0.5 rounded border border-rose-500/40 bg-rose-500/10 text-bad">
                     {rtReport.summary.revision_required} revision flag
                     {rtReport.summary.revision_required > 1 ? 's' : ''}
                   </span>
@@ -542,7 +542,7 @@ export function CraftStudio() {
                 <label key={id} className="grid gap-1">
                   <span className={cn('text-2xs uppercase tracking-wide', zeroFlag ? 'text-ink' : 'text-mut')}>
                     {label}
-                    {zeroFlag && <span className="text-rose-400"> ·zero=revise</span>}
+                    {zeroFlag && <span className="text-bad"> ·zero=revise</span>}
                   </span>
                   <select
                     className={cn(inputClass, 'text-xs')}
@@ -593,7 +593,7 @@ export function CraftStudio() {
               <p
                 className={cn(
                   'text-2xs font-mono',
-                  rtLast.qc.revision_required ? 'text-amber-400' : 'text-mut',
+                  rtLast.qc.revision_required ? 'text-warn' : 'text-mut',
                 )}
               >
                 ch {rtLast.chapter_number}: {rtLast.qc.total}/14 · {rtLast.qc.band} ·{' '}
@@ -687,7 +687,7 @@ export function CraftStudio() {
             {checkResult && (
               <div className="grid gap-1.5 mt-1">
                 <div className="flex items-center gap-2 text-2xs">
-                  <span className={cn('font-mono font-bold', checkResult.pass ? 'text-emerald-400' : 'text-amber-400')}>
+                  <span className={cn('font-mono font-bold', checkResult.pass ? 'text-ok' : 'text-warn')}>
                     readiness {checkResult.readiness_score}/100 {checkResult.pass ? '· PASS' : '· GAPS'}
                   </span>
                   <span className="font-mono text-mut">
@@ -700,9 +700,9 @@ export function CraftStudio() {
                     className={cn(
                       'text-2xs px-2 py-1 rounded border flex items-start gap-1.5',
                       i.severity === 'FAIL'
-                        ? 'border-rose-500/40 bg-rose-500/10 text-rose-300'
+                        ? 'border-rose-500/40 bg-rose-500/10 text-bad'
                         : i.severity === 'WARN'
-                          ? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+                          ? 'border-amber-500/40 bg-amber-500/10 text-warn'
                           : 'border-line text-mut',
                     )}
                   >

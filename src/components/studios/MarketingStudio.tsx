@@ -152,7 +152,7 @@ export function MarketingStudio() {
           {/* YouTube builders */}
           <div className="border border-line rounded-xl bg-panel2 px-4 py-3 grid gap-2">
             <div className="flex items-center gap-2 text-xs font-semibold">
-              <PlayCircle size={14} className="text-red-400" /> YouTube SEO builders
+              <PlayCircle size={14} className="text-bad" /> YouTube SEO builders
               <span className="text-2xs text-mut font-normal">deterministic local drafts — no network</span>
             </div>
             <div className="grid gap-1.5">

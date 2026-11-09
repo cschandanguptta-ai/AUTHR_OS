@@ -52,6 +52,22 @@ needs no human but is not literal code text. Past bugs are at §5.
     `.authr_lock`, `project.db-wal`, `project.db-shm`, embedded `.git/` are
     never exported. Consequence (INFERRED): export/import round-trip loses
     revision history by design.
+14. **Frontend colors go through the semantic palette — never hardcoded
+    Tailwind spectrum classes** (`tailwind.config.js`, `index.css` theme
+    blocks). `text-emerald-300`-style constants are bright-on-dark and vanish
+    on the sepia light theme; use `text-ok` / `text-warn` / `text-bad` /
+    `text-accent2` / `text-mut` / `text-on-accent` (all var-driven). The
+    semantic colors are alpha-capable via the per-theme `--X-rgb` channel
+    triples — a *plain* `var(--x)` Tailwind color makes Tailwind silently
+    DROP alpha modifiers (`bg-accent/10` emitted no CSS at all before the
+    triples existed; 37 usages were silently broken). Emotion-chip hues use
+    the `.chip-*` classes (per-theme). FACT (probed: tailwind emits
+    `rgb(var(--accent-rgb) / 0.1)`).
+15. **App-level shortcuts avoid plain Ctrl/Cmd+B/I** (`useGlobalShortcuts.ts`):
+    Lexical owns those (bold/italic). Binder/inspector toggles are
+    Ctrl/Cmd+Alt+B/I, studios 1–6, palette Ctrl/Cmd+K. Focus mode must always
+    have an exit (floating pill + Escape) — an earlier build stranded users
+    in typewriter mode with no visible way out. FACT.
 
 ## 2. Ordering & race-condition notes
 

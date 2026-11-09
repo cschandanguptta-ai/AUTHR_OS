@@ -82,3 +82,13 @@ export function errorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
   return String(err);
 }
+
+/** Platform detection for shortcut hints (⌘ glyphs on macOS, spelled out elsewhere). */
+export const IS_MAC =
+  typeof navigator !== 'undefined' && navigator.platform.toLowerCase().includes('mac');
+
+/** The palette modifier as a display chip: '⌘' or 'Ctrl+'. */
+export const MOD_KEY = IS_MAC ? '⌘' : 'Ctrl+';
+
+/** The studio/pane modifier: '⌘⌥' or 'Ctrl+Alt+'. */
+export const MOD_ALT_KEY = IS_MAC ? '⌘⌥' : 'Ctrl+Alt+';

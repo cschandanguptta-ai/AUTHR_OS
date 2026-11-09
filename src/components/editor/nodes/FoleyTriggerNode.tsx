@@ -37,7 +37,7 @@ function FoleyPill({ data }: { data: FoleyTriggerData }) {
       className="foley-pill"
       title={isSfx ? 'One-shot Foley' : 'Ambient bed'}
     >
-      <AudioLines size={10} className={isSfx ? 'text-amber-400' : 'text-accent2'} />
+      <AudioLines size={10} className={isSfx ? 'text-warn' : 'text-accent2'} />
       {cue}
     </span>
   );

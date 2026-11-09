@@ -198,7 +198,7 @@ export function VideoStudio() {
               {plan && (
                 <div className="flex gap-3 mt-1.5 text-2xs text-mut">
                   <span>ladder: {plan.ladder.refs_ready} ready · {plan.ladder.partial} partial · {plan.ladder.text_only} text-only</span>
-                  {plan.missing_sheets.length > 0 && <span className="text-amber-400/90">missing sheets: {plan.missing_sheets.join(', ')}</span>}
+                  {plan.missing_sheets.length > 0 && <span className="text-warn/90">missing sheets: {plan.missing_sheets.join(', ')}</span>}
                   <span>{plan.narration_ready ? 'narration ready' : 'no narration yet (silent track)'}</span>
                 </div>
               )}
@@ -249,7 +249,7 @@ export function VideoStudio() {
                   </p>
                 )}
                 {mp4 && (
-                  <p className="text-2xs text-emerald-400/90 mt-1">
+                  <p className="text-2xs text-ok/90 mt-1">
                     {mp4.out} · {(mp4.bytes / 1e6).toFixed(1)} MB · narration: {mp4.narration || 'silent'}
                   </p>
                 )}
@@ -260,9 +260,9 @@ export function VideoStudio() {
                         <CheckCircle2
                           size={11}
                           className={cn(
-                            c.status === 'PASS' && 'text-emerald-400',
-                            c.status === 'WARN' && 'text-amber-400',
-                            c.status === 'FAIL' && 'text-red-400',
+                            c.status === 'PASS' && 'text-ok',
+                            c.status === 'WARN' && 'text-warn',
+                            c.status === 'FAIL' && 'text-bad',
                           )}
                         />
                         <span className="font-mono text-mut w-32">{c.name}</span>

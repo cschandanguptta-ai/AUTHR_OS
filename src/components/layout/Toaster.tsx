@@ -11,9 +11,9 @@ const KIND_ICON: Record<ToastKind, typeof Info> = {
 
 const KIND_COLOR: Record<ToastKind, string> = {
   info: 'text-accent2',
-  success: 'text-emerald-400',
-  error: 'text-rose-400',
-  warn: 'text-amber-400',
+  success: 'text-ok',
+  error: 'text-bad',
+  warn: 'text-warn',
 };
 
 export function Toaster() {
@@ -31,7 +31,7 @@ export function Toaster() {
         return (
           <div
             key={t.id}
-            className="flex items-start gap-2.5 rounded-lg border border-line2 bg-panel px-3 py-2.5 shadow-xl"
+            className="anim-toast flex items-start gap-2.5 rounded-lg border border-line2 bg-panel px-3 py-2.5 shadow-xl"
           >
             <Icon size={15} className={cn('mt-0.5 shrink-0', KIND_COLOR[t.kind])} />
             <div className="min-w-0 flex-1">

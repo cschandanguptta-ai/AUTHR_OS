@@ -299,7 +299,7 @@ function CanvasInner() {
                 className={cn(
                   'px-2.5 py-1 text-2xs rounded-md transition-colors whitespace-nowrap',
                   viewMode === m.id
-                    ? 'bg-accent text-zinc-950 font-semibold'
+                    ? 'bg-accent text-on-accent font-semibold'
                     : 'text-mut hover:text-ink',
                 )}
               >

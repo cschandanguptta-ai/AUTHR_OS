@@ -69,10 +69,10 @@ export function DynamicInspector() {
               className={cn(
                 'text-2xs font-mono px-1.5 py-0.5 rounded border',
                 segment.segment_type === 'DIALOGUE'
-                  ? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+                  ? 'border-amber-500/40 bg-amber-500/10 text-warn'
                   : segment.segment_type === 'INTERNAL_MONOLOGUE'
-                    ? 'border-violet-500/40 bg-violet-500/10 text-violet-300'
-                    : 'border-zinc-500/40 bg-zinc-500/10 text-zinc-300',
+                    ? 'border-violet-500/40 bg-violet-500/10 text-accent2'
+                    : 'border-zinc-500/40 bg-zinc-500/10 text-mut',
               )}
             >
               {SEGMENT_TYPE_LABELS[segment.segment_type]}
@@ -209,7 +209,7 @@ export function DynamicInspector() {
 
           {segment.audio_hash && (
             <div className="text-2xs font-mono text-mut flex items-center gap-2 pt-1">
-              <Volume2 size={12} className="text-emerald-400" />
+              <Volume2 size={12} className="text-ok" />
               {formatMs(segment.audio_duration_ms)} · hash {segment.audio_hash.slice(0, 10)}…
             </div>
           )}

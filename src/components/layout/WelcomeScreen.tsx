@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import {
   BookOpen,
+  Clapperboard,
   Crosshair,
   Feather,
-  FileSearch,
   FolderOpen,
+  Gauge,
   Loader2,
   Lock,
   Plus,
-  Sparkles,
 } from 'lucide-react';
 import { useProjectStore, lastBundlePath } from '../../stores/projectStore';
 import { APP_VERSION } from '../../lib/constants';
@@ -18,38 +18,38 @@ const FEATURES = [
   {
     icon: Feather,
     title: 'Manuscript AST Canvas',
-    hint: 'Segments, speakers and prosody stored as a queryable AST with shadow-file re-render on every sync.',
-    phase: 'Phase 3',
+    hint: 'Segments, speakers and prosody stored as a queryable AST — with BM25 full-text search across everything you have ever written.',
+    tag: 'CANVAS',
   },
   {
     icon: BookOpen,
     title: 'Voice Cast Rack',
     hint: 'Assign synthesis engines, IPA phonetics and per-character prosody baselines across five engines.',
-    phase: 'Phase 3',
+    tag: 'AUDIO',
+  },
+  {
+    icon: Clapperboard,
+    title: 'Video-Novel Studio',
+    hint: 'Character reference sheets, a canonical pacing timeline and the offline ffmpeg MP4 pipeline — narration included.',
+    tag: 'VIDEO',
   },
   {
     icon: Crosshair,
     title: "Chekhov's Ledger",
     hint: 'Every introduced thread tracked from its intro chapter to the payoff that must resolve it.',
-    phase: 'Phase 3',
+    tag: 'CRAFT',
   },
   {
-    icon: FileSearch,
-    title: 'Full-Text Search',
-    hint: 'BM25 search across every segment you have ever written — porter unicode61, FTS5 powered.',
-    phase: 'Phase 3',
+    icon: Gauge,
+    title: 'Craft Library & Retention QC',
+    hint: '25 formats × 37 personas × 18 arc frameworks, Serialized Fiction Blueprint QC, and KDP compliance scoring.',
+    tag: 'CRAFT',
   },
   {
     icon: Lock,
     title: 'Lease & Bundle Safety',
     hint: 'Crash-safe 120s leases, WAL checkpoints and automatic git snapshots of your manuscript.',
-    phase: 'Core',
-  },
-  {
-    icon: Sparkles,
-    title: 'Studio Workstations',
-    hint: 'Audio synthesis, video slides, localization and marketing workstations behind one cockpit.',
-    phase: 'Phase 4–6',
+    tag: 'CORE',
   },
 ];
 
@@ -68,7 +68,7 @@ export function WelcomeScreen() {
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto">
-      <div className="mx-auto w-full max-w-4xl px-6 py-14">
+      <div className="mx-auto w-full max-w-4xl px-6 py-14 anim-fade">
         {/* Wordmark */}
         <div className="flex flex-col items-center text-center gap-3 mb-12">
           <div className="inline-flex items-baseline gap-1 rounded-xl border border-line2 bg-panel px-6 py-3 shadow-lg">
@@ -227,7 +227,7 @@ export function WelcomeScreen() {
                   <f.icon size={15} strokeWidth={1.7} />
                 </div>
                 <span className="text-2xs font-mono text-mut border border-line rounded px-1.5 py-0.5">
-                  {f.phase}
+                  {f.tag}
                 </span>
               </div>
               <div className="text-[13px] font-semibold mb-1">{f.title}</div>
@@ -239,12 +239,12 @@ export function WelcomeScreen() {
         <footer className="mt-12 flex items-center justify-center gap-3 text-2xs text-mut">
           <span className="font-mono">AUTHR_OS {APP_VERSION}</span>
           <span aria-hidden="true">·</span>
-          <span>Phase 3 — The Author's Cockpit</span>
+          <span>The Author's Cockpit</span>
         </footer>
 
         <p className="mt-6 text-center text-2xs text-mut/70 max-w-[62ch] mx-auto leading-relaxed">
-          Dev note: in browser mode the bridge spawns the <span className="font-mono">authr</span>{' '}
-          CLI for every call. Set <span className="font-mono">AUTHR_CLI</span> /{' '}
+          In browser mode the bridge spawns the <span className="font-mono">authr</span> CLI for every
+          call — set <span className="font-mono">AUTHR_CLI</span> /{' '}
           <span className="font-mono">AUTHR_BUNDLE</span> to override the binary and bundle paths.
         </p>
       </div>

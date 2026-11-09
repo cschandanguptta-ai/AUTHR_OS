@@ -4,56 +4,110 @@
 
 /* ── Theme variables ──────────────────────────────────────────────────────── */
 
+/* Single source of truth: each theme defines `--X-rgb` channel triples;
+   the hex-style vars (--accent, --panel, …) derive from them as
+   `rgb(var(--X-rgb))` so raw CSS and Tailwind's alpha modifiers
+   (`bg-accent/10` → `rgb(var(--accent-rgb) / 0.1)`) can never drift apart. */
+
 :root,
 .theme-dark {
   color-scheme: dark;
-  --app-bg: #09090b;
-  --panel: #101013;
-  --panel-2: #16161a;
-  --panel-3: #1d1d22;
-  --line: #26262b;
-  --line-2: #333339;
-  --ink: #e6e6e9;
-  --muted: #9d9da7;
-  --accent: #f59e0b;
-  --accent-2: #8b8cf8;
-  --ok: #34d399;
-  --warn: #fbbf24;
-  --bad: #fb7185;
+  --app-rgb: 9 9 11;
+  --panel-rgb: 16 16 19;
+  --panel-2-rgb: 22 22 26;
+  --panel-3-rgb: 29 29 34;
+  --line-rgb: 38 38 43;
+  --line-2-rgb: 51 51 57;
+  --ink-rgb: 230 230 233;
+  --muted-rgb: 157 157 167;
+  --accent-rgb: 245 158 11;
+  --accent-2-rgb: 139 140 248;
+  --ok-rgb: 52 211 153;
+  --warn-rgb: 251 191 36;
+  --bad-rgb: 251 113 133;
+  --on-accent-rgb: 24 24 27;
+
+  --app-bg: rgb(var(--app-rgb));
+  --panel: rgb(var(--panel-rgb));
+  --panel-2: rgb(var(--panel-2-rgb));
+  --panel-3: rgb(var(--panel-3-rgb));
+  --line: rgb(var(--line-rgb));
+  --line-2: rgb(var(--line-2-rgb));
+  --ink: rgb(var(--ink-rgb));
+  --muted: rgb(var(--muted-rgb));
+  --accent: rgb(var(--accent-rgb));
+  --accent-2: rgb(var(--accent-2-rgb));
+  --ok: rgb(var(--ok-rgb));
+  --warn: rgb(var(--warn-rgb));
+  --bad: rgb(var(--bad-rgb));
+  --on-accent: rgb(var(--on-accent-rgb));
 }
 
 .theme-midnight {
   color-scheme: dark;
-  --app-bg: #04060f;
-  --panel: #080d1c;
-  --panel-2: #0c1328;
-  --panel-3: #111a36;
-  --line: #1b2445;
-  --line-2: #26305c;
-  --ink: #dde3f4;
-  --muted: #8b93ad;
-  --accent: #f59e0b;
-  --accent-2: #7c8cff;
-  --ok: #34d399;
-  --warn: #fbbf24;
-  --bad: #fb7185;
+  --app-rgb: 4 6 15;
+  --panel-rgb: 8 13 28;
+  --panel-2-rgb: 12 19 40;
+  --panel-3-rgb: 17 26 54;
+  --line-rgb: 27 36 69;
+  --line-2-rgb: 38 48 92;
+  --ink-rgb: 221 227 244;
+  --muted-rgb: 139 147 173;
+  --accent-rgb: 245 158 11;
+  --accent-2-rgb: 124 140 255;
+  --ok-rgb: 52 211 153;
+  --warn-rgb: 251 191 36;
+  --bad-rgb: 251 113 133;
+  --on-accent-rgb: 11 16 32;
+
+  --app-bg: rgb(var(--app-rgb));
+  --panel: rgb(var(--panel-rgb));
+  --panel-2: rgb(var(--panel-2-rgb));
+  --panel-3: rgb(var(--panel-3-rgb));
+  --line: rgb(var(--line-rgb));
+  --line-2: rgb(var(--line-2-rgb));
+  --ink: rgb(var(--ink-rgb));
+  --muted: rgb(var(--muted-rgb));
+  --accent: rgb(var(--accent-rgb));
+  --accent-2: rgb(var(--accent-2-rgb));
+  --ok: rgb(var(--ok-rgb));
+  --warn: rgb(var(--warn-rgb));
+  --bad: rgb(var(--bad-rgb));
+  --on-accent: rgb(var(--on-accent-rgb));
 }
 
 .theme-sepia {
   color-scheme: light;
-  --app-bg: #f6f1e7;
-  --panel: #fbf7ee;
-  --panel-2: #f1e9d8;
-  --panel-3: #e9dfc9;
-  --line: #ddd2b8;
-  --line-2: #c9bb9c;
-  --ink: #40382a;
-  --muted: #8a7d63;
-  --accent: #b45309;
-  --accent-2: #6d5bb8;
-  --ok: #0f8a5f;
-  --warn: #b45309;
-  --bad: #be4a4a;
+  --app-rgb: 246 241 231;
+  --panel-rgb: 251 247 238;
+  --panel-2-rgb: 241 233 216;
+  --panel-3-rgb: 233 223 201;
+  --line-rgb: 221 210 184;
+  --line-2-rgb: 201 187 156;
+  --ink-rgb: 64 56 42;
+  /* Darkened from #8a7d63 — 11px labels need ≥4:1 against #fbf7ee. */
+  --muted-rgb: 117 104 77;
+  --accent-rgb: 180 83 9;
+  --accent-2-rgb: 109 91 184;
+  --ok-rgb: 15 138 95;
+  --warn-rgb: 180 83 9;
+  --bad-rgb: 190 74 74;
+  --on-accent-rgb: 255 247 237;
+
+  --app-bg: rgb(var(--app-rgb));
+  --panel: rgb(var(--panel-rgb));
+  --panel-2: rgb(var(--panel-2-rgb));
+  --panel-3: rgb(var(--panel-3-rgb));
+  --line: rgb(var(--line-rgb));
+  --line-2: rgb(var(--line-2-rgb));
+  --ink: rgb(var(--ink-rgb));
+  --muted: rgb(var(--muted-rgb));
+  --accent: rgb(var(--accent-rgb));
+  --accent-2: rgb(var(--accent-2-rgb));
+  --ok: rgb(var(--ok-rgb));
+  --warn: rgb(var(--warn-rgb));
+  --bad: rgb(var(--bad-rgb));
+  --on-accent: rgb(var(--on-accent-rgb));
 }
 
 html,
@@ -70,8 +124,26 @@ body {
 }
 
 ::selection {
-  background: rgba(245, 158, 11, 0.28);
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
 }
+
+/* ── Semantic status colors ──────────────────────────────────────────────────
+   Components must use the Tailwind semantic utilities (text-ok / text-warn /
+   text-bad / text-accent2 / text-on-accent) — never hardcoded palette classes
+   like text-emerald-300, which vanish on the sepia light theme. The Tailwind
+   side resolves these through the --X-rgb channel triples above. */
+
+/* Emotion-chip hue accents: bright -300 tones on dark themes, saturated
+   -700/-800 tones on sepia so the chips stay readable in light mode. */
+.chip-teal   { color: #2dd4bf; }
+.chip-orange { color: #fb923c; }
+.chip-lime   { color: #a3e635; }
+.chip-pink   { color: #f9a8d4; }
+
+.theme-sepia .chip-teal   { color: #0f766e; }
+.theme-sepia .chip-orange { color: #c2410c; }
+.theme-sepia .chip-lime   { color: #4d7c0f; }
+.theme-sepia .chip-pink   { color: #be185d; }
 
 /* ── Scrollbars ───────────────────────────────────────────────────────────── */
 
@@ -99,6 +171,70 @@ body {
 *::-webkit-scrollbar-thumb:hover {
   background: var(--muted);
   background-clip: content-box;
+}
+
+/* ── Motion ─────────────────────────────────────────────────────────────────
+   Small, fast, directional. Everything collapses to zero under
+   prefers-reduced-motion. */
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.anim-pop { animation: pop-in 140ms cubic-bezier(0.16, 1, 0.3, 1); }
+.anim-fade { animation: fade-in 180ms ease-out; }
+.anim-modal { animation: modal-in 190ms cubic-bezier(0.16, 1, 0.3, 1); }
+.anim-toast { animation: toast-in 200ms cubic-bezier(0.16, 1, 0.3, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-pop,
+  .anim-fade,
+  .anim-modal,
+  .anim-toast {
+    animation: none;
+  }
+
+  .skeleton::after {
+    animation: none;
+  }
+
+  .timeline-block {
+    transition: none;
+  }
 }
 
 /* ── Skeleton shimmer ─────────────────────────────────────────────────────── */
@@ -181,15 +317,16 @@ body {
   max-width: 68ch;
 }
 
+/* Editor type size follows the Settings popover (14–22px) via --editor-font. */
 .editor-clean .canvas-editor,
 .editor-readalong .canvas-editor {
   font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
-  font-size: 17.5px;
+  font-size: var(--editor-font, 17.5px);
 }
 
 .editor-script .canvas-editor {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 15px;
+  font-size: calc(var(--editor-font, 17.5px) - 2.5px);
 }
 
 /* View-mode visibility rules (contract §4.8 / build plan):
@@ -206,9 +343,9 @@ body {
 }
 
 .editor-readalong .canvas-paragraph.seg-active {
-  background: rgba(245, 158, 11, 0.07);
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
   border-radius: 8px;
-  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.22);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
 .editor-readalong .canvas-paragraph {
@@ -247,8 +384,8 @@ body {
 }
 
 .gutter-badge.seg-active {
-  border-color: rgba(245, 158, 11, 0.55);
-  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.25);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
 .emotion-chip {
@@ -287,7 +424,7 @@ body {
 .editor-placeholder {
   color: var(--muted);
   font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
-  font-size: 17.5px;
+  font-size: var(--editor-font, 17.5px);
   font-style: italic;
   pointer-events: none;
   position: absolute;
@@ -302,7 +439,8 @@ body {
 
 .timeline-block.dragging {
   opacity: 0.85;
-  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.6), 0 6px 18px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 60%, transparent),
+    0 6px 18px rgba(0, 0, 0, 0.45);
   z-index: 10;
 }
 
@@ -311,11 +449,45 @@ body {
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
-button:focus-visible {
-  outline: 1px solid rgba(245, 158, 11, 0.55);
+button:focus-visible,
+[role='option']:focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
   outline-offset: 0;
 }
 
 input[type='range'] {
   accent-color: var(--accent);
+}
+
+/* Focus-mode exit pill (Cockpit typewriter mode) */
+.focus-exit-pill {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line-2);
+  background: color-mix(in srgb, var(--panel) 82%, transparent);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+  font-size: 12px;
+  color: var(--muted);
+  transition: color 140ms ease, border-color 140ms ease;
+  opacity: 0.45;
+}
+
+.focus-exit-pill:hover {
+  color: var(--ink);
+  border-color: var(--accent);
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-exit-pill {
+    transition: none;
+  }
 }

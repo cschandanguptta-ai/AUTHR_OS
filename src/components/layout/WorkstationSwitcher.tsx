@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   AudioLines,
   BookOpen,
   Clapperboard,
+  Command,
   Eye,
   GitCommitHorizontal,
   Languages,
@@ -18,7 +19,9 @@ import { useWorkspaceStore, type StudioId } from '../../stores/workspaceStore';
 import { useProjectStore } from '../../stores/projectStore';
 import * as api from '../../ipc/api';
 import { toast, toastError } from '../../stores/uiStore';
-import { cn } from '../../lib/utils';
+import { cn, IS_MAC, MOD_KEY } from '../../lib/utils';
+import { SettingsPopover } from './SettingsPopover';
+import { useDismiss } from '../../hooks/useDismiss';
 
 const STUDIOS: Array<{ id: StudioId; label: string; icon: typeof BookOpen }> = [
   { id: 'novel', label: 'Novel', icon: BookOpen },
@@ -67,7 +70,12 @@ export function WorkstationSwitcher() {
   const readonly = useProjectStore((s) => s.readonly);
   const bundlePath = useProjectStore((s) => s.bundlePath);
   const closeProject = useProjectStore((s) => s.closeProject);
+  const setPaletteOpen = useWorkspaceStore((s) => s.setPaletteOpen);
   const [menuOpen, setMenuOpen] = useState(false);
+  const kebabRef = useRef<HTMLDivElement>(null);
+
+  // The kebab menu now closes on outside pointerdown and Escape.
+  useDismiss(kebabRef, () => setMenuOpen(false), menuOpen);
 
   const snapshot = async () => {
     try {
@@ -117,27 +125,49 @@ export function WorkstationSwitcher() {
               type="button"
               onClick={() => setActiveStudio(s.id)}
               aria-current={activeStudio === s.id ? 'page' : undefined}
+              title={`${s.label} studio — ${IS_MAC ? '⌘⌥' : 'Ctrl+Alt+'}${STUDIOS.indexOf(s) + 1}`}
               className={cn(
-                'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[13px] transition-colors',
+                'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[13px] transition-colors relative',
                 activeStudio === s.id
                   ? 'bg-panel3 text-ink font-medium'
                   : 'text-mut hover:text-ink hover:bg-panel2',
               )}
             >
-              <s.icon size={14} strokeWidth={1.8} />
+              <s.icon size={14} strokeWidth={1.8} className={activeStudio === s.id ? 'text-accent' : ''} />
               <span className="hidden lg:inline">{s.label}</span>
+              {activeStudio === s.id && (
+                <span
+                  aria-hidden="true"
+                  className="absolute -bottom-[7px] left-2.5 right-2.5 h-[2px] rounded-full bg-accent/80"
+                />
+              )}
             </button>
           </div>
         ))}
       </nav>
 
       {/* Right cluster */}
-      <div className="ml-auto flex items-center gap-3">
+      <div className="ml-auto flex items-center gap-2.5">
         {readonly && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-amber-500/40 bg-amber-500/10 text-amber-300 text-2xs font-medium">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-amber-500/40 bg-amber-500/10 text-warn text-2xs font-medium">
             <Eye size={11} /> READ-ONLY
           </span>
         )}
+
+        {/* Command palette trigger */}
+        <button
+          type="button"
+          onClick={() => setPaletteOpen(true)}
+          className="flex items-center gap-1.5 px-2 py-1 rounded-md border border-line bg-panel2 hover:bg-panel3 text-mut hover:text-ink text-2xs transition-colors"
+          aria-label="Open command palette"
+          title="Command palette — search every action"
+        >
+          <Command size={12} />
+          <kbd className="font-mono">{MOD_KEY}K</kbd>
+        </button>
+
+        <SettingsPopover />
+
         <span className="text-[13px] text-ink font-medium truncate max-w-[220px]">
           {manifest?.title ?? 'Untitled bundle'}
         </span>
@@ -149,7 +179,7 @@ export function WorkstationSwitcher() {
         )}
 
         {/* Maintenance kebab */}
-        <div className="relative">
+        <div className="relative" ref={kebabRef}>
           <button
             type="button"
             onClick={() => setMenuOpen((o) => !o)}
@@ -160,7 +190,7 @@ export function WorkstationSwitcher() {
             <MoreHorizontal size={14} />
           </button>
           {menuOpen && (
-            <div className="absolute right-0 top-9 z-40 w-60 rounded-lg border border-line2 bg-panel shadow-2xl py-1.5">
+            <div className="anim-pop absolute right-0 top-9 z-40 w-60 rounded-lg border border-line2 bg-panel shadow-2xl py-1.5">
               <button
                 type="button"
                 onClick={() => void snapshot()}
@@ -198,7 +228,7 @@ export function WorkstationSwitcher() {
                   setMenuOpen(false);
                   void closeProject();
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] hover:bg-panel2 text-rose-300 text-left"
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] hover:bg-panel2 text-bad text-left"
               >
                 <LogOut size={14} />
                 Close project

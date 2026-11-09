@@ -118,7 +118,7 @@ export function LocalizationStudio() {
                   setLanguages((ls) => ls.filter((x) => x.id !== l.id));
                   if (activeLang === l.id) setActiveLang('');
                 }}
-                className="ml-0.5 text-mut hover:text-red-400"
+                className="ml-0.5 text-mut hover:text-bad"
               >
                 <Trash2 size={11} />
               </button>

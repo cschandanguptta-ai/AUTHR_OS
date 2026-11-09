@@ -120,7 +120,7 @@ function SpeakerGutterBadge({
               className={cn(
                 'w-4 h-4 rounded text-[9px] font-mono leading-none transition-colors',
                 data.segment_type === type
-                  ? 'bg-accent text-zinc-950 font-bold'
+                  ? 'bg-accent text-on-accent font-bold'
                   : 'text-mut hover:text-ink hover:bg-panel3',
               )}
             >

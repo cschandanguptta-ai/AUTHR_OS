@@ -17,12 +17,14 @@ interface WorkspaceState {
   paneWidths: Record<PaneKey, number>;
   binderOpen: boolean;
   inspectorOpen: boolean;
+  paletteOpen: boolean;
   setActiveStudio: (studio: StudioId) => void;
   setViewMode: (mode: ViewMode) => void;
   setPaneWidth: (pane: PaneKey, width: number) => void;
   resetPaneWidths: () => void;
   toggleBinder: () => void;
   toggleInspector: () => void;
+  setPaletteOpen: (open: boolean) => void;
 }
 
 export const useWorkspaceStore = create<WorkspaceState>((set) => ({
@@ -31,6 +33,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   paneWidths: { ...PANE_DEFAULTS },
   binderOpen: true,
   inspectorOpen: true,
+  paletteOpen: false,
   setActiveStudio: (studio) => set({ activeStudio: studio }),
   setViewMode: (mode) => set({ viewMode: mode }),
   setPaneWidth: (pane, width) =>
@@ -43,4 +46,5 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   resetPaneWidths: () => set({ paneWidths: { ...PANE_DEFAULTS } }),
   toggleBinder: () => set((s) => ({ binderOpen: !s.binderOpen })),
   toggleInspector: () => set((s) => ({ inspectorOpen: !s.inspectorOpen })),
+  setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
 }));

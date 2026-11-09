@@ -1,4 +1,5 @@
 import { useCallback, useRef } from 'react';
+import { Minimize2 } from 'lucide-react';
 import { useWorkspaceStore, PANE_DEFAULTS, type PaneKey } from '../../stores/workspaceStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { ProjectBinder } from './ProjectBinder';
@@ -72,6 +73,7 @@ export function Cockpit() {
   const inspectorWidth = useWorkspaceStore((s) => s.paneWidths.inspector);
   const setPaneWidth = useWorkspaceStore((s) => s.setPaneWidth);
   const typewriter = useSettingsStore((s) => s.typewriterMode);
+  const setTypewriterMode = useSettingsStore((s) => s.setTypewriterMode);
 
   const resetBinder = useCallback(() => setPaneWidth('binder', PANE_DEFAULTS.binder), [setPaneWidth]);
   const resetInspector = useCallback(
@@ -81,10 +83,22 @@ export function Cockpit() {
 
   if (typewriter) {
     // Distraction-free mode: the canvas takes over the viewport; same editor
-    // instance, so the open chapter and undo history survive.
+    // instance, so the open chapter and undo history survive. The floating
+    // pill (plus the global Escape handler) guarantees a way out — the old
+    // build stranded users here with no visible exit.
     return (
-      <div className="flex-1 min-h-0 relative">
+      <div className="flex-1 min-h-0 relative anim-fade">
         <LexicalCanvas />
+        <button
+          type="button"
+          onClick={() => setTypewriterMode(false)}
+          className="focus-exit-pill anim-fade"
+          title="Leave focus mode (Escape)"
+          aria-label="Leave focus mode"
+        >
+          <Minimize2 size={12} />
+          <span>Focus mode — press <kbd className="font-mono text-[11px]">Esc</kbd> or click to exit</span>
+        </button>
       </div>
     );
   }

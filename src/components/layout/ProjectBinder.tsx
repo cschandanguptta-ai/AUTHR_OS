@@ -295,7 +295,7 @@ function LoreSection({ open, onToggle }: { open: boolean; onToggle: () => void }
                       <button
                         type="button"
                         onClick={() => void deleteLore(entry.key)}
-                        className="opacity-0 group-hover:opacity-100 text-mut hover:text-rose-400"
+                        className="opacity-0 group-hover:opacity-100 text-mut hover:text-bad"
                         aria-label={`Delete lore entry ${entry.key}`}
                       >
                         <Trash2 size={11} />
@@ -379,9 +379,9 @@ function ChekhovSection({ open, onToggle }: { open: boolean; onToggle: () => voi
     'RESOLVED',
   ];
   const columnTone: Record<string, string> = {
-    INTRODUCED: 'text-amber-300/90',
-    ESCALATED: 'text-rose-300/90',
-    RESOLVED: 'text-emerald-300/90',
+    INTRODUCED: 'text-warn/90',
+    ESCALATED: 'text-bad/90',
+    RESOLVED: 'text-ok/90',
   };
 
   return (
@@ -457,7 +457,7 @@ function ChekhovSection({ open, onToggle }: { open: boolean; onToggle: () => voi
                               <button
                                 type="button"
                                 onClick={() => void resolveThread(t.id)}
-                                className="text-2xs text-mut hover:text-emerald-400"
+                                className="text-2xs text-mut hover:text-ok"
                                 title="Resolve in the open chapter"
                                 aria-label={`Resolve thread ${t.thread_title}`}
                               >
@@ -465,7 +465,7 @@ function ChekhovSection({ open, onToggle }: { open: boolean; onToggle: () => voi
                               </button>
                             )}
                             {status === 'RESOLVED' && t.resolved_in_chapter && (
-                              <span className="font-mono text-2xs text-emerald-400/80">
+                              <span className="font-mono text-2xs text-ok/80">
                                 →ch{t.resolved_in_chapter}
                               </span>
                             )}

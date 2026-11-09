@@ -84,7 +84,7 @@ function VoiceRow({ character }: { character: CharacterRow }) {
                 const ok = await deleteCharacter(draft.character_key);
                 if (!ok) toast('warn', 'Cannot delete', 'Segments still reference this speaker.');
               }}
-              className="text-mut hover:text-red-400 transition-colors"
+              className="text-mut hover:text-bad transition-colors"
               aria-label={`Delete ${draft.display_name}`}
             >
               <Trash2 size={13} />
@@ -275,7 +275,7 @@ export function AudioStudio() {
                   onClick={() => setLayerState((s) => ({ ...s, [layer.id]: { ...st, muted: !st.muted } }))}
                   className={cn(
                     'text-2xs px-2 py-1 rounded border font-mono',
-                    st.muted ? 'border-red-500/40 bg-red-500/10 text-red-300' : 'border-line text-mut hover:text-ink',
+                    st.muted ? 'border-red-500/40 bg-red-500/10 text-bad' : 'border-line text-mut hover:text-ink',
                   )}
                 >
                   {st.muted ? 'MUTED' : 'LIVE'}
@@ -285,7 +285,7 @@ export function AudioStudio() {
                   onClick={() => setLayerState((s) => ({ ...s, [layer.id]: { ...st, solo: !st.solo } }))}
                   className={cn(
                     'text-2xs px-2 py-1 rounded border font-mono',
-                    st.solo ? 'border-amber-500/40 bg-amber-500/10 text-amber-300' : 'border-line text-mut hover:text-ink',
+                    st.solo ? 'border-amber-500/40 bg-amber-500/10 text-warn' : 'border-line text-mut hover:text-ink',
                   )}
                 >
                   {st.solo ? 'SOLO' : 'SOLO'}

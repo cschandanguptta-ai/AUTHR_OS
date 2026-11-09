@@ -91,6 +91,16 @@ npm run dev                    # http://localhost:5173
 envelope, so Lexical edits, binder trees and studio tables drive the actual
 Rust core. No Tauri required until packaging.
 
+**Cockpit chrome** (v3.0 UI/UX delta): command palette (**Ctrl/Cmd+K** —
+studios, canvas views, project actions, themes, all filterable), reader
+settings popover (dark/midnight/sepia themes, editor type size 14–22px,
+focus mode), studio shortcuts **Ctrl/Cmd+Alt+1–6**, binder/inspector toggles
+**Ctrl/Cmd+Alt+B / I**, Escape always exits focus mode. Modals trap focus and
+restore it on close; all motion collapses under `prefers-reduced-motion`.
+Theming rule: components use the semantic utilities (`text-ok`, `bg-accent/10`,
+…) — never hardcoded spectrum classes; see `docs/invariants-and-gotchas.md`
+§1.14–1.15.
+
 ### 3. E2E test suite (205 tests · 35 modules)
 
 ```bash
