@@ -1,6 +1,6 @@
 {
  "suite": "AUTHR_OS Desktop \u2014 Phase 1\u20136 + v1.3\u2013v1.5 Craft, Retention & Video Novel acceptance (contract v1.5)",
- "recorded_at": "2026-11-09T13:05:15.202423+00:00",
+ "recorded_at": "2026-11-09T14:08:40.938114+00:00",
  "rust": {
   "toolchain": "rustc 1.99.1",
   "crate": "authr 3.0.0",
@@ -20,25 +20,25 @@
   "tier1": {
    "passed": 129,
    "failed": 0,
-   "duration_s": 12.16,
+   "duration_s": 13.28,
    "modules": 20
   },
   "tier2": {
    "passed": 62,
    "failed": 0,
-   "duration_s": 3.63,
+   "duration_s": 3.67,
    "modules": 10
   },
   "tier3": {
    "passed": 6,
    "failed": 0,
-   "duration_s": 2.76,
+   "duration_s": 2.74,
    "modules": 1
   },
   "tier4": {
    "passed": 8,
    "failed": 0,
-   "duration_s": 3.8,
+   "duration_s": 3.94,
    "modules": 4
   }
  },
@@ -50,12 +50,12 @@
  },
  "benchmark_gates": {
   "cold_start": {
-   "median_ms": 1.947,
-   "p95_ms": 2.233,
+   "median_ms": 1.895,
+   "p95_ms": 2.456,
    "limit_ms": 1500.0
   },
   "rss": {
-   "peak_mb": 6.12,
+   "peak_mb": 6.33,
    "limit_mb": 50.0
   },
   "binary": {
@@ -71,8 +71,8 @@
   "error_codes": 14,
   "test_modules": 35,
   "rust_unit_tests": 120,
-  "phases": "1\u20136 complete + v1.3 craft & KDP + v1.4 retention kit + v1.5 video novel studio \u2014 Golden Master v3.0.0-PROD",
+  "phases": "1\u20136 complete + v1.3 craft & KDP + v1.4 retention kit + v1.5 video novel studio + cockpit UI/UX upgrade \u2014 Golden Master v3.0.0-PROD",
   "contract_version": "1.5"
  },
- "verification_note": "Acceptance on 2026-11-09 (contract v1.5): 205/205 E2E + 120/120 Rust unit tests green, tsc + vite clean, cargo build 0 warnings, clippy 0 warnings, all benchmark gates pass. v1.3 adds the craft catalog (25 formats / 37 personas / 18 arcs), beat scaffolding and KDP storefront packaging (kdp_check/kdp_package). Storefront-grade EPUB: cover embedding with dimension validation, title/copyright front matter, DC metadata from the KDP payload. v1.4 adds the SFB-2.0 retention kit (craft_retention_check/report/worksheet, craft_catalog kind=retention): seven-beat chapter model, six ending types with last-3 rotation, 10\u201315 chapter micro-arc cycle, 7\u00d70\u20132 QC rubric with zero-flag rule, A\u2013E worksheet, 1000\u20132000 word guidance and cadence arithmetic. v1.5 adds the video novel studio (video_plan/render/assemble/validate): draft-time media derivation (no-double-work contract), deterministic SCRIPTED image engine (BMP + 5\u00d77 font + seeded palettes), R2I reference sheets with the consistency ladder, R2I_ENDPOINT fail-closed seam, one-pass ffmpeg MP4 (Ken Burns + focal anchors + narration reuse + SRT)."
+ "verification_note": "Acceptance on 2026-11-09 (contract v1.5): 205/205 E2E + 120/120 Rust unit tests green, tsc + vite clean, cargo build 0 warnings, clippy 0 warnings, all benchmark gates pass. v1.3 adds the craft catalog (25 formats / 37 personas / 18 arcs), beat scaffolding and KDP storefront packaging (kdp_check/kdp_package). Storefront-grade EPUB: cover embedding with dimension validation, title/copyright front matter, DC metadata from the KDP payload. v1.4 adds the SFB-2.0 retention kit (craft_retention_check/report/worksheet, craft_catalog kind=retention): seven-beat chapter model, six ending types with last-3 rotation, 10\u201315 chapter micro-arc cycle, 7\u00d70\u20132 QC rubric with zero-flag rule, A\u2013E worksheet, 1000\u20132000 word guidance and cadence arithmetic. v1.5 adds the video novel studio (video_plan/render/assemble/validate): draft-time media derivation (no-double-work contract), deterministic SCRIPTED image engine (BMP + 5\u00d77 font + seeded palettes), R2I reference sheets with the consistency ladder, R2I_ENDPOINT fail-closed seam, one-pass ffmpeg MP4 (Ken Burns + focal anchors + narration reuse + SRT). Cockpit UI/UX upgrade re-verified on this run: Ctrl/Cmd+K command palette, global studio shortcuts, reader settings popover (themes, editor type size, focus mode), modal focus traps + restore, semantic color system with alpha-capable --X-rgb triples, theme-aware status tones, prefers-reduced-motion; zero new dependencies \u2014 tsc + vite clean, full E2E + bench re-run green."
 }

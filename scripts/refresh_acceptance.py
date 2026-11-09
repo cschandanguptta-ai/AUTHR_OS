@@ -74,7 +74,7 @@ record = {
         "error_codes": 14,
         "test_modules": 35,
         "rust_unit_tests": 120,
-        "phases": "1–6 complete + v1.3 craft & KDP + v1.4 retention kit + v1.5 video novel studio — Golden Master v3.0.0-PROD",
+        "phases": "1–6 complete + v1.3 craft & KDP + v1.4 retention kit + v1.5 video novel studio + cockpit UI/UX upgrade — Golden Master v3.0.0-PROD",
         "contract_version": "1.5",
     },
     "verification_note": (
@@ -92,7 +92,12 @@ record = {
         "draft-time media derivation (no-double-work contract), deterministic "
         "SCRIPTED image engine (BMP + 5×7 font + seeded palettes), R2I reference "
         "sheets with the consistency ladder, R2I_ENDPOINT fail-closed seam, "
-        "one-pass ffmpeg MP4 (Ken Burns + focal anchors + narration reuse + SRT)."
+        "one-pass ffmpeg MP4 (Ken Burns + focal anchors + narration reuse + SRT). "
+        "Cockpit UI/UX upgrade re-verified on this run: Ctrl/Cmd+K command palette, "
+        "global studio shortcuts, reader settings popover (themes, editor type size, "
+        "focus mode), modal focus traps + restore, semantic color system with "
+        "alpha-capable --X-rgb triples, theme-aware status tones, prefers-reduced-motion; "
+        "zero new dependencies — tsc + vite clean, full E2E + bench re-run green."
     ),
 }
 
