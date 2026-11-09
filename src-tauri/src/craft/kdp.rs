@@ -214,7 +214,9 @@ pub fn kdp_check(ctx: &mut crate::ipc::Ctx, a: &Value) -> crate::error::IpcResul
     let typ_ok = exists(&format!("{slug}.typ"));
     let m4b_ok = exists(&format!("{slug}.m4b"));
 
-    // Cover: row field must point at an existing file inside the bundle.
+    // Cover: row field must point at an existing file inside the bundle AND
+    // decode as a JPG/PNG. Dimension quality (KDP ideal 2560×1600, minimum
+    // 1000px longest side, ~1.6:1) is reported as WARN — never silently OK.
     let cover_field = book["cover_image_path"].as_str().unwrap_or("").to_string();
     let cover_ok = !cover_field.is_empty()
         && crate::security::sandbox::resolve_in_root(
@@ -223,6 +225,15 @@ pub fn kdp_check(ctx: &mut crate::ipc::Ctx, a: &Value) -> crate::error::IpcResul
         )
         .map(|p| p.is_file())
         .unwrap_or(false);
+    let cover_asset = if cover_ok {
+        crate::publish::resolve_cover(&ctx.root, &cover_field)
+    } else {
+        None
+    };
+    let cover_warnings = match &cover_asset {
+        Some(c) => crate::publish::cover_spec_warnings(c.width, c.height),
+        None => Vec::new(),
+    };
 
     // Metadata: the persisted storefront payload (from kdp_package).
     let sf = state["storefront"].clone();
@@ -311,6 +322,15 @@ pub fn kdp_check(ctx: &mut crate::ipc::Ctx, a: &Value) -> crate::error::IpcResul
         issues.push(json!({"severity":"FAIL","area":"cover","message":
             "no cover image on file (storefronts require one)",
             "fix":"set cover_image_path (book_update) — KDP ideal 2560×1600 JPG, ratio 1.6:1"}));
+    } else if cover_asset.is_none() {
+        issues.push(json!({"severity":"WARN","area":"cover","message":
+            format!("cover at {cover_field} is not a decodable JPG/PNG (header unreadable)"),
+            "fix":"replace with a JPG/PNG inside the bundle"}));
+    } else {
+        for wmsg in &cover_warnings {
+            issues.push(json!({"severity":"WARN","area":"cover","message": wmsg,
+                "fix":"replace the cover asset with a KDP-spec image (2560×1600 JPG, 1.6:1)"}));
+        }
     }
     let print_score = if pdf_ok {
         10
@@ -371,7 +391,11 @@ pub fn kdp_check(ctx: &mut crate::ipc::Ctx, a: &Value) -> crate::error::IpcResul
             "manuscript": {"score": manuscript_score, "chapters": chapters.len(), "words": words},
             "epub": {"score": epub_score, "out": format!("exports/{slug}.epub"), "present": epub_ok},
             "docx": {"present": docx_ok},
-            "cover": {"score": cover_score, "path": cover_field, "present": cover_ok},
+            "cover": {"score": cover_score, "path": cover_field, "present": cover_ok,
+                      "decodable": cover_asset.is_some(),
+                      "width": cover_asset.as_ref().map(|c| c.width).unwrap_or(0),
+                      "height": cover_asset.as_ref().map(|c| c.height).unwrap_or(0),
+                      "warnings": cover_warnings},
             "metadata": {"score": metadata_score, "keywords": keywords.len(),
                          "categories": categories.len(), "description_chars": desc.chars().count()},
             "print": {"score": print_score, "pdf": pdf_ok, "typ": typ_ok},

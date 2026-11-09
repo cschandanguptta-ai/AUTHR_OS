@@ -206,6 +206,140 @@ pub fn iso_utc() -> String {
     chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Cover assets (v1.3 craft) — header-only dimension probe + KDP spec checks.
+// No image codec dependency: we only need intrinsic pixel dimensions for
+// storefront validation, parsed straight from PNG IHDR / JPEG SOF markers.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Intrinsic pixel dimensions decoded from the image header.
+/// Supports PNG (IHDR) and JPEG (any SOF0–SOF15 frame header except the
+/// marker-only DHT/DAC/JPG codes). Returns `(width, height)` or `None` when
+/// the header is unrecognized/truncated.
+pub fn image_dimensions(bytes: &[u8]) -> Option<(u32, u32)> {
+    if bytes.len() >= 24 && bytes[0] == 0x89 && &bytes[1..4] == b"PNG" {
+        // PNG: 8-byte signature, IHDR chunk header (8) + length/type (8);
+        // width at offset 16, height at 20, both big-endian u32.
+        let w = u32::from_be_bytes(bytes[16..20].try_into().ok()?);
+        let h = u32::from_be_bytes(bytes[20..24].try_into().ok()?);
+        return Some((w, h));
+    }
+    if bytes.len() >= 4 && bytes[0] == 0xFF && bytes[1] == 0xD8 {
+        // JPEG: walk the marker chain until a frame header (SOFn) shows dims.
+        let mut i = 2usize;
+        while i + 4 <= bytes.len() {
+            if bytes[i] != 0xFF {
+                i += 1;
+                continue;
+            }
+            let marker = bytes[i + 1];
+            if marker == 0xFF {
+                i += 1; // fill byte before a marker
+                continue;
+            }
+            // Standalone markers carry no length segment.
+            if marker == 0x01 || (0xD0..=0xD9).contains(&marker) {
+                i += 2;
+                continue;
+            }
+            let seg_len =
+                usize::from(u16::from_be_bytes(bytes.get(i + 2..i + 4)?.try_into().ok()?));
+            if seg_len < 2 {
+                return None; // corrupt length — refuse to loop forever
+            }
+            // SOFn frame headers: C0–CF except C4 (DHT), C8 (JPG), CC (DAC).
+            if (0xC0..=0xCF).contains(&marker) && ![0xC4, 0xC8, 0xCC].contains(&marker) {
+                if i + 9 <= bytes.len() {
+                    let h = u16::from_be_bytes(bytes[i + 5..i + 7].try_into().ok()?) as u32;
+                    let w = u16::from_be_bytes(bytes[i + 7..i + 9].try_into().ok()?) as u32;
+                    return Some((w, h));
+                }
+                return None;
+            }
+            i += 2 + seg_len;
+        }
+    }
+    None
+}
+
+/// A resolved, validated cover asset ready for EPUB embedding.
+pub struct CoverAsset {
+    pub bytes: Vec<u8>,
+    /// Normalized extension: "jpg" | "png"
+    pub ext: &'static str,
+    /// MIME: "image/jpeg" | "image/png"
+    pub media: &'static str,
+    pub width: u32,
+    pub height: u32,
+}
+
+/// KDP ebook-cover spec: ideal 2560×1600 (1.6:1), minimum 1000 px on the
+/// longest side; JPEG/PNG, RGB. Returns human-readable WARN strings (empty
+/// when the asset meets spec). Pure — unit-tested, shared by publish_epub
+/// and kdp_check.
+pub fn cover_spec_warnings(width: u32, height: u32) -> Vec<String> {
+    let mut out = Vec::new();
+    if width == 0 || height == 0 {
+        return vec!["cover image has zero dimensions".to_string()];
+    }
+    let longest = width.max(height);
+    if longest < 1000 {
+        out.push(format!(
+            "cover is {width}×{height}px — below KDP's 1000px minimum on the longest side; \
+             upscale to at least 1000px (ideal 2560×1600)"
+        ));
+    } else if width < 2560 && height < 1600 {
+        out.push(format!(
+            "cover is {width}×{height}px — KDP ideal is 2560×1600 for crisp display"
+        ));
+    }
+    let ratio = width as f64 / height as f64;
+    if (ratio - 1.6).abs() / 1.6 > 0.15 {
+        out.push(format!(
+            "cover aspect ratio is {ratio:.2}:1 — KDP ebook covers should be ~1.6:1; \
+             the storefront may crop or letterbox"
+        ));
+    }
+    out
+}
+
+/// Resolve a book's `cover_image_path` into a validated `CoverAsset`.
+/// Fails soft: any problem (unset, sandbox escape, unreadable, undecodable
+/// header) yields `None` plus an explanatory `Err`-free path — callers
+/// decide whether that is a WARN or a FAIL for their surface.
+pub fn resolve_cover(root: &std::path::Path, rel: &str) -> Option<CoverAsset> {
+    if rel.trim().is_empty() {
+        return None;
+    }
+    let abs = crate::security::sandbox::resolve_in_root(root, std::path::Path::new(rel)).ok()?;
+    if !abs.is_file() {
+        return None;
+    }
+    let bytes = std::fs::read(&abs).ok()?;
+    let (w, h) = image_dimensions(&bytes)?;
+    let ext = abs
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(str::to_ascii_lowercase);
+    match ext.as_deref() {
+        Some("jpg") | Some("jpeg") => Some(CoverAsset {
+            bytes,
+            ext: "jpg",
+            media: "image/jpeg",
+            width: w,
+            height: h,
+        }),
+        Some("png") => Some(CoverAsset {
+            bytes,
+            ext: "png",
+            media: "image/png",
+            width: w,
+            height: h,
+        }),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -250,5 +384,65 @@ mod tests {
         ];
         let starts = cumulative_starts(&segs);
         assert_eq!(starts, vec![0, 1115, 1735]);
+    }
+
+    /// Build a minimal PNG in-test: signature + IHDR with the given dims.
+    fn png_with_dims(w: u32, h: u32) -> Vec<u8> {
+        let mut v = vec![0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A];
+        v.extend_from_slice(&[0, 0, 0, 13]); // IHDR data length
+        v.extend_from_slice(b"IHDR");
+        v.extend_from_slice(&w.to_be_bytes());
+        v.extend_from_slice(&h.to_be_bytes());
+        v.extend_from_slice(&[8, 6, 0, 0, 0]); // bit depth, color, …
+        v.extend_from_slice(&[0, 0, 0, 0]); // CRC placeholder (unused here)
+        v
+    }
+
+    /// Build a minimal JPEG: SOI + APP0 + SOF0 with dims + EOI.
+    fn jpeg_with_dims(w: u16, h: u16) -> Vec<u8> {
+        let mut v = vec![0xFF, 0xD8]; // SOI
+        v.extend_from_slice(&[0xFF, 0xE0, 0x00, 0x02]); // APP0, empty
+        v.extend_from_slice(&[0xFF, 0xC0]); // SOF0
+        v.extend_from_slice(&8u16.to_be_bytes()); // segment length
+        v.push(8); // precision
+        v.extend_from_slice(&h.to_be_bytes());
+        v.extend_from_slice(&w.to_be_bytes());
+        v.extend_from_slice(&[1, 0x11, 0]); // components
+        v.extend_from_slice(&[0xFF, 0xD9]); // EOI
+        v
+    }
+
+    #[test]
+    fn image_dimensions_reads_png_ihdr() {
+        assert_eq!(image_dimensions(&png_with_dims(2560, 1600)), Some((2560, 1600)));
+        assert_eq!(image_dimensions(&png_with_dims(100, 62)), Some((100, 62)));
+    }
+
+    #[test]
+    fn image_dimensions_reads_jpeg_sof() {
+        assert_eq!(image_dimensions(&jpeg_with_dims(1600, 1000)), Some((1600, 1000)));
+    }
+
+    #[test]
+    fn image_dimensions_rejects_garbage() {
+        assert_eq!(image_dimensions(b"not an image at all"), None);
+        assert_eq!(image_dimensions(&[]), None);
+        assert_eq!(image_dimensions(&[0xFF, 0xD8, 0x00]), None); // truncated JPEG
+    }
+
+    #[test]
+    fn cover_spec_warns_on_undersized_and_wrong_ratio() {
+        // 1×1: below minimum AND wrong ratio.
+        let w = cover_spec_warnings(100, 62);
+        assert!(w.iter().any(|s| s.contains("1000px minimum")));
+        // 1600×1000 = 1.6:1, above minimum, below ideal → only the "ideal" note.
+        let w2 = cover_spec_warnings(1600, 1000);
+        assert!(w2.len() == 1 && w2[0].contains("2560×1600"));
+        // Exact KDP ideal → zero warnings.
+        assert!(cover_spec_warnings(2560, 1600).is_empty());
+        // Above minimum but 2:1 ratio → ratio warning only.
+        let w3 = cover_spec_warnings(2560, 1280);
+        assert!(w3.iter().any(|s| s.contains("aspect ratio")));
+        assert!(!w3.iter().any(|s| s.contains("1000px minimum")));
     }
 }

@@ -43,7 +43,7 @@ record = {
         "toolchain": "rustc 1.99.1",
         "crate": "authr 3.0.0",
         "build": "cargo build --release: 0 warnings",
-        "unit_tests": "84 passed (dsp kernels, tts protocols, scheduler, rag, llm, publish, release, craft catalog/engine/kdp)",
+        "unit_tests": "93 passed (dsp kernels, tts protocols, scheduler, rag, llm, publish+cover, release, craft catalog/engine/kdp, epub storefront front matter)",
     },
     "e2e_full_suite": {
         "suite": "AUTHR_OS E2E",
@@ -73,15 +73,17 @@ record = {
         "commands": 62,
         "error_codes": 14,
         "test_modules": 33,
-        "rust_unit_tests": 84,
+        "rust_unit_tests": 93,
         "phases": "1–6 complete + v1.3 craft & KDP — Golden Master v3.0.0-PROD",
         "contract_version": "1.3",
     },
     "verification_note": (
-        "Acceptance on 2026-11-09 (contract v1.3): 184/184 E2E + 84/84 Rust unit tests green, "
+        "Acceptance on 2026-11-09 (contract v1.3): 186/186 E2E + 93/93 Rust unit tests green, "
         "tsc + vite clean, cargo build 0 warnings, all benchmark gates pass. "
         "v1.3 adds the craft catalog (25 formats / 37 personas / 18 arcs), "
-        "beat scaffolding and KDP storefront packaging (kdp_check/kdp_package)."
+        "beat scaffolding and KDP storefront packaging (kdp_check/kdp_package). "
+        "Storefront-grade EPUB: cover embedding with dimension validation, "
+        "title/copyright front matter, DC metadata from the KDP payload."
     ),
 }
 

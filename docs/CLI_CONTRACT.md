@@ -238,7 +238,7 @@ maps to one of the four frozen CHECK values).
 | 58 | `craft_apply` | `{book_id, format_id?, plot_arc_id?, style_persona_id?, adopt_defaults?=false}` | `{book_id, format, plot_arc, style_persona, legacy_sync, state}` — validates ids (`CRAFT_ERROR`), upserts `craft_state`, syncs `persona_id`/`narrative_structure`, optionally adopts the format's default word/chapter targets |
 | 59 | `craft_scaffold` | `{book_id, plot_arc_id?, chapter_count?, start_chapter?=1, per_chapter_words?=3500, overwrite_synopsis?=false}` | `{book_id, plot_arc, arc_label, chapters_total, created, mapped, beats_total, plan[], chapters_created[]}` — deterministic beat mapping: chapter *i* of *n* carries beat `⌊i·b/n⌋` (monotonic, full coverage for any n); missing chapters are created (title = beat label, synopsis = beat guidance, act = 1+⌊3·beat/b⌋ clamped 1–3) |
 | 60 | `craft_progress` | `{book_id}` | `{total_beats, covered_beats, coverage_pct, beats:[{beat_id, label, guidance, chapters[], started}], chapters, total_words, target_words, unresolved_threads, plan}` — beat coverage fused with word counts and the Chekhov ledger |
-| 61 | `kdp_check` | `{book_id, price_usd?=4.99}` | `{pass, readiness_score(0–100), checks:{manuscript, epub, docx, cover, metadata, print, audio, polish}, issues:[{severity:FAIL\|WARN\|INFO, area, message, fix}], pricing_hint:{ebook 70%/35%, paperback, hardcover, audiobook_acx}, est_pages}` — read-only compliance scan over manuscript/exports/cover/metadata |
+| 61 | `kdp_check` | `{book_id, price_usd?=4.99}` | `{pass, readiness_score(0–100), checks:{manuscript, epub, docx, cover, metadata, print, audio, polish}, issues:[{severity:FAIL\|WARN\|INFO, area, message, fix}], pricing_hint:{ebook 70%/35%, paperback, hardcover, audiobook_acx}, est_pages}` — read-only compliance scan over manuscript/exports/cover/metadata. **Cover is dimension-probed from the image header** (PNG IHDR / JPEG SOF, no codec dependency): `checks.cover` carries `decodable, width, height, warnings[]`; a decodable-but-sub-spec image (below 1000px longest side or off the ~1.6:1 ratio) scores for presence yet raises WARN issues — never a silent pass |
 | 62 | `kdp_package` | `{book_id, price_usd?=4.99, keywords?[≤7, ≤50 chars], categories?[≤2], description?(20–4000 chars, falls back to `marketing_copy`), subtitle?, language?="en", isbn?, publisher?, edition?, ai_disclosure?=false, drm?=false}` | `{package_dir: exports/kdp/<slug>/, files:[metadata.json, description.html, copyright-page.xhtml, checklist.md], metadata, royalties, issues, words, est_pages}` — writer; persists the storefront payload in `craft_state.storefront_json` |
 
 KDP packaging guarantees: `description.html` is rebuilt by a **whitelist
@@ -251,6 +251,19 @@ current rates on kdp.amazon.com before filing real prices.
 Persona hooks: `local_llm_generate` accepts an additive `style_persona` arg
 (§4.12) — the persona's craft directive is prepended to the prompt for every
 backend, and the response carries `style_persona`.
+
+Storefront-grade EPUB (additive enrichment of #47 `publish_epub`, same args,
+all legacy fields unchanged): when `books.cover_image_path` resolves to a
+readable JPG/PNG inside the bundle the EPUB embeds `OEBPS/images/cover.*` +
+`OEBPS/cover.xhtml` with `properties="cover-image"` and the cover page opens
+the spine; `OEBPS/title.xhtml` + `OEBPS/copyright.xhtml` (© year, all-rights
+boilerplate, imprint/edition/ISBN, optional AI-assistance disclosure) are
+always present ahead of the chapters; the OPF gains `dc:description`
+(storefront → `marketing_copy` → `premise`), `dc:subject` (categories →
+`genre`), storefront publisher/language. Result payload adds `cover:
+{embedded, path?, media?, width?, height?, ratio?, warnings[], hint?}` and
+`front_matter: ["title.xhtml", "copyright.xhtml"]` and extends `dc` with
+`description, subject, subtitle`.
 
 ## 5. Row Shapes (camel-free — snake_case exactly as SQLite)
 
