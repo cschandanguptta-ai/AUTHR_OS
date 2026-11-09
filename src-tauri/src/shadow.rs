@@ -63,10 +63,10 @@ pub fn render_chapter(ctx: &Ctx, chapter_id: i64) -> Result<(), AppError> {
     let md = render_markdown(&row, &segments, &ctx.conn)?;
     let ast = render_ast(&segments)?;
 
-    crate::bundle::manifest::atomic_write(&ctx.root.join(format!("{rel}")), md.as_bytes())?;
+    crate::bundle::manifest::atomic_write(&ctx.root.join(&rel), md.as_bytes())?;
     let ast_rel = rel.trim_end_matches(".md").to_string() + ".ast.json";
     crate::bundle::manifest::atomic_write(
-        &ctx.root.join(format!("{ast_rel}")),
+        &ctx.root.join(&ast_rel),
         ast.as_bytes(),
     )?;
     Ok(())

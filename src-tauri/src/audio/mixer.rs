@@ -65,7 +65,7 @@ pub fn resample(samples: &[f32], rate_in: u32, rate_out: u32) -> Result<Vec<f32>
     let chunk_in = resampler.input_frames_next();
     let mut padded = samples.to_vec();
     let pad = (chunk_in - padded.len() % chunk_in) % chunk_in;
-    padded.extend(std::iter::repeat(0.0f32).take(pad));
+    padded.extend(std::iter::repeat_n(0.0f32, pad));
     let mut out = Vec::with_capacity(padded.len() * rate_out as usize / rate_in as usize + chunk_out);
     for chunk in padded.chunks(chunk_in) {
         let processed = resampler

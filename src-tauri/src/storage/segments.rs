@@ -70,7 +70,14 @@ pub fn list(conn: &Connection, chapter_id: i64) -> Result<Value, AppError> {
 
 /// FTS5 BM25 search with the porter unicode61 tokenizer.
 /// Lesson from Phase 1: MATCH must target the real table name — no aliases.
+/// Tech-debt T-2: the query is sanitized with the shared rag FTS sanitizer
+/// (`rag::store::fts_sanitize`) and bound as a parameter, so FTS5 syntax in
+/// user input (`AND`, `NEAR(`, `"`, `*`) is searched literally instead of
+/// erroring with STORAGE_ERROR.
 pub fn search(conn: &Connection, query: &str, limit: i64) -> Result<Value, AppError> {
+    let Some(match_q) = crate::rag::store::fts_sanitize(query) else {
+        return Ok(json!({ "hits": [] }));
+    };
     let sql = "SELECT s.segment_id, s.chapter_id, s.text_content,
                       bm25(chapter_segments_fts) AS rank
                FROM chapter_segments_fts
@@ -80,7 +87,7 @@ pub fn search(conn: &Connection, query: &str, limit: i64) -> Result<Value, AppEr
                LIMIT ?2";
     let mut stmt = conn.prepare(sql)?;
     let hits = stmt
-        .query_map(rusqlite::params![query, limit], |r| {
+        .query_map(rusqlite::params![match_q, limit], |r| {
             Ok(json!({
                 "segment_id": r.get::<_, String>(0)?,
                 "chapter_id": r.get::<_, i64>(1)?,

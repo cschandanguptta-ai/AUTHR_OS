@@ -156,6 +156,14 @@ fn last_speaker_count(turns: &[Turn]) -> usize {
     seen.len()
 }
 
+/// Canonical duration estimator (ms) for unsynthesized text — `chars×55+400`.
+/// Single source of truth (tech-debt T-3): `audio_plan`, the synthesis
+/// scheduler, captions, EPUB SMIL overlays and M4B chapter marks all derive
+/// from this one function. Do NOT copy the formula — call this.
+pub fn estimate_duration_ms(text: &str) -> u64 {
+    (text.chars().count() as f64 * 55.0 + 400.0) as u64
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -217,5 +225,14 @@ mod tests {
         for w in &p.waves {
             assert_eq!(w.len(), 10);
         }
+    }
+
+    #[test]
+    fn estimator_matches_locked_formula() {
+        // Locked formula (invariants §3, tech-debt T-3): chars×55+400 ms.
+        // "one two three" = 13 chars → 1115 ms (mirrors publish/mod.rs test).
+        assert_eq!(estimate_duration_ms("one two three"), 1115);
+        assert_eq!(estimate_duration_ms(""), 400);
+        assert_eq!(estimate_duration_ms("four"), 620);
     }
 }

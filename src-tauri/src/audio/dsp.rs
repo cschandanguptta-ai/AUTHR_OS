@@ -28,9 +28,9 @@ impl Biquad {
 /// K-weighting stage 1 — high shelf (+4 dB @ ~1.68 kHz), BS.1770/pyloudnorm
 /// parameterization, valid at arbitrary sample rates via tan() pre-warp.
 fn high_shelf(fs: f64) -> Biquad {
-    let f0 = 1681.974_450_955_533;
-    let g = 3.999_843_853_973_347;
-    let q = 0.707_175_236_955_419_6;
+    let f0 = 1681.974450955533;
+    let g = 3.999843853973347;
+    let q = 0.7071752369554196;
     let k = (std::f64::consts::PI * f0 / fs).tan();
     let vh = 10f64.powf(g / 20.0);
     let vb = vh.powf(0.499_666_774_154_541_6);
@@ -197,7 +197,7 @@ fn sliding_max_abs(x: &[f32], w: usize) -> Vec<f32> {
         dq.push_back(j);
         if j >= w - 1 {
             let i = j + 1 - w;
-            while dq.front().map_or(false, |&f| f < i) {
+            while dq.front().is_some_and(|&f| f < i) {
                 dq.pop_front();
             }
             if let Some(&f) = dq.front() {
@@ -205,12 +205,12 @@ fn sliding_max_abs(x: &[f32], w: usize) -> Vec<f32> {
             }
         }
     }
-    for i in n.saturating_sub(w - 1)..n {
-        while dq.front().map_or(false, |&f| f < i) {
+    for (i, slot) in out.iter_mut().enumerate().skip(n.saturating_sub(w - 1)) {
+        while dq.front().is_some_and(|&f| f < i) {
             dq.pop_front();
         }
         if let Some(&f) = dq.front() {
-            out[i] = x[f].abs();
+            *slot = x[f].abs();
         }
     }
     out

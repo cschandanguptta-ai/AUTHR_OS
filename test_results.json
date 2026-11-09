@@ -1,6 +1,6 @@
 {
  "suite": "AUTHR_OS Desktop \u2014 Phase 1\u20136 final acceptance (contract v1.2)",
- "recorded_at": "2026-11-09T05:16:30.563078+00:00",
+ "recorded_at": "2026-11-09T06:43:28.776376+00:00",
  "rust": {
   "toolchain": "rustc 1.99.1",
   "crate": "authr 3.0.0",
@@ -10,7 +10,7 @@
  "e2e_full_suite": {
   "suite": "AUTHR_OS E2E",
   "exit_code": 0,
-  "passed": 168,
+  "passed": 170,
   "failed": 0,
   "tier": null,
   "feature": null,
@@ -18,27 +18,27 @@
  },
  "tiers": {
   "tier1": {
-   "passed": 94,
+   "passed": 95,
    "failed": 0,
-   "duration_s": 6.77,
+   "duration_s": 6.59,
    "modules": 16
   },
   "tier2": {
-   "passed": 61,
+   "passed": 62,
    "failed": 0,
-   "duration_s": 2.71,
+   "duration_s": 2.87,
    "modules": 10
   },
   "tier3": {
    "passed": 6,
    "failed": 0,
-   "duration_s": 1.33,
+   "duration_s": 1.52,
    "modules": 1
   },
   "tier4": {
    "passed": 7,
    "failed": 0,
-   "duration_s": 2.0,
+   "duration_s": 2.05,
    "modules": 3
   }
  },
@@ -50,22 +50,22 @@
  },
  "benchmark_gates": {
   "cold_start": {
-   "median_ms": 1.819,
-   "p95_ms": 2.018,
+   "median_ms": 2.03,
+   "p95_ms": 2.417,
    "limit_ms": 1500.0
   },
   "rss": {
-   "peak_mb": 6.2,
+   "peak_mb": 6.03,
    "limit_mb": 50.0
   },
   "binary": {
-   "mb": 10.11,
+   "mb": 10.36,
    "limit_mb": 25.0
   },
   "pass": true
  },
  "totals": {
-  "e2e_tests": 168,
+  "e2e_tests": 170,
   "pass_rate": "100%",
   "commands": 56,
   "error_codes": 13,

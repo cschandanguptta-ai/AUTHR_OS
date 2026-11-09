@@ -1,6 +1,6 @@
 """Tier 2 — BVA: multi-level cascade deletes & ON DELETE SET NULL / ON UPDATE CASCADE.
 
-Test IDs T2.CD1–T2.CD5 (5 tests).
+Test IDs T2.CD1–T2.CD6 (6 tests).
 """
 
 from helpers.assertions import assert_ok
@@ -90,3 +90,23 @@ def test_cd5_speaker_rename_on_update_cascades(seeded_bundle):
         assert "CHAR_KIRA" not in speakers
     finally:
         conn.close()
+
+
+def test_cd6_chapter_delete_records_snapshot_commit(bundle, cli):
+    """T2.CD6 — T-4 regression: chapter_delete participates in the standard
+    bookkeeping — after_commit() runs and the removal is committed to the
+    embedded git repo immediately (contract-locked `chore: manual snapshot`
+    message), not deferred to the next chapter sync."""
+    b = bundle()
+    _setup(b, cli)
+    out = assert_ok(cli("chapter_delete", bundle=b, args={"id": 1}), "chapter_delete")
+    commit = out.get("commit")
+    assert isinstance(commit, str) and len(commit) == 40, f"expected commit oid, got {commit!r}"
+    assert all(c in "0123456789abcdef" for c in commit)
+    # The commit is real and HEAD-carrying: a second delete-only session
+    # produces another commit (workdir dirty again via after_commit).
+    ch = assert_ok(cli("chapter_create", bundle=b, args={
+        "book_id": 1, "chapter_number": 9, "title": "Another",
+    }))["id"]
+    out2 = assert_ok(cli("chapter_delete", bundle=b, args={"id": ch}), "chapter_delete 2")
+    assert isinstance(out2.get("commit"), str) and out2["commit"] != commit

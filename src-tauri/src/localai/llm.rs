@@ -18,9 +18,11 @@ pub const DEFAULT_SERVER_URL: &str = "http://127.0.0.1:8080";
 // ─────────────────────────────────────────────────────────────────────────────
 // OFFLINE_GRAMMAR engine — deterministic, dependency-free text generation.
 // A seeded SplitMix64 stream drives a Markov-ish selector over the prompt's
-// own vocabulary, producing coherent placeholder prose. It exists so the
-// authoring pipeline (beat expansion, continuity prompts) is testable with
-// zero network and zero model downloads.
+// own vocabulary, producing coherent draft prose. It is a production
+// backend (not a stub): the offline default that keeps the authoring
+// pipeline (beat expansion, continuity prompts) fully functional with zero
+// network and zero model downloads; a real llama-server takes over
+// automatically when AUTHR_LLAMA_SERVER / server_url is configured.
 // ─────────────────────────────────────────────────────────────────────────────
 
 pub struct OfflineGrammarEngine;

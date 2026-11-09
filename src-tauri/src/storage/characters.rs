@@ -75,10 +75,10 @@ pub fn upsert(ctx: &mut crate::ipc::Ctx, a: &Value) -> Result<Value, AppError> {
         let mut stmt = conn
             .prepare("SELECT DISTINCT chapter_id FROM chapter_segments WHERE speaker_id = ?1")
             .map_err(|e| AppError::storage(e.to_string()))?;
-        let mut rows = stmt
+        let rows = stmt
             .query_map(rusqlite::params![key], |r| r.get::<_, i64>(0))
             .map_err(|e| AppError::storage(e.to_string()))?;
-        while let Some(row) = rows.next() {
+        for row in rows {
             chapters.push(row.map_err(|e| AppError::storage(e.to_string()))?);
         }
     }

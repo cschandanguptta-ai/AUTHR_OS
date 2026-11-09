@@ -31,11 +31,19 @@ def test_x2_cascade_fts_git_alignment(cli, seeded_bundle):
     assert assert_ok(cli("segment_search", bundle=b, args={"query": "dormant"}))["hits"] == []
     assert not (b.path / "manuscript" / "ch01.md").exists()
     assert not (b.path / "manuscript" / "ch01.ast.json").exists()
-    # The deletions are visible in git status (shadow layer was tracked).
+    # T-4 fix: the removal is committed immediately (contract-locked snapshot
+    # message) — the workdir is clean and the commit records the deletion,
+    # instead of leaving it pending until the next chapter sync.
     import subprocess
     p = subprocess.run(["git", "-C", str(b.path), "status", "--porcelain"],
                        capture_output=True, text=True, timeout=30)
-    assert "manuscript/ch01.md" in p.stdout
+    assert p.stdout.strip() == "", "workdir must be clean after the delete snapshot"
+    log = subprocess.run(["git", "-C", str(b.path), "log", "--oneline", "-1"],
+                         capture_output=True, text=True, timeout=30)
+    assert "chore: manual snapshot" in log.stdout
+    show = subprocess.run(["git", "-C", str(b.path), "show", "--name-status", "--format=", "HEAD"],
+                          capture_output=True, text=True, timeout=30)
+    assert "manuscript/ch01.md" in show.stdout and "D" in show.stdout
 
 
 def test_x3_export_then_tamper(cli, seeded_bundle, tmp_path):

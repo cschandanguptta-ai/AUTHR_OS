@@ -151,7 +151,7 @@ impl ScriptedEngine {
             // 60 ms inter-word pause.
             let pause = ((60.0 / req.rate.max(0.25)) * fs as f32 / 1000.0).round() as usize;
             if n + 1 < tokens.len() {
-                samples.extend(std::iter::repeat(0.0f32).take(pause));
+                samples.extend(std::iter::repeat_n(0.0f32, pause));
             }
         }
         let request_id = {
@@ -321,9 +321,12 @@ pub struct HttpTtsEngine {
     pub transport: Box<dyn HttpTransport>,
 }
 
+/// (url, headers, body, content_type) parts of a provider request.
+pub type HttpTtsRequestParts = (String, Vec<(String, String)>, String, String);
+
 impl HttpTtsEngine {
-    /// Build the provider request. Returns (url, headers, body, content_type).
-    pub fn build_request(&self, req: &TtsRequest) -> Result<(String, Vec<(String, String)>, String, String), AppError> {
+    /// Build the provider request.
+    pub fn build_request(&self, req: &TtsRequest) -> Result<HttpTtsRequestParts, AppError> {
         match self.engine {
             Engine::ElevenLabs => {
                 let key = require_env("ELEVENLABS_API_KEY")?;

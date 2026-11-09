@@ -6,17 +6,31 @@ use serde_json::Value;
 
 /// Generic pass-through command: the frontend calls
 /// `invoke('authr_command', { command, bundle, args })`.
+///
+/// Workerised (ADR-0008): the dispatcher runs on a blocking worker thread,
+/// not the async runtime thread — DSP mastering, RAG indexing, zip export and
+/// git snapshots are CPU/IO-heavy and must never stall the webview IPC path.
 #[tauri::command]
-pub fn authr_command(
+pub async fn authr_command(
     command: String,
     bundle: Option<String>,
     args: Option<Value>,
 ) -> Result<Value, Value> {
     let root = bundle.map(std::path::PathBuf::from);
-    match crate::ipc::dispatch(root.as_deref(), &command, &args.unwrap_or(Value::Null)) {
-        Ok(data) => Ok(serde_json::json!({ "ok": true, "data": data })),
-        Err(err) => Err(err.to_json()),
-    }
+    tauri::async_runtime::spawn_blocking(move || {
+        match crate::ipc::dispatch(root.as_deref(), &command, &args.unwrap_or(Value::Null)) {
+            Ok(data) => Ok(serde_json::json!({ "ok": true, "data": data })),
+            Err(err) => Err(err.to_json()),
+        }
+    })
+    .await
+    .map_err(|e| {
+        serde_json::json!({
+            "code": "BUNDLE_ERROR",
+            "message": format!("dispatcher worker terminated: {e}"),
+            "category": "bundle"
+        })
+    })?
 }
 
 /// Run the Tauri app (requires `gui` feature and a desktop environment).

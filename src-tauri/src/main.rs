@@ -24,6 +24,13 @@ struct Cli {
     #[arg(long, value_name = "JSON", conflicts_with = "contract")]
     args: Option<String>,
 
+    /// Read the args JSON object from stdin instead of argv. Additive
+    /// transport option (contract §1): large payloads — e.g. a bulk Lexical
+    /// AST mutation — can exceed the OS per-argument limit (≈128 KB on
+    /// Linux); the dev bridge switches to this automatically.
+    #[arg(long, conflicts_with_all = ["args", "contract"])]
+    args_stdin: bool,
+
     /// Print the frozen command surface and exit
     #[arg(long)]
     contract: bool,
@@ -62,7 +69,24 @@ fn main() {
         }
     };
 
-    let args: Value = match &cli.args {
+    let raw_args: Option<String> = if cli.args_stdin {
+        use std::io::Read;
+        let mut raw = String::new();
+        match std::io::stdin().read_to_string(&mut raw) {
+            Ok(_) => Some(raw),
+            Err(e) => {
+                emit(json!({
+                    "ok": false,
+                    "error": {"code": "STORAGE_ERROR", "message": format!("--args-stdin read error: {e}"), "category": "storage"}
+                }));
+                std::process::exit(1);
+            }
+        }
+    } else {
+        cli.args.clone()
+    };
+
+    let args: Value = match &raw_args {
         Some(raw) => match serde_json::from_str(raw) {
             Ok(v @ Value::Object(_)) => v,
             Ok(_) => {

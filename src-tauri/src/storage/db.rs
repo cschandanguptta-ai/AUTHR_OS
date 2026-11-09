@@ -203,7 +203,17 @@ pub fn row_json(row: &rusqlite::Row<'_>, cols: &[&str]) -> rusqlite::Result<Valu
             ValueRef::Integer(n) => json!(n),
             ValueRef::Real(f) => json!(f),
             ValueRef::Text(t) => Value::String(String::from_utf8_lossy(t).into_owned()),
-            ValueRef::Blob(b) => Value::String(format!("<{} bytes>", b.len())),
+            ValueRef::Blob(_) => {
+                // Tech-debt T-5: JSON projections must never silently emit a
+                // "<N bytes>" placeholder. No §5 projection selects a BLOB;
+                // binary columns go through dedicated loaders (e.g.
+                // rag::store::all_chunks). Fail loudly instead.
+                return Err(rusqlite::Error::InvalidColumnType(
+                    i,
+                    (*c).to_string(),
+                    rusqlite::types::Type::Blob,
+                ));
+            }
         };
         m.insert((*c).to_string(), v);
     }
@@ -253,5 +263,34 @@ pub fn json_to_sql(v: &Value) -> Box<dyn rusqlite::types::ToSql> {
         }
         Value::String(s) => Box::new(s.clone()),
         other => Box::new(other.to_string()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// T-5 regression: a BLOB column in a §5 JSON projection must fail loudly,
+    /// never render the old silent "<N bytes>" placeholder.
+    #[test]
+    fn row_json_rejects_blob_columns_loudly() {
+        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE t(a TEXT, b BLOB);
+             INSERT INTO t VALUES ('x', x'00ff10');",
+        )
+        .unwrap();
+        let err = conn
+            .query_row("SELECT a, b FROM t", [], |r| row_json(r, &["a", "b"]))
+            .unwrap_err();
+        assert!(matches!(
+            err,
+            rusqlite::Error::InvalidColumnType(_, _, rusqlite::types::Type::Blob)
+        ));
+        // Non-BLOB projections keep working.
+        let ok = conn
+            .query_row("SELECT a FROM t", [], |r| row_json(r, &["a"]))
+            .unwrap();
+        assert_eq!(ok["a"], "x");
     }
 }

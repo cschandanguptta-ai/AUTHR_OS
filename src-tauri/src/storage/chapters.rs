@@ -103,8 +103,18 @@ pub fn update(ctx: &mut crate::ipc::Ctx, a: &Value) -> Result<Value, AppError> {
 pub fn delete(ctx: &mut crate::ipc::Ctx, id: i64) -> Result<Value, AppError> {
     let row = get(&ctx.conn, id)?;
     ctx.conn.execute("DELETE FROM chapters WHERE id = ?1", rusqlite::params![id])?;
+    // Tech-debt T-4: deletions follow the same bookkeeping as every other
+    // mutation — manifest touch BEFORE shadow/git sync (invariant §1.2),
+    // then a contract-locked snapshot commit (§8 message reused) so the
+    // removal lands in git immediately, not at the next chapter sync.
+    ctx.after_commit()?;
     crate::shadow::remove_chapter(ctx, &row)?;
-    Ok(json!({ "deleted": id }))
+    let commit = if ctx.readonly {
+        None
+    } else {
+        crate::storage::git::commit_all(&ctx.root, "chore: manual snapshot")?
+    };
+    Ok(json!({ "deleted": id, "commit": commit }))
 }
 
 /// Update `actual_word_count` for a chapter (called from the sync bridge).

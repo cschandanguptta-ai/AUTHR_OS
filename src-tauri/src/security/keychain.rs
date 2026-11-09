@@ -128,16 +128,22 @@ impl KeyringBackend for MockKeyring {
 }
 
 /// Backend selection per contract §4.9.
+///
+/// Forensic hardening (ADR-0008): the file-backed mock is reachable ONLY in
+/// builds compiled without `os-keychain` (headless CI / sandbox). It used to
+/// win over the OS backend whenever `AUTHR_MOCK_KEYCHAIN=1` was set — meaning
+/// a production desktop build could be silently downgraded to plaintext
+/// credentials on disk. Desktop builds now always use the real keychain.
 pub fn backend() -> Result<Box<dyn KeyringBackend>, AppError> {
-    if std::env::var("AUTHR_MOCK_KEYCHAIN").as_deref() == Ok("1") {
-        return Ok(Box::new(MockKeyring::new()));
-    }
     #[cfg(feature = "os-keychain")]
     {
         Ok(Box::new(OsKeyring))
     }
     #[cfg(not(feature = "os-keychain"))]
     {
+        if std::env::var("AUTHR_MOCK_KEYCHAIN").as_deref() == Ok("1") {
+            return Ok(Box::new(MockKeyring::new()));
+        }
         Err(AppError::security(
             "OS keychain backend not compiled into this build (feature `os-keychain`); \
              set AUTHR_MOCK_KEYCHAIN=1 for headless operation",

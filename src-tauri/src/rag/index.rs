@@ -7,6 +7,7 @@
 // Re-indexing a source is atomic in effect: clear-then-insert per source.
 
 use crate::error::AppError;
+use rayon::prelude::*;
 use rusqlite::Connection;
 use serde_json::{json, Value};
 use std::time::Instant;
@@ -14,6 +15,9 @@ use std::time::Instant;
 use super::embed::{pack, Embedder};
 
 pub const SOURCES: &[&str] = &["lorebook", "characters", "chapters"];
+
+/// One `character_profiles` row as read by `index_characters`.
+type CharacterProfileRow = (String, String, String, String, String, String, String, String);
 
 fn index_lorebook(conn: &Connection, emb: &dyn Embedder) -> Result<usize, AppError> {
     let mut stmt = conn
@@ -24,12 +28,20 @@ fn index_lorebook(conn: &Connection, emb: &dyn Embedder) -> Result<usize, AppErr
         .map_err(AppError::from)?
         .collect::<Result<_, _>>()
         .map_err(AppError::from)?;
-    let mut n = 0;
-    for (key, category, content) in rows {
-        let text = format!("[{category}] {key}: {content}");
-        let vec = emb.embed(&text);
+    // Workerised (ADR-0008): embed in parallel (Embedder: Send + Sync, pure),
+    // then upsert sequentially in the original ORDER BY key order — the
+    // chunk insertion order stays deterministic.
+    let items: Vec<(String, String)> = rows
+        .into_iter()
+        .map(|(key, category, content)| {
+            let text = format!("[{category}] {key}: {content}");
+            (key, text)
+        })
+        .collect();
+    let vectors: Vec<Vec<f32>> = items.par_iter().map(|(_, text)| emb.embed(text)).collect();
+    let n = items.len();
+    for ((key, text), vec) in items.into_iter().zip(vectors) {
         super::store::upsert_chunk(conn, "lorebook", &key, None, &text, emb.dim(), &pack(&vec))?;
-        n += 1;
     }
     Ok(n)
 }
@@ -41,7 +53,7 @@ fn index_characters(conn: &Connection, emb: &dyn Embedder) -> Result<usize, AppE
              FROM character_profiles ORDER BY character_key",
         )
         .map_err(AppError::from)?;
-    let rows: Vec<(String, String, String, String, String, String, String, String)> = stmt
+    let rows: Vec<CharacterProfileRow> = stmt
         .query_map([], |r| {
             Ok((
                 r.get(0)?,
@@ -57,14 +69,20 @@ fn index_characters(conn: &Connection, emb: &dyn Embedder) -> Result<usize, AppE
         .map_err(AppError::from)?
         .collect::<Result<_, _>>()
         .map_err(AppError::from)?;
-    let mut n = 0;
-    for (key, display, role, bio, ipa, engine, voice_id, cadence) in rows {
-        let text = format!(
-            "[voice cast] {display} ({key}) — role {role}; bio: {bio}; voice {engine}/{voice_id}; ipa {ipa}; cadence {cadence}"
-        );
-        let vec = emb.embed(&text);
+    // Workerised (ADR-0008): parallel embed, deterministic sequential upsert.
+    let items: Vec<(String, String)> = rows
+        .into_iter()
+        .map(|(key, display, role, bio, ipa, engine, voice_id, cadence)| {
+            let text = format!(
+                "[voice cast] {display} ({key}) — role {role}; bio: {bio}; voice {engine}/{voice_id}; ipa {ipa}; cadence {cadence}"
+            );
+            (key, text)
+        })
+        .collect();
+    let vectors: Vec<Vec<f32>> = items.par_iter().map(|(_, text)| emb.embed(text)).collect();
+    let n = items.len();
+    for ((key, text), vec) in items.into_iter().zip(vectors) {
         super::store::upsert_chunk(conn, "characters", &key, None, &text, emb.dim(), &pack(&vec))?;
-        n += 1;
     }
     Ok(n)
 }
@@ -86,12 +104,18 @@ fn index_chapters(conn: &Connection, emb: &dyn Embedder, book_id: Option<i64>) -
         .map_err(AppError::from)?
         .collect::<Result<_, _>>()
         .map_err(AppError::from)?;
-    let mut n = 0;
-    for (segment_id, chapter_id, seg_type, speaker, emotion, text) in rows {
-        let content = format!("[{seg_type}|{speaker}|{emotion}] {text}");
-        let vec = emb.embed(&content);
+    // Workerised (ADR-0008): parallel embed, deterministic sequential upsert.
+    let items: Vec<(String, i64, String)> = rows
+        .into_iter()
+        .map(|(segment_id, chapter_id, seg_type, speaker, emotion, text)| {
+            let content = format!("[{seg_type}|{speaker}|{emotion}] {text}");
+            (segment_id, chapter_id, content)
+        })
+        .collect();
+    let vectors: Vec<Vec<f32>> = items.par_iter().map(|(_, _, content)| emb.embed(content)).collect();
+    let n = items.len();
+    for ((segment_id, chapter_id, content), vec) in items.into_iter().zip(vectors) {
         super::store::upsert_chunk(conn, "chapters", &segment_id, Some(chapter_id), &content, emb.dim(), &pack(&vec))?;
-        n += 1;
     }
     Ok(n)
 }

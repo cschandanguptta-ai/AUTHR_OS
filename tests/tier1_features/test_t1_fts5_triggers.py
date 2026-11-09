@@ -78,3 +78,16 @@ def test_ft6_search_scoped_across_chapters(seeded_bundle, cli):
     assert len(hits) == 1 and hits[0]["chapter_id"] == 2
     # Unrelated query returns nothing.
     assert _search(cli, seeded_bundle, "zebra") == []
+
+
+def test_ft7_hostile_queries_are_sanitized_not_errors(seeded_bundle, cli):
+    """T1.FT7 — T-2 regression: FTS5 syntax in segment_search is searched
+    literally (shared rag sanitizer + bound parameter), never a 500-level
+    MATCH syntax error. Mirrors the rag fts hostile-input test."""
+    for hostile in ['"unclosed', "dormant OR (", "dormant AND power NOT x",
+                    "*^;--", "NEAR(dormant, power)", '"phrases with quotes"']:
+        hits = _search(cli, seeded_bundle, hostile)
+        assert isinstance(hits, list), f"hostile `{hostile}` errored"
+    # Literal terms inside hostile-looking input still match.
+    hits = _search(cli, seeded_bundle, "dormant AND power")
+    assert len(hits) >= 1 and "dormant power" in hits[0]["text_content"]

@@ -44,6 +44,8 @@ tungstenite = { version = "0.24", default-features = false, features = ["handsha
 # ── Phase 6: publishing & release ───────────────────────────────────────────
 ed25519-dalek = { version = "2", default-features = false, features = ["fast", "rand_core"] }
 rand_core = { version = "0.6", features = ["getrandom"] }
+# ── Phase 7: workerisation (ADR-0008) ───────────────────────────────────────
+rayon = "1.10"                                  # data-parallel RAG embed + dense scan
 
 [profile.release]
 opt-level = 2

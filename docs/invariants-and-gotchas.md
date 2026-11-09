@@ -81,10 +81,10 @@ needs no human but is not literal code text. Past bugs are at §5.
 
 ## 3. Hidden coupling
 
-- **Duration estimator duplicated**: `chars×55+400ms` in `studio.rs:62,200`
-  (scheduler) and `publish/mod.rs:84-92` (captions/EPUB SMIL/M4B chapters).
-  They must stay textually identical or unsynthesized timelines diverge
-  between `audio_plan` and every publish output. FACT.
+- **Duration estimator is single-sourced**: `chars×55+400ms` lives only in
+  `audio::scheduler::estimate_duration_ms` (Phase 7, T-3); `audio_plan`, the
+  synthesis scheduler, captions, EPUB SMIL and M4B chapter marks all call it.
+  Do not re-inline the formula anywhere. FACT.
 - **`segment_duration_ms` prefers `audio_duration_ms>0`, else estimator** —
   EPUB overlays, captions and M4B chapter marks therefore *change meaning*
   after a later `audio_synthesize` run (real durations replace estimates).
@@ -99,17 +99,18 @@ needs no human but is not literal code text. Past bugs are at §5.
   `rag_chunks.embedding` through any row projection yields that placeholder,
   never data. Use `rag/store.rs::all_chunks` (pack/unpack in `embed.rs:139-153`).
   FACT.
-- **`segment_search` does NOT sanitize FTS MATCH input** (`segments.rs:73-80`
-  passes the raw query), while `rag` FTS does (`rag/store.rs:135`,
-  sanitized per `LOCAL_AI.md`). A query with FTS syntax (`NEAR(`, `"`,
-  `*`) can error → `STORAGE_ERROR`. FACT; see tech-debt T-3.
+- **`segment_search` FTS input is sanitized** (Phase 7, T-2): both
+  `segment_search` and the rag FTS route through
+  `rag::store::fts_sanitize` with a bound `MATCH ?1` — hostile input is
+  searched literally, never a MATCH syntax error (regression test `test_ft7`).
+  FACT.
 - **`character_delete` is blocked by FK while segments reference the key**
   (contract #18, `db.rs:101` `ON UPDATE CASCADE` only). Renaming a
   `character_key` cascades into `chapter_segments.speaker_id` and any
   `rag_chunks` with `source=characters` become stale-keyed. FACT/INFERRED.
-- **`chapter_delete` does not call `after_commit()`** (`chapters.rs:103-108`):
-  manifest `last_modified_at` is not bumped by a deletion, and no immediate
-  git commit records it (next chapter sync commits the removal). FACT.
+- **`chapter_delete` participates in full bookkeeping** (Phase 7, T-4):
+  after_commit → shadow removal → `chore: manual snapshot` commit; the
+  workdir is clean and HEAD records the removal immediately. FACT.
 - **Engine spellings are constrained twice**: `Engine::parse` (`tts.rs:54-80`)
   and the `voice_engine` CHECK constraint (`db.rs:58-59`) must accept the same
   set (contract §4.11 note). `SCRIPTED`/`HF_MMS` are valid engine args but NOT
@@ -120,6 +121,10 @@ needs no human but is not literal code text. Past bugs are at §5.
 - **`sandbox_normalize` (#34) is bundle-free** — it is a pure self-test of
   `normalize_raw` (`handlers.rs:35-38`); don't wire it to filesystem effects.
   FACT.
+- **The keychain mock cannot leak into desktop builds** (Phase 7):
+  `security/keychain.rs::backend` selects the OS keyring whenever the
+  `os-keychain` feature is compiled; `AUTHR_MOCK_KEYCHAIN=1` only takes
+  effect on builds without that feature (headless CI / sandbox). FACT.
 
 ## 4. Fragile areas — "do not touch without reading X"
 

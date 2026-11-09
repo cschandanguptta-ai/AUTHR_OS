@@ -23,17 +23,18 @@ pub fn publish_m4b(ctx: &mut crate::ipc::Ctx, a: &Value) -> crate::error::IpcRes
     };
 
     // Resolve scope + title.
-    let data: BookData = if chapter_id.is_none() {
-        load_book(&ctx.conn, book_id)?
-    } else {
-        let ch_row = crate::storage::chapters::get(&ctx.conn, chapter_id.unwrap())?;
-        let bid = ch_row["book_id"].as_i64().unwrap_or(0);
-        let mut book = load_book(&ctx.conn, bid)?;
-        book.chapters.retain(|c| c.row["id"].as_i64() == chapter_id);
-        if book.chapters.is_empty() {
-            return Err(AppError::bundle("chapter has no segments to publish"));
+    let data: BookData = match chapter_id {
+        None => load_book(&ctx.conn, book_id)?,
+        Some(cid) => {
+            let ch_row = crate::storage::chapters::get(&ctx.conn, cid)?;
+            let bid = ch_row["book_id"].as_i64().unwrap_or(0);
+            let mut book = load_book(&ctx.conn, bid)?;
+            book.chapters.retain(|c| c.row["id"].as_i64() == chapter_id);
+            if book.chapters.is_empty() {
+                return Err(AppError::bundle("chapter has no segments to publish"));
+            }
+            book
         }
-        book
     };
     let title = data.book["title"].as_str().unwrap_or("untitled");
     let slug = slugify(title);
@@ -162,7 +163,7 @@ fn ffmpeg_missing() -> AppError {
 }
 
 /// Null-byte/apostrophe-safe path quoting for the concat demuxer list.
-fn abs_escape(p: &PathBuf) -> String {
+fn abs_escape(p: &std::path::Path) -> String {
     p.to_string_lossy().replace('\'', "'\\''")
 }
 

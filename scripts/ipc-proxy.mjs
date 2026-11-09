@@ -54,7 +54,7 @@ function sendJson(res, status, payload) {
 /**
  * Spawn the CLI and collect stdout/stderr. Resolves {code, out, err}.
  */
-function runCli(binary, cliArgs, timeoutMs = 120_000) {
+function runCli(binary, cliArgs, timeoutMs = 120_000, stdinData = null) {
   return new Promise((resolve, reject) => {
     let child;
     try {
@@ -66,6 +66,14 @@ function runCli(binary, cliArgs, timeoutMs = 120_000) {
         category: 'bundle',
       });
       return;
+    }
+
+    // Large args go over stdin (--args-stdin) to stay under the OS argv limit.
+    if (stdinData !== null) {
+      child.stdin.on('error', () => {
+        /* the child may exit before stdin drains; the envelope handles it */
+      });
+      child.stdin.end(stdinData);
     }
 
     let out = '';
@@ -211,10 +219,19 @@ export function authrIpcProxy() {
           if (!NO_BUNDLE_COMMANDS.has(command)) {
             cliArgs.push('--bundle', bundle);
           }
-          cliArgs.push('--args', JSON.stringify(args ?? {}));
+          const argsJson = JSON.stringify(args ?? {});
+          // Payloads approaching the OS per-argument limit (~128 KB) travel
+          // over stdin via the additive --args-stdin transport (contract §1).
+          let stdinPayload = null;
+          if (argsJson.length > 96 * 1024) {
+            cliArgs.push('--args-stdin');
+            stdinPayload = argsJson;
+          } else {
+            cliArgs.push('--args', argsJson);
+          }
 
           try {
-            const { code, out, err } = await runCli(binary, cliArgs);
+            const { code, out, err } = await runCli(binary, cliArgs, 120_000, stdinPayload);
             const envelope = parseEnvelope(out);
 
             if (!envelope) {
@@ -238,6 +255,11 @@ export function authrIpcProxy() {
                 data && typeof data.path === 'string' && data.path.length > 0
               ) {
                 currentBundle = data.path;
+              }
+              // Opening an existing bundle must also re-target the tracker,
+              // or later bundle-scoped writes land in the default sandbox.
+              if (command === 'project_open' && typeof args.path === 'string') {
+                currentBundle = args.path;
               }
               sendJson(res, 200, { ok: true, data });
             } else {

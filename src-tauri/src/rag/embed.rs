@@ -141,7 +141,7 @@ pub fn pack(vec: &[f32]) -> Vec<u8> {
 }
 
 pub fn unpack(blob: &[u8], dim: usize) -> Vec<f32> {
-    blob.chunks_exact(4)
+    blob.as_chunks::<4>().0.iter()
         .take(dim)
         .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
         .collect()

@@ -17,12 +17,15 @@ Phase 6 (Publishing, Packaging & Hardening).
 
 | Surface  | Form |
 |----------|------|
-| Tauri IPC  | `#[tauri::command]` wrappers in `src-tauri/src/shell/`, invoked as `invoke(name, args)` |
+| Tauri IPC  | single `#[tauri::command]` pass-through `authr_command` in `src-tauri/src/shell/` (workerised, ADR-0008); the frontend bridge routes every contract command through it |
 | CLI (headless / tests) | `authr <command> [--bundle <BUNDLE_DIR>] [--args '<json>']` |
 | Browser dev bridge | `POST /api/ipc` with `{command, args, bundle}` (vite middleware spawns the CLI) |
 
 - Command names are **snake_case** and identical on every surface.
 - `--args` is a single JSON object; unknown keys are ignored, missing optional keys use defaults.
+- `--args-stdin` (additive, Phase 7): read the args JSON from stdin instead of argv. For
+  payloads near the OS per-argument limit (~128 KB on Linux — e.g. bulk Lexical AST
+  mutations) the dev bridge switches to this automatically. Mutually exclusive with `--args`.
 - `--bundle` is the `.authr` bundle directory. Required by every bundle-scoped command
   (all except `project_init`, `project_import`, `keychain_*`).
 
@@ -90,7 +93,7 @@ Exactly **one line** of JSON on stdout. Exit code `0` on success, `1` on failure
 | 12 | `chapter_list` | `{book_id?}` | `{chapters:[row…]}` ordered by `(book_id, chapter_number)` |
 | 13 | `chapter_get` | `{id}` | chapter row |
 | 14 | `chapter_update` | `{id, …fields}` | chapter row (re-renders shadow files when title/status change) |
-| 15 | `chapter_delete` | `{id}` | `{deleted:id}` (cascades segments, threads, shadow files, FTS) |
+| 15 | `chapter_delete` | `{id}` | `{deleted:id, commit:oid\|null}` (cascades segments, threads, shadow files, FTS; manifest touch + contract-locked `chore: manual snapshot` commit — T-4) |
 
 ### 4.4 Voice Cast (character_profiles)
 
@@ -122,7 +125,7 @@ Exactly **one line** of JSON on stdout. Exit code `0` on success, `1` on failure
 |---|---------|------|--------|
 | 25 | `segment_append` | `{chapter_id, segment_type, speaker_id, text_content, emotion?, prosody_rate?, prosody_pitch?, ambient_cue?, sfx_cue?, sequence_order?}` | segment row (new UUID v4; `sequence_order` defaults to next) |
 | 26 | `segment_list` | `{chapter_id}` | `{segments:[row…]}` ordered by `sequence_order` |
-| 27 | `segment_search` | `{query, limit?}` | `{hits:[{segment_id, chapter_id, text_content, rank}]}` — FTS5 BM25, porter unicode61 |
+| 27 | `segment_search` | `{query, limit?}` | `{hits:[{segment_id, chapter_id, text_content, rank}]}` — FTS5 BM25, porter unicode61; the query is sanitized with the shared `rag::store::fts_sanitize` and bound as a parameter (T-2): FTS syntax in user input is searched literally, never a MATCH syntax error |
 
 ### 4.8 Editor Bridge
 

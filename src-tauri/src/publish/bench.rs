@@ -90,10 +90,10 @@ fn proc_self_status() -> Option<(Option<u64>, Option<u64>)> {
     let mut hwm = None;
     for line in raw.lines() {
         if let Some(v) = line.strip_prefix("VmRSS:") {
-            rss = v.trim().split_whitespace().next().and_then(|x| x.parse().ok());
+            rss = v.split_whitespace().next().and_then(|x| x.parse().ok());
         }
         if let Some(v) = line.strip_prefix("VmHWM:") {
-            hwm = v.trim().split_whitespace().next().and_then(|x| x.parse().ok());
+            hwm = v.split_whitespace().next().and_then(|x| x.parse().ok());
         }
     }
     Some((rss, hwm))

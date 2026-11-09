@@ -45,13 +45,53 @@ function toIpcError(payload: unknown, status: number): IpcError {
   );
 }
 
+// Current bundle for the desktop transport — mirrors the dev middleware's
+// module-level tracker (scripts/ipc-proxy.mjs). Set by project_init /
+// project_import (resolved bundle path) and project_open (explicit path).
+let tauriBundle: string | undefined;
+
+function trackBundle(command: string, args: object | undefined, data: unknown): void {
+  const d = data as { path?: unknown } | null;
+  if (
+    (command === 'project_init' || command === 'project_import') &&
+    d && typeof d.path === 'string' && d.path.length > 0
+  ) {
+    tauriBundle = d.path;
+  } else if (command === 'project_open') {
+    const p = (args as { path?: unknown } | undefined)?.path;
+    if (typeof p === 'string' && p.length > 0) tauriBundle = p;
+  }
+}
+
 export async function invoke<T>(
   command: string,
   args?: object,
 ): Promise<T> {
   if (window.__TAURI_INTERNALS__) {
+    // Desktop transport (tech-debt T-1 fix): the shell registers exactly one
+    // #[tauri::command] — `authr_command` — funnelling into the frozen
+    // dispatcher. Invoking the contract name directly would fail with Tauri's
+    // "unknown command" in every packaged build.
     const core = await import('@tauri-apps/api/core');
-    return core.invoke<T>(command, (args ?? {}) as Record<string, unknown> | undefined);
+    const envelope = await core.invoke<{
+      ok: boolean;
+      data?: T;
+      error?: { code?: string; message?: string; category?: string };
+    }>('authr_command', {
+      command,
+      bundle: tauriBundle ?? null,
+      args: args ?? {},
+    });
+    if (envelope && envelope.ok) {
+      trackBundle(command, args, envelope.data);
+      return envelope.data as T;
+    }
+    const e = envelope?.error ?? {};
+    throw new IpcError(
+      e.code ?? 'IPC_TRANSPORT_ERROR',
+      e.message ?? 'IPC request failed.',
+      e.category ?? 'storage',
+    );
   }
 
   const res = await fetch('/api/ipc', {

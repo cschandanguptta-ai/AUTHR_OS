@@ -59,7 +59,7 @@ pub fn audio_plan(ctx: &Ctx, a: &Value) -> IpcResult {
     let pairs: Vec<(String, u64)> = rows
         .iter()
         .map(|(speaker, text, dur)| {
-            let est = if *dur > 0 { *dur } else { ((text.chars().count() as f64) * 55.0 + 400.0) as u64 };
+            let est = if *dur > 0 { *dur } else { crate::audio::scheduler::estimate_duration_ms(text) };
             (speaker.clone(), est)
         })
         .collect();
@@ -197,7 +197,7 @@ fn synthesize_chapter(
         .iter()
         .enumerate()
         .map(|(i, (speaker, text, dur))| {
-            let est = if *dur > 0 { *dur } else { ((text.chars().count() as f64) * 55.0 + 400.0) as u64 };
+            let est = if *dur > 0 { *dur } else { crate::audio::scheduler::estimate_duration_ms(text) };
             crate::audio::scheduler::Turn { idx: i, speaker: speaker.clone(), est_ms: est }
         })
         .collect();

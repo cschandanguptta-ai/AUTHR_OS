@@ -8,6 +8,7 @@
 // budget is observable in the E2E suite.
 
 use crate::error::AppError;
+use rayon::prelude::*;
 use rusqlite::Connection;
 use serde_json::{json, Value};
 use std::time::Instant;
@@ -35,24 +36,35 @@ fn snippet(content: &str, max: usize) -> String {
 }
 
 /// Dense cosine scan (deterministic order: chunk_id ASC → stable ranks).
+/// Workerised (ADR-0008): the per-chunk cosine is pure, so the scan fans out
+/// across the rayon pool and collects in index order — identical scores and
+/// ordering to the sequential scan, minus the wall-clock.
 fn dense_search(
     conn: &Connection,
     emb: &dyn Embedder,
     query_vec: &[f32],
     limit: usize,
 ) -> Result<Vec<(String, f64)>, AppError> {
-    let chunks = super::store::all_chunks(conn)?;
-    let mut scored: Vec<(String, f64)> = Vec::new();
-    for c in chunks {
-        if c.dim != emb.dim() {
-            return Err(AppError::ai(format!(
-                "chunk {} has dim {} but embedder {} expects {} — re-run rag_index",
-                c.chunk_id, c.dim, emb.name(), emb.dim()
-            )));
-        }
-        let vec = unpack(&c.embedding, c.dim);
-        scored.push((c.chunk_id, cosine(query_vec, &vec) as f64));
+    let chunks = super::store::all_chunk_blobs(conn)?;
+    // Dim mismatches are reported deterministically (lowest chunk_id wins) —
+    // never dependent on worker scheduling.
+    if let Some(bad) = chunks
+        .iter()
+        .filter(|c| c.dim != emb.dim())
+        .min_by(|a, b| a.chunk_id.cmp(&b.chunk_id))
+    {
+        return Err(AppError::ai(format!(
+            "chunk {} has dim {} but embedder {} expects {} — re-run rag_index",
+            bad.chunk_id, bad.dim, emb.name(), emb.dim()
+        )));
     }
+    let mut scored: Vec<(String, f64)> = chunks
+        .par_iter()
+        .map(|c| {
+            let vec = unpack(&c.embedding, c.dim);
+            (c.chunk_id.clone(), cosine(query_vec, &vec) as f64)
+        })
+        .collect();
     scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal).then(a.0.cmp(&b.0)));
     scored.truncate(limit);
     Ok(scored)
@@ -110,10 +122,13 @@ pub fn search(
         fts.iter().map(|(id, r)| (id.clone(), -r)).collect()
     };
 
-    // Enrich with chunk metadata (content, source).
-    let chunks = super::store::all_chunks(conn)?;
+    // Enrich with chunk metadata (content, source) — a targeted fetch of only
+    // the fused ids (tech-debt T-9); the old path loaded the whole table on
+    // every query just to decorate ≤k hits.
+    let fused_ids: Vec<String> = fused.iter().take(k).map(|(id, _)| id.clone()).collect();
+    let rows = super::store::chunks_by_ids(conn, &fused_ids)?;
     let by_id: std::collections::HashMap<&str, &super::store::ChunkRow> =
-        chunks.iter().map(|c| (c.chunk_id.as_str(), c)).collect();
+        rows.iter().map(|c| (c.chunk_id.as_str(), c)).collect();
 
     let dense_rank: std::collections::HashMap<&str, usize> =
         dense.iter().enumerate().map(|(i, (id, _))| (id.as_str(), i + 1)).collect();

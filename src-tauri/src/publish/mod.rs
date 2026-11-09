@@ -79,15 +79,15 @@ pub fn cast_names(conn: &Connection) -> std::collections::HashMap<String, String
     out
 }
 
-/// Estimated spoken duration (ms) — the same estimator as `audio_plan`, so
+/// Estimated spoken duration (ms) — delegates the `chars×55+400` formula to
+/// the canonical `audio::scheduler::estimate_duration_ms` (tech-debt T-3), so
 /// publish timing agrees with the scheduler for unsynthesized segments.
 pub fn segment_duration_ms(seg: &Value) -> u64 {
     seg["audio_duration_ms"]
         .as_u64()
         .filter(|d| *d > 0)
         .unwrap_or_else(|| {
-            (seg["text_content"].as_str().map(|t| t.chars().count()).unwrap_or(0) as f64 * 55.0
-                + 400.0) as u64
+            crate::audio::scheduler::estimate_duration_ms(seg["text_content"].as_str().unwrap_or(""))
         })
 }
 
@@ -104,6 +104,12 @@ pub fn cumulative_starts(segments: &[Value]) -> Vec<u64> {
 
 /// Filesystem-safe slug: lowercase alnum runs joined by `-`. Hostile titles
 /// (`../../evil`, `CON:…`, unicode noise) collapse to safe export names.
+///
+/// Tech-debt T-11: titles sharing a 64-char prefix used to overwrite each
+/// other's export file. When truncation actually occurs, a short SHA-256
+/// prefix of the FULL slug is appended — so two colliding titles diverge,
+/// while republishing the same title stays idempotent (same input → same
+/// hash → same file name → overwrite as before).
 pub fn slugify(title: &str) -> String {
     let mut slug = String::new();
     let mut prev_dash = true;
@@ -122,9 +128,17 @@ pub fn slugify(title: &str) -> String {
     if slug.is_empty() {
         slug.push_str("untitled");
     }
-    slug.truncate(64);
-    if slug.ends_with('-') {
-        slug.pop();
+    if slug.len() > 64 {
+        use sha2::{Digest, Sha256};
+        let mut h = Sha256::new();
+        h.update(slug.as_bytes());
+        let digest = h.finalize();
+        let suffix: String = digest[..4].iter().map(|b| format!("{b:02x}")).collect();
+        let mut keep = slug[..55].to_string();
+        while keep.ends_with('-') {
+            keep.pop();
+        }
+        slug = format!("{keep}-{suffix}");
     }
     slug
 }
@@ -205,6 +219,19 @@ mod tests {
         assert_eq!(slugify("   ---   "), "untitled");
         let long = slugify(&"x".repeat(300));
         assert!(long.len() <= 64);
+    }
+
+    #[test]
+    fn slugify_disambiguates_long_prefix_collisions() {
+        // T-11: both titles share the first 64+ slug chars; the differing
+        // word lies beyond the truncation point. Old behavior: one export
+        // clobbered the other. New: distinct names, same title → same name.
+        let base = "the lighthouse keeper of port merrow chapter and the long voyage ";
+        let a = slugify(&format!("{base}home"));
+        let b = slugify(&format!("{base}away"));
+        assert_ne!(a, b, "colliding prefixes must disambiguate: {a} vs {b}");
+        assert_eq!(a, slugify(&format!("{base}home")), "republish must be idempotent");
+        assert!(a.len() <= 64 && b.len() <= 64);
     }
 
     #[test]

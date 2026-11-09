@@ -107,6 +107,67 @@ pub fn count(conn: &Connection) -> Result<i64, AppError> {
         .map_err(AppError::from)
 }
 
+/// Minimal projection for the dense cosine scan (tech-debt T-9): skips
+/// materializing `content`/`source`/`ref_id` for the whole corpus.
+pub struct ChunkBlob {
+    pub chunk_id: String,
+    pub dim: usize,
+    pub embedding: Vec<u8>,
+}
+
+/// Every chunk's vector, ordered for a deterministic scan → stable ranks.
+pub fn all_chunk_blobs(conn: &Connection) -> Result<Vec<ChunkBlob>, AppError> {
+    let mut stmt = conn
+        .prepare("SELECT chunk_id, dim, embedding FROM rag_chunks ORDER BY chunk_id")
+        .map_err(AppError::from)?;
+    let rows = stmt
+        .query_map([], |r| {
+            Ok(ChunkBlob {
+                chunk_id: r.get(0)?,
+                dim: r.get::<_, i64>(1)? as usize,
+                embedding: r.get(2)?,
+            })
+        })
+        .map_err(AppError::from)?;
+    let mut out = Vec::new();
+    for row in rows {
+        out.push(row.map_err(AppError::from)?);
+    }
+    Ok(out)
+}
+
+/// Targeted enrichment fetch (tech-debt T-9): load only the fused hit rows
+/// instead of the whole chunk table. `ids` is bounded by the k clamp (≤50).
+pub fn chunks_by_ids(conn: &Connection, ids: &[String]) -> Result<Vec<ChunkRow>, AppError> {
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    let placeholders = ids.iter().map(|_| "?").collect::<Vec<_>>().join(", ");
+    let sql = format!(
+        "SELECT chunk_id, source, ref_id, content, book_id, dim, embedding \
+         FROM rag_chunks WHERE chunk_id IN ({placeholders})"
+    );
+    let mut stmt = conn.prepare(&sql).map_err(AppError::from)?;
+    let rows = stmt
+        .query_map(rusqlite::params_from_iter(ids.iter()), |r| {
+            Ok(ChunkRow {
+                chunk_id: r.get(0)?,
+                source: r.get(1)?,
+                ref_id: r.get(2)?,
+                content: r.get(3)?,
+                book_id: r.get(4)?,
+                dim: r.get::<_, i64>(5)? as usize,
+                embedding: r.get(6)?,
+            })
+        })
+        .map_err(AppError::from)?;
+    let mut out = Vec::new();
+    for row in rows {
+        out.push(row.map_err(AppError::from)?);
+    }
+    Ok(out)
+}
+
 pub fn count_by_source(conn: &Connection) -> Result<Value, AppError> {
     let mut stmt = conn
         .prepare("SELECT source, COUNT(*) FROM rag_chunks GROUP BY source ORDER BY source")
@@ -130,29 +191,41 @@ pub fn clear_source(conn: &Connection, source: &str) -> Result<usize, AppError> 
         .map_err(AppError::from)
 }
 
-/// FTS5 BM25 search over the chunk corpus. Returns (chunk_id, bm25_rank)
-/// ordered best-first (bm25() is negative-scaled: smaller = better).
-pub fn fts_search(conn: &Connection, query: &str, limit: usize) -> Result<Vec<(String, f64)>, AppError> {
-    // Sanitize into a prefix-friendly OR query; FTS5 MATCH syntax errors map
-    // to AI_ERROR with the reason (tier-2 boundary tests assert this).
+/// Shared FTS5 MATCH sanitizer (tech-debt T-2): split on non-alphanumerics,
+/// quote each surviving term with a prefix star, OR-join. Returns `None` when
+/// nothing searchable remains. Both `rag_search` FTS and `segment_search`
+/// route through this, so hostile input (`"`, `NEAR(`, `*`, `AND`) can never
+/// produce a MATCH syntax error or an injection — and the result is always
+/// bound as a parameter, never string-interpolated into the SQL.
+pub fn fts_sanitize(query: &str) -> Option<String> {
     let terms: Vec<String> = query
         .split(|c: char| !c.is_alphanumeric())
         .filter(|t| !t.is_empty())
         .map(|t| format!("\"{t}\"*"))
         .collect();
     if terms.is_empty() {
-        return Ok(Vec::new());
+        None
+    } else {
+        Some(terms.join(" OR "))
     }
-    let match_q = terms.join(" OR ");
-    let sql = format!(
-        "SELECT chunk_id, bm25(rag_chunks_fts) AS rank
+}
+
+/// FTS5 BM25 search over the chunk corpus. Returns (chunk_id, bm25_rank)
+/// ordered best-first (bm25() is negative-scaled: smaller = better).
+pub fn fts_search(conn: &Connection, query: &str, limit: usize) -> Result<Vec<(String, f64)>, AppError> {
+    // Sanitized + parameter-bound (tier-2 boundary tests assert this).
+    let Some(match_q) = fts_sanitize(query) else {
+        return Ok(Vec::new());
+    };
+    let sql = "SELECT chunk_id, bm25(rag_chunks_fts) AS rank
          FROM rag_chunks_fts
-         WHERE rag_chunks_fts MATCH '{match_q}'
-         ORDER BY rank LIMIT {limit}"
-    );
-    let mut stmt = conn.prepare(&sql).map_err(|e| AppError::ai(format!("fts query: {e}")))?;
+         WHERE rag_chunks_fts MATCH ?1
+         ORDER BY rank LIMIT ?2";
+    let mut stmt = conn.prepare(sql).map_err(|e| AppError::ai(format!("fts query: {e}")))?;
     let rows = stmt
-        .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, f64>(1)?)))
+        .query_map(rusqlite::params![match_q, limit as i64], |r| {
+            Ok((r.get::<_, String>(0)?, r.get::<_, f64>(1)?))
+        })
         .map_err(|e| AppError::ai(format!("fts search: {e}")))?;
     let mut out = Vec::new();
     for row in rows {

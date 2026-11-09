@@ -20,9 +20,7 @@ pub fn normalize_raw(raw: &str) -> Result<String, AppError> {
     let lower = s.to_ascii_lowercase();
     if lower.starts_with("\\\\?\\unc\\") {
         s = format!(r"\\{}", &s[8..]);
-    } else if lower.starts_with("\\\\?\\") {
-        s = s[4..].to_string();
-    } else if lower.starts_with("\\??\\") {
+    } else if lower.starts_with("\\\\?\\") || lower.starts_with("\\??\\") {
         s = s[4..].to_string();
     }
 
