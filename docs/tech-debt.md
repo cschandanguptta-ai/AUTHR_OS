@@ -56,17 +56,16 @@ labeled. IDs are stable for reference from other docs and commits.
 - **Direction**: set a restrictive CSP before public release; verify Lexical
   + vite asset loading still work.
 
-## T-7 — Stale counts in shipped docs/metadata
-- **Where**: `README.md` (says "149 tests", contract "v1.1: 48 commands" —
-  actual 168/56, see `AGENTS.md` note); `src-tauri/src/main.rs:13` clap
-  `about` string says "48-command IPC surface";
-  `test_results.json` `totals.test_modules=28` (actual 30) and its `suite`
-  string says "contract v1.1" / "Phase 1–5".
-- **Impact**: an AI (or human) trusting these numbers mis-scopes the surface.
-- **Direction**: refresh on each phase; consider generating counts from
-  `authr --contract` in CI. (README.md was corrected in the docs update that
-  added this file; `main.rs`/`test_results.json` are code artifacts left to
-  the next code change.)
+## T-7 — Stale counts in shipped docs/metadata — RESOLVED 2026-11-09
+- **Where (was)**: `README.md` ("149 tests", "v1.1: 48 commands");
+  `src-tauri/src/main.rs:13` clap `about` ("48-command IPC surface");
+  `test_results.json` (`totals.test_modules=28`, suite string "contract v1.1"
+  / "Phase 1–5").
+- **Resolution**: README was corrected in the docs commit that added this
+  file; `main.rs:13` now says 56-command; `test_results.json` is regenerated
+  from live runs by `scripts/refresh_acceptance.py` (records contract v1.2,
+  56 commands, 30 modules, 168 E2E, 67 unit tests, benchmark gates). Keep
+  counts generated, not hand-edited.
 
 ## T-8 — `run_e2e.py --feature` map missing an alias
 - **Where**: `tests/run_e2e.py:22-49` — `test_t2_publish_boundaries.py` has

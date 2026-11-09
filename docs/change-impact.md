@@ -28,7 +28,7 @@ Unit = `cargo test --release`. All = full `pytest tests/ -q` (~11 s).
 | **`publish/m4b.rs` ffmpeg invocation** | External binary contract (argv only, `abs_escape` quoting) | `SECURITY_AUDIT.md §4` | publish, publish_boundaries (missing-ffmpeg → BUNDLE_ERROR) |
 | **`publish/release.rs` (ed25519, `latest.json` shape)** | Updater config `tauri.conf.json:61-68`; PACKAGING docs; key env | `docs/PACKAGING.md`, `tauri.conf.json` pubkey placeholder | release_bench (test_r1–r3) |
 | **`publish/bench.rs` thresholds** | `docs/BENCHMARKS.md`, Golden Master gate, `test_b1` | `docs/BENCHMARKS.md` | release_bench |
-| **`rag/embed.rs::HashingEmbedder` / `resolve`** | All stored embeddings (BLOB format f32 LE, dim 384); hybrid + dense ranks; `rag_status` | `rag/index.rs`, `rag/search.rs`, `local_ai.md` | rag, local_ai, audio_rag_scenario |
+| **`rag/embed.rs::HashingEmbedder` / `resolve`** | All stored embeddings (BLOB format f32 LE, dim 384); hybrid + dense ranks; `rag_status` | `rag/index.rs`, `rag/search.rs`, `LOCAL_AI.md` | rag, local_ai, audio_rag_scenario |
 | **`rag/store.rs` schema / `fts_search` sanitization** | `rag_chunks`/`rag_chunks_fts`; hostile-query safety | `rag/search.rs`, `LOCAL_AI.md §1` | rag, local_ai (fts sanitization tests live in `rag/store.rs` tests) |
 | **`localai/llm.rs` offline engine or llama-server protocol** | `local_llm_generate` determinism (seeded SplitMix64); `cache_prompt`/`keep_alive` flags asserted by tests | `docs/LOCAL_AI.md §3` | local_ai, audio_ai_boundaries |
 | **`localai/tts.rs` Kokoro negotiation** | `local_tts_generate` error contract (`AI_ENGINE_UNAVAILABLE` + placement guidance) | `docs/LOCAL_AI.md §2` | local_ai |

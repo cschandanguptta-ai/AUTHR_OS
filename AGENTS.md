@@ -38,6 +38,7 @@ Any change to them requires a contract version bump.
 | `docs/PACKAGING.md` | installers, release signing, updater, Golden Master checklist |
 | `docs/SECURITY_AUDIT.md` | credential handling, sandbox guarantees, threat model evidence |
 | `docs/BENCHMARKS.md` | perf thresholds enforced by `benchmark_run` (cold start / RSS / binary) |
+| `RUN_ON_LAPTOP.md` | setting up a fresh machine: prerequisites, build/run/installer steps |
 
 ## Hard rules
 

@@ -6,6 +6,9 @@ professional authors, novelists, scriptwriters, and audio dramatists.
 Architecture: **Tauri v2 + Rust Core Runtime + React 19 / TypeScript / Vite /
 Tailwind CSS / Meta's Lexical AST** under a Zero-Double-Work paradigm.
 
+> **Run this on a new machine?** Start with **`RUN_ON_LAPTOP.md`** —
+> prerequisites, per-OS build/run/installer steps, and what works offline.
+
 | Component | Status |
 |-----------|--------|
 | Phase 1 — Foundation & Storage Core | ✅ complete (schema §6.1, bundle lifecycle, security, CLI) |
