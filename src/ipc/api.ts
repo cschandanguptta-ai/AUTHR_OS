@@ -393,6 +393,126 @@ export function kdpPackage(args: {
   }>('kdp_package', args);
 }
 
+// ── v1.4 — retention & serialization kit (SFB-2.0) ──────────────────────────
+
+export interface RetentionQc {
+  scores: number[];
+  total: number;
+  max: number;
+  band: 'STRONG' | 'EXAMINE' | 'STRUCTURAL_REVISION' | 'RECONSIDER';
+  verdict: string;
+  zero_flags: string[];
+  revision_required: boolean;
+}
+
+export interface RetentionPhase {
+  chapter_number: number;
+  cycle: number;
+  phase_index: number;
+  phase_id: 'setup' | 'escalation' | 'reversal_pivot' | 'climax_resolution';
+  phase_label: string;
+  phase_chapters: string;
+  step_in_phase: number;
+  phase_span: number;
+  goals: string[];
+}
+
+export interface RetentionEndingSuggestion {
+  id: string;
+  label: string;
+  example: string;
+  when: string;
+}
+
+export function craftRetentionCheck(args: {
+  book_id: number;
+  chapter_number: number;
+  scores: number[];
+  ending_type?: string;
+  notes?: string;
+}) {
+  return invoke<{
+    book_id: number;
+    chapter_number: number;
+    chapter_id: number;
+    qc: RetentionQc;
+    ending_type: string;
+    next_chapter: {
+      number: number;
+      phase: RetentionPhase;
+      suggested_endings: RetentionEndingSuggestion[];
+    };
+    blueprint: string;
+  }>('craft_retention_check', args);
+}
+
+export function craftRetentionReport(args: {
+  book_id: number;
+  chapters_per_week?: number;
+}) {
+  return invoke<{
+    book_id: number;
+    chapters_per_week: number;
+    chapters: Array<{
+      chapter_number: number;
+      title: string;
+      status: string;
+      word_count: number;
+      word_length_guidance: 'unwritten' | 'short' | 'in_range' | 'long';
+      phase: RetentionPhase;
+      qc?: {
+        total: number;
+        band: string;
+        revision_required: boolean;
+        ending_type?: string;
+        notes?: string;
+      };
+    }>;
+    cadence: {
+      reserve_chapters: number;
+      published_chapters: number;
+      planned_chapters: number;
+      buffer_weeks: number;
+      buffer_healthy: boolean;
+    };
+    summary: {
+      chapters_total: number;
+      qc_scored: number;
+      bands: Record<string, number>;
+      revision_required: number;
+      endings_used: Record<string, number>;
+      recent_endings: string[];
+      ending_repetition_in_window: string[];
+      next_phase: RetentionPhase;
+    };
+    blueprint: string;
+  }>('craft_retention_report', args);
+}
+
+export function craftRetentionWorksheet(args: {
+  book_id: number;
+  chapter_number: number;
+}) {
+  return invoke<{
+    book_id: number;
+    chapter_number: number;
+    chapter_exists: boolean;
+    chapter?: { title: string; target_word_count: number; actual_word_count: number; status: string };
+    phase: RetentionPhase;
+    arc?: { id: string; label: string };
+    beat_stamp?: { beat_id: string; beat_label: string };
+    previous_qc?: { total: number; band: string; revision_required: boolean };
+    ending_rotation: {
+      recent: string[];
+      suggested: RetentionEndingSuggestion[];
+      blocked_window: number;
+    };
+    sections: Array<{ letter: string; id: string; title: string; prompts: string[]; context: string }>;
+    qc_criteria: string[];
+    blueprint: string;
+  }>('craft_retention_worksheet', args);
+}
+
 export function localLlmGenerate(args: {
   prompt: string;
   max_tokens?: number;

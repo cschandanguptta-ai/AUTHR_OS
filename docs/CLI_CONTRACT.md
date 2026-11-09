@@ -1,12 +1,14 @@
-# AUTHR_OS — Frozen IPC / CLI Contract (v1.3)
+# AUTHR_OS — Frozen IPC / CLI Contract (v1.4)
 
 **Status**: v1 sections are FROZEN. v1.1 (Phases 4–5) extended the surface
 **additively**: 13 new commands (§4.11–4.12) and 4 new error codes in two new
 categories (§3). v1.2 (Phase 6) extends it further: 8 new commands (§4.13),
 **reusing the frozen error taxonomy** — no new codes. v1.3 (Craft & KDP)
 extends it additively once more: 6 new commands (§4.14) and **one** new error
-code (`CRAFT_ERROR`, category `craft`). Every v1/v1.1/v1.2 command, code and
-semantic is untouched.
+code (`CRAFT_ERROR`, category `craft`). v1.4 (Retention & Serialization)
+adds 3 commands (§4.15) and a `retention` catalog kind — **no new codes**, no
+schema changes to frozen tables (additive `chapter_retention` only). Every
+v1/v1.1/v1.2/v1.3 command, code and semantic is untouched.
 
 **Applies to**: Phase 1 (Storage Core), Phase 3 (Author's Cockpit UI),
 Phase 4 (Audio Studio), Phase 5 (Local-First AI & Vector RAG),
@@ -69,9 +71,9 @@ Exactly **one line** of JSON on stdout. Exit code `0` on success, `1` on failure
 
 | Code | Category | Raised when |
 |------|----------|-------------|
-| `CRAFT_ERROR` | craft | Invalid craft/KDP args: unknown format/arc/persona id, >7 keywords, >2 categories, description outside 20–4000 chars, price outside 0.99–200, unknown catalog `kind` |
+| `CRAFT_ERROR` | craft | Invalid craft/KDP/retention args: unknown format/arc/persona id, >7 keywords, >2 categories, description outside 20–4000 chars, price outside 0.99–200, unknown catalog `kind`, malformed QC scores (≠7 or outside 0–2), unknown `ending_type`, `chapter_number` < 1, notes > 2000 chars |
 
-## 4. Command Surface (62 commands)
+## 4. Command Surface (65 commands)
 
 ### 4.1 Project lifecycle
 
@@ -234,7 +236,7 @@ maps to one of the four frozen CHECK values).
 
 | # | Command | Args (JSON) | Result `data` |
 |---|---------|-------------|---------------|
-| 57 | `craft_catalog` | `{kind?="all\|formats\|personas\|arcs\|pricing"}` | full catalog entries + counts + `pricing` (KDP constants, planning approximation) — bundle-free, deterministic, offline |
+| 57 | `craft_catalog` | `{kind?="all\|formats\|personas\|arcs\|pricing\|retention"}` | full catalog entries + counts + `pricing` (KDP constants, planning approximation); `kind=retention` serves the **SFB-2.0 reader-retention blueprint** (§4.15); bundle-free, deterministic, offline |
 | 58 | `craft_apply` | `{book_id, format_id?, plot_arc_id?, style_persona_id?, adopt_defaults?=false}` | `{book_id, format, plot_arc, style_persona, legacy_sync, state}` — validates ids (`CRAFT_ERROR`), upserts `craft_state`, syncs `persona_id`/`narrative_structure`, optionally adopts the format's default word/chapter targets |
 | 59 | `craft_scaffold` | `{book_id, plot_arc_id?, chapter_count?, start_chapter?=1, per_chapter_words?=3500, overwrite_synopsis?=false}` | `{book_id, plot_arc, arc_label, chapters_total, created, mapped, beats_total, plan[], chapters_created[]}` — deterministic beat mapping: chapter *i* of *n* carries beat `⌊i·b/n⌋` (monotonic, full coverage for any n); missing chapters are created (title = beat label, synopsis = beat guidance, act = 1+⌊3·beat/b⌋ clamped 1–3) |
 | 60 | `craft_progress` | `{book_id}` | `{total_beats, covered_beats, coverage_pct, beats:[{beat_id, label, guidance, chapters[], started}], chapters, total_words, target_words, unresolved_threads, plan}` — beat coverage fused with word counts and the Chekhov ledger |
@@ -247,6 +249,29 @@ sanitizer** (all input escaped; blank-line paragraphs, `- ` bullet lists,
 a well-formed XHTML fragment with every value XML-escaped; royalty math is an
 offline planning approximation from `catalog::pricing()` — always re-verify
 current rates on kdp.amazon.com before filing real prices.
+
+### 4.15 Retention & Serialization Kit (v1.4)
+
+The chapter-level retention machinery of the **Serialized Fiction Blueprint
+2.0 (SFB-2.0)**, complementing the macro plot arcs of §4.14: a seven-beat
+chapter model, six chapter-ending types with selection rules, the 10–15
+chapter micro-arc cycle (4 phases, wrapping every 15 chapters), a 7×0–2 QC
+rubric with editorial bands and a zero-flag rule (a 0 on `narrative_objective`
+or `chapter_payoff` forces revision regardless of the total), the A–E
+drafting worksheet, opening-hook strategy (200–400 words) and the
+serialization cadence (2–3 chapters/week, 4–8 chapter buffer). Storage is
+purely additive: `chapter_retention(book_id, chapter_number, ending_type,
+scores_json, total, band, notes, updated_at)` via an eager idempotent
+migration; the blueprint itself is served bundle-free by
+`craft_catalog kind=retention`. The chapter pipeline (`status`) is the
+cadence source of truth: `reserve` = DRAFTING+POLISHED+AUDIO_READY,
+`buffer_weeks = reserve / chapters_per_week`.
+
+| # | Command | Args (JSON) | Result `data` |
+|---|---------|-------------|---------------|
+| 63 | `craft_retention_check` | `{book_id, chapter_number, scores[7×0–2], ending_type?, notes?≤2000}` | `{book_id, chapter_number, chapter_id, qc:{scores, total(0–14), band, verdict, zero_flags, revision_required}, ending_type, next_chapter:{number, phase, suggested_endings[]}, blueprint:"SFB-2.0"}` — writer (lease enforced); requires the chapter to exist (QC applies to drafted chapters); upserts `chapter_retention` |
+| 64 | `craft_retention_report` | `{book_id, chapters_per_week?=2.5 (0.5–7)}` | `{book_id, chapters:[{chapter_number, title, status, word_count, word_length_guidance (unwritten/short/in_range/long vs 1000–2000), phase, qc?}], cadence:{reserve_chapters, published_chapters, planned_chapters, buffer_weeks, buffer_healthy}, summary:{qc_scored, bands, revision_required, endings_used, recent_endings, ending_repetition_in_window, next_phase}}` — read-only |
+| 65 | `craft_retention_worksheet` | `{book_id, chapter_number}` | `{book_id, chapter_number, chapter_exists, chapter?, phase:{cycle, phase_id, step_in_phase, goals}, arc?, beat_stamp?, previous_qc?, ending_rotation:{recent, suggested[] (last-3 window blocked), blocked_window:3}, sections:[A–E with prompts + fused context], qc_criteria}` — read-only; works for chapters that do not exist yet (pre-draft planning) |
 
 Persona hooks: `local_llm_generate` accepts an additive `style_persona` arg
 (§4.12) — the persona's craft directive is prepended to the prompt for every

@@ -78,9 +78,10 @@ pub const WRITER_COMMANDS: &[&str] = &[
     "craft_apply",
     "craft_scaffold",
     "kdp_package",
+    "craft_retention_check",
 ];
 
-/// Full contract dispatch (§4, 62 commands). `root` is the `--bundle` value.
+/// Full contract dispatch (§4, 65 commands). `root` is the `--bundle` value.
 pub fn dispatch(root: Option<&Path>, command: &str, args: &Value) -> IpcResult {
     // ── Bundle-free commands ────────────────────────────────────────────────
     match command {
@@ -216,6 +217,11 @@ pub fn dispatch(root: Option<&Path>, command: &str, args: &Value) -> IpcResult {
         "craft_progress" => crate::craft::engine::craft_progress(&mut ctx, args),
         "kdp_check" => crate::craft::kdp::kdp_check(&mut ctx, args),
         "kdp_package" => crate::craft::kdp::kdp_package(&mut ctx, args),
+
+        // ── 4.15 retention & serialization kit (v1.4) ────────────────
+        "craft_retention_check" => crate::craft::retention::craft_retention_check(&mut ctx, args),
+        "craft_retention_report" => crate::craft::retention::craft_retention_report(&mut ctx, args),
+        "craft_retention_worksheet" => crate::craft::retention::craft_retention_worksheet(&mut ctx, args),
 
         other => Err(AppError::bundle(format!(
             "unknown command `{other}` — see docs/CLI_CONTRACT.md §4"

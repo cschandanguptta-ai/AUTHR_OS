@@ -56,7 +56,7 @@ labeled. IDs are stable for reference from other docs and commits.
   `test_results.json` (`totals.test_modules=28`, suite string "contract v1.1"
   / "Phase 1–5").
 - **Resolution**: README was corrected in the docs commit that added this
-  file; `main.rs:13` now says 62-command; `test_results.json` is regenerated
+  file; `main.rs:13` now says 65-command; `test_results.json` is regenerated
   from live runs by `scripts/refresh_acceptance.py` (contract v1.2, live
   command/module/test counts, benchmark gates — 170 E2E / 70 unit as of
   Phase 7). Keep counts generated, not hand-edited.

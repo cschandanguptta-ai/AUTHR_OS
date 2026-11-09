@@ -89,11 +89,13 @@ erDiagram
 | `rag_chunks` | `chunk_id` TEXT = `"<source>:<ref_id>"` | `book_id`, `source`, `ref_id`, `content`, `dim`, `embedding` BLOB (little-endian f32, 384) | **no FK** — snapshot rows; created by idempotent migration (`rag/store.rs:35`); upsert keyed on chunk_id (`store.rs:41`) |
 | `craft_state` | `book_id` FK books CASCADE | `format_id` (25 ids), `plot_arc_id` (18 ids), `style_persona_id` (37 ids), `plan_json` TEXT, `storefront_json` TEXT | **v1.3 additive** (`craft/engine.rs::ensure_craft_schema`, executed eagerly from `db::open_db`); idempotent `CREATE TABLE IF NOT EXISTS` — frozen DDL untouched |
 | `chapter_beats` | `chapter_id` FK chapters CASCADE | `beat_id` TEXT, `beat_index` INTEGER, `beat_label` TEXT | **v1.3 additive**; one beat stamp per chapter; `idx_chapter_beats_beat` |
+| `chapter_retention` | PK `(book_id, chapter_number)` | `ending_type` TEXT (6 SFB-2.0 ids or ''), `scores_json` TEXT (7×0–2), `total` INTEGER 0–14, `band` TEXT, `notes` TEXT ≤2000, `updated_at` | **v1.4 additive** (`craft/retention.rs::ensure_retention_schema`); QC verdicts per chapter; `idx_chapter_retention_book` |
 | `rag_chunks_fts` | (FTS5) | `chunk_id UNINDEXED`, `content`, porter unicode61 | kept in sync by `upsert_chunk`/`clear_source` (`store.rs:41-70,126-133`) |
 
 Indexes: `idx_chapters_book_order`, `idx_segments_chapter_order`,
 `idx_segments_audio_hash`, `idx_threads_status` (`db.rs:119-122`) plus the
-additive `idx_chapter_beats_beat` (craft v1.3). Index
+additive `idx_chapter_beats_beat` (craft v1.3) and
+`idx_chapter_retention_book` (retention v1.4). Index
 guarantees are asserted by `tests/tier1_features/test_t1_indexes.py`.
 
 ## 3. Engine PRAGMAs (every connection, `db.rs:147-154`)

@@ -83,3 +83,37 @@ the whole point of the one-person house model: **catalog depth × evergreen
 royalties**, which the craft catalogs (formats × arcs × personas) are built
 to accelerate. (Illustrative arithmetic from `catalog::pricing()` constants,
 not a promise.)
+
+## 6. Reader retention & the serial revenue loop (v1.4)
+
+Storefronts pay on **page-through**: Kindle Unlimited royalties are computed
+from pages readers actually finish, and serial platforms retain or churn
+chapter by chapter. v1.4 therefore ships the Serialized Fiction Blueprint
+2.0 (SFB-2.0) as executable craft machinery (`craft_catalog kind=retention`):
+
+- **Seven-beat chapter model** — opening continuity → objective → resistance
+  → escalation → turning point → payoff → forward pull; the with-chapter
+  skeleton every KU page is spent inside.
+- **Six ending types with rotation control** — danger, emotional revelation,
+  mystery/discovery, irreversible choice, reversal, anticipation;
+  `craft_retention_worksheet` blocks whatever the last three chapters used,
+  so cliffhanger fatigue never accumulates mechanically.
+- **Micro-arc cycle (10–15 chapters × 4 phases)** — the retention unit
+  between "chapter" and "book"; phase maps wrap every 15 chapters.
+- **QC gate before publication** — `craft_retention_check` scores 7 criteria
+  ×0–2 (max 14) with editorial bands (12–14 strong … 0–5 reconsider); a zero
+  on *narrative objective* or *meaningful payoff* forces revision regardless
+  of the total. Only chapters that pass this gate should reach `kdp_package`.
+- **Serialization cadence** — 2–3 chapters/week on a 4–8 chapter reserve;
+  `craft_retention_report` derives the buffer directly from the chapter
+  pipeline (`DRAFTING/POLISHED/AUDIO_READY`) and converts it to weeks of
+  schedule protection.
+- **Word-length conformance** — chapters are checked against the 1000–2000
+  serial range (platform reading format) separately from the project target.
+
+Workflow: scaffold the macro arc (§4.14) → draft against the A–E worksheet →
+run the QC gate → keep the buffer ≥ 4 → publish on cadence → package with
+`kdp_package`. Retention is treated as an editorial self-assessment tool
+(the blueprint's own caveat), not a guarantee — but it is now enforced,
+logged and queryable inside the bundle instead of living in the author's
+head.

@@ -351,17 +351,23 @@ pub fn catalog_json(kind: &str) -> Result<Value, String> {
         "personas" => Ok(json!({"kind":"personas","entries":personas(),"count":personas().len()})),
         "arcs" => Ok(json!({"kind":"arcs","entries":arcs(),"count":arcs().len()})),
         "pricing" => Ok(json!({"kind":"pricing","entries":[pricing()],"count":1})),
+        // v1.4: the SFB-2.0 retention blueprint rides the same surface.
+        "retention" => {
+            let bp = crate::craft::retention::blueprint_json();
+            Ok(json!({"kind":"retention","entries":[bp],"count":1,"blueprint":bp}))
+        }
         "all" => Ok(json!({
             "kind": "all",
             "formats": formats(),
             "personas": personas(),
             "arcs": arcs(),
             "pricing": pricing(),
+            "retention": crate::craft::retention::blueprint_json(),
             "counts": {"formats": formats().len(), "personas": personas().len(), "arcs": arcs().len()},
             "offline": true
         })),
         other => Err(format!(
-            "unknown catalog kind `{other}` — use formats|personas|arcs|pricing|all"
+            "unknown catalog kind `{other}` — use formats|personas|arcs|pricing|retention|all"
         )),
     }
 }

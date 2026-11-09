@@ -10,7 +10,7 @@ use std::path::PathBuf;
 #[command(
     name = "authr",
     version,
-    about = "AUTHR_OS core runtime — 62-command IPC surface (CLI transport)"
+    about = "AUTHR_OS core runtime — 65-command IPC surface (CLI transport)"
 )]
 struct Cli {
     /// Contract command name (see docs/CLI_CONTRACT.md §4)

@@ -7,6 +7,8 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   BookTemplate,
   CheckCircle2,
+  ClipboardList,
+  HeartPulse,
   Package,
   PenTool,
   RefreshCw,
@@ -21,12 +23,16 @@ import {
   craftApply,
   craftCatalog,
   craftProgress,
+  craftRetentionCheck,
+  craftRetentionReport,
+  craftRetentionWorksheet,
   craftScaffold,
   kdpCheck,
   kdpPackage,
   type CatalogEntry,
   type CraftProgressResult,
   type KdpCheckResult,
+  type RetentionPhase,
 } from '../../ipc/api';
 import { btnPrimary, inputClass } from '../layout/Modal';
 import { cn } from '../../lib/utils';
@@ -86,6 +92,28 @@ export function CraftStudio() {
   const [checkResult, setCheckResult] = useState<KdpCheckResult | null>(null);
   const [packageResult, setPackageResult] = useState<string | null>(null);
 
+  // Retention QC (SFB-2.0) panel state — v1.4
+  const QC_LABELS: Array<[string, string, boolean]> = [
+    ['opening_attention', 'Opening attention', false],
+    ['narrative_objective', 'Narrative objective', true],
+    ['conflict_progression', 'Conflict & tension', false],
+    ['character_development', 'Character development', false],
+    ['plot_advancement', 'Plot advancement', false],
+    ['chapter_payoff', 'Meaningful payoff', true],
+    ['ending_pull', 'Ending pull', false],
+  ];
+  const ENDING_IDS = [
+    'danger', 'emotional_revelation', 'mystery_discovery',
+    'irreversible_choice', 'reversal', 'anticipation',
+  ];
+  const [rtChapter, setRtChapter] = useState(1);
+  const [rtScores, setRtScores] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
+  const [rtEnding, setRtEnding] = useState('');
+  const [rtNotes, setRtNotes] = useState('');
+  const [rtWorksheet, setRtWorksheet] = useState<Awaited<ReturnType<typeof craftRetentionWorksheet>> | null>(null);
+  const [rtReport, setRtReport] = useState<Awaited<ReturnType<typeof craftRetentionReport>> | null>(null);
+  const [rtLast, setRtLast] = useState<Awaited<ReturnType<typeof craftRetentionCheck>> | null>(null);
+
   useEffect(() => {
     void loadBooks();
     void craftCatalog()
@@ -105,6 +133,9 @@ export function CraftStudio() {
     void craftProgress({ book_id: book.id })
       .then(setProgress)
       .catch(() => setProgress(null));
+    void craftRetentionReport({ book_id: book.id })
+      .then(setRtReport)
+      .catch(() => setRtReport(null));
   }, [book]);
 
   const personaList = useMemo(() => {
@@ -207,6 +238,43 @@ export function CraftStudio() {
     }
   };
 
+  const loadWorksheet = async () => {
+    if (!book) return;
+    try {
+      setRtWorksheet(await craftRetentionWorksheet({ book_id: book.id, chapter_number: rtChapter }));
+    } catch (err) {
+      toastError('craft_retention_worksheet failed', err);
+    }
+  };
+
+  const saveQc = async () => {
+    if (!book) return;
+    setBusy(true);
+    try {
+      const res = await craftRetentionCheck({
+        book_id: book.id,
+        chapter_number: rtChapter,
+        scores: rtScores,
+        ending_type: rtEnding || undefined,
+        notes: rtNotes || undefined,
+      });
+      setRtLast(res);
+      setRtReport(await craftRetentionReport({ book_id: book.id }));
+      toast(
+        'success',
+        `QC saved: ${res.qc.total}/14 · ${res.qc.band}`,
+        res.qc.revision_required ? `zero-flag: ${res.qc.zero_flags.join(', ')}` : 'no revision flags',
+      );
+    } catch (err) {
+      toastError('craft_retention_check failed', err);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const phaseChip = (p: RetentionPhase | undefined) =>
+    p ? `ch ${p.chapter_number} · ${p.phase_label} (${p.step_in_phase}/${p.phase_span}) · cycle ${p.cycle}` : '—';
+
   if (!book) {
     return (
       <StudioShell icon={PenTool} title="Craft Studio" subtitle="Formats · personas · plot arcs · KDP packaging">
@@ -225,7 +293,7 @@ export function CraftStudio() {
     <StudioShell
       icon={PenTool}
       title="Craft Studio"
-      subtitle="25 formats · 37 bestseller personas · 18 plot arcs · KDP packaging"
+      subtitle="25 formats · 37 personas · 18 arcs · retention QC · KDP packaging"
     >
       <div className="pb-10">
         <div className="px-6 pt-5 grid gap-3 max-w-4xl">
@@ -368,6 +436,174 @@ export function CraftStudio() {
                   ))}
                 </div>
               </div>
+            )}
+          </div>
+
+          {/* ── Retention QC (SFB-2.0) ── */}
+          <div className="border border-line rounded-xl bg-panel2 px-4 py-3 grid gap-2">
+            <div className="flex items-center gap-2 text-xs font-semibold">
+              <HeartPulse size={14} className="text-accent" /> Retention QC · SFB-2.0
+              <span className="text-2xs text-mut font-normal">
+                seven-beat chapters · ending rotation · micro-arc phases · cadence
+              </span>
+            </div>
+            {rtReport && (
+              <div className="flex items-center gap-2 flex-wrap text-2xs font-mono text-mut">
+                <span>
+                  reserve {rtReport.cadence.reserve_chapters} · published{' '}
+                  {rtReport.cadence.published_chapters} · buffer ≈{' '}
+                  {rtReport.cadence.buffer_weeks} wk
+                </span>
+                <span
+                  className={cn(
+                    'px-1.5 py-0.5 rounded border',
+                    rtReport.cadence.buffer_healthy
+                      ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                      : 'border-amber-500/40 bg-amber-500/10 text-amber-300',
+                  )}
+                >
+                  {rtReport.cadence.buffer_healthy ? 'buffer healthy' : 'buffer < 4'}
+                </span>
+                <span>QC {rtReport.summary.qc_scored}/{rtReport.summary.chapters_total}</span>
+                {rtReport.summary.revision_required > 0 && (
+                  <span className="px-1.5 py-0.5 rounded border border-rose-500/40 bg-rose-500/10 text-rose-300">
+                    {rtReport.summary.revision_required} revision flag
+                    {rtReport.summary.revision_required > 1 ? 's' : ''}
+                  </span>
+                )}
+                <span className="text-mut/70">
+                  next: {phaseChip(rtReport.summary.next_phase)}
+                </span>
+              </div>
+            )}
+            <div className="flex items-end gap-3 flex-wrap">
+              <label className="grid gap-1">
+                <span className="text-2xs text-mut uppercase tracking-wide">Chapter #</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={999}
+                  className={cn(inputClass, 'w-20 text-xs')}
+                  value={rtChapter}
+                  onChange={(e) => setRtChapter(Number(e.target.value) || 1)}
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => void loadWorksheet()}
+                className="text-2xs px-3 py-1.5 rounded-lg border border-line text-mut hover:text-ink flex items-center gap-1.5"
+              >
+                <ClipboardList size={12} /> Load worksheet
+              </button>
+              {rtWorksheet && (
+                <span className="text-2xs font-mono text-mut">
+                  {phaseChip(rtWorksheet.phase)}
+                  {rtWorksheet.beat_stamp ? ` · beat: ${rtWorksheet.beat_stamp.beat_label}` : ''}
+                  {rtWorksheet.previous_qc ? ` · prior QC ${rtWorksheet.previous_qc.total}/14` : ''}
+                </span>
+              )}
+            </div>
+            {rtWorksheet && (
+              <div className="grid gap-1.5">
+                {rtWorksheet.ending_rotation.suggested.length > 0 &&
+                  rtWorksheet.ending_rotation.suggested.length < 6 && (
+                    <div className="flex items-center gap-1.5 text-2xs text-mut flex-wrap">
+                      <span>suggested endings (last-3 rotation):</span>
+                      {rtWorksheet.ending_rotation.suggested.map((e) => (
+                        <button
+                          key={e.id}
+                          type="button"
+                          title={e.when}
+                          onClick={() => setRtEnding(e.id)}
+                          className="px-1.5 py-0.5 rounded border border-line hover:text-ink hover:border-accent"
+                        >
+                          {e.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                {rtWorksheet.sections.map((s) => (
+                  <details key={s.letter} className="text-2xs text-mut border border-line/60 rounded px-2 py-1">
+                    <summary className="cursor-pointer text-ink font-semibold">
+                      {s.letter} · {s.title}
+                    </summary>
+                    <p className="mt-1 leading-snug">{s.context}</p>
+                    <ul className="mt-1 list-disc pl-4 leading-snug">
+                      {s.prompts.map((p, i) => (
+                        <li key={i}>{p}</li>
+                      ))}
+                    </ul>
+                  </details>
+                ))}
+              </div>
+            )}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {QC_LABELS.map(([id, label, zeroFlag], i) => (
+                <label key={id} className="grid gap-1">
+                  <span className={cn('text-2xs uppercase tracking-wide', zeroFlag ? 'text-ink' : 'text-mut')}>
+                    {label}
+                    {zeroFlag && <span className="text-rose-400"> ·zero=revise</span>}
+                  </span>
+                  <select
+                    className={cn(inputClass, 'text-xs')}
+                    value={rtScores[i]}
+                    onChange={(e) =>
+                      setRtScores(rtScores.map((s, j) => (j === i ? Number(e.target.value) : s)))
+                    }
+                  >
+                    <option value={0}>0 — lacking</option>
+                    <option value={1}>1 — partial</option>
+                    <option value={2}>2 — solid</option>
+                  </select>
+                </label>
+              ))}
+              <label className="grid gap-1">
+                <span className="text-2xs text-mut uppercase tracking-wide">Ending type</span>
+                <select
+                  className={cn(inputClass, 'text-xs')}
+                  value={rtEnding}
+                  onChange={(e) => setRtEnding(e.target.value)}
+                >
+                  <option value="">— none —</option>
+                  {ENDING_IDS.map((id) => (
+                    <option key={id} value={id}>
+                      {id.replace(/_/g, ' ')}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <input
+                className={cn(inputClass, 'text-xs flex-1 min-w-[180px]')}
+                placeholder="QC notes (optional, ≤2000 chars)"
+                value={rtNotes}
+                onChange={(e) => setRtNotes(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={() => void saveQc()}
+                disabled={busy}
+                className={cn(btnPrimary, 'text-2xs px-3 py-1.5 flex items-center gap-1.5')}
+              >
+                <HeartPulse size={12} /> {busy ? 'Working…' : 'Save chapter QC'}
+              </button>
+            </div>
+            {rtLast && (
+              <p
+                className={cn(
+                  'text-2xs font-mono',
+                  rtLast.qc.revision_required ? 'text-amber-400' : 'text-mut',
+                )}
+              >
+                ch {rtLast.chapter_number}: {rtLast.qc.total}/14 · {rtLast.qc.band} ·{' '}
+                {rtLast.qc.verdict}
+                {rtLast.qc.revision_required && ` — revise: ${rtLast.qc.zero_flags.join(', ')}`}
+                {rtLast.next_chapter.suggested_endings.length < 6 &&
+                  ` — next endings: ${rtLast.next_chapter.suggested_endings
+                    .map((e) => e.id)
+                    .join(', ')}`}
+              </p>
             )}
           </div>
 

@@ -16,8 +16,8 @@ pub mod storage;
 #[cfg(feature = "gui")]
 pub mod shell;
 
-pub const CONTRACT_VERSION: &str = "1.3";
-pub const COMMAND_COUNT: usize = 62;
+pub const CONTRACT_VERSION: &str = "1.4";
+pub const COMMAND_COUNT: usize = 65;
 
 /// The frozen command surface (docs/CLI_CONTRACT.md §4).
 pub const COMMANDS: &[&str] = &[
@@ -97,4 +97,8 @@ pub const COMMANDS: &[&str] = &[
     "craft_progress",
     "kdp_check",
     "kdp_package",
+    // 4.15 retention & serialization kit (v1.4)
+    "craft_retention_check",
+    "craft_retention_report",
+    "craft_retention_worksheet",
 ];

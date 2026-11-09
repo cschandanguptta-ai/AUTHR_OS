@@ -5,6 +5,9 @@ the `audio` and `ai` categories cover the Phase 4/5 studio surface. Phase 6
 (publishing & release) reuses the frozen taxonomy — no new codes.
 Contract v1.3 (craft & KDP): +1 additive code `CRAFT_ERROR` in the `craft`
 category; 6 new commands (§4.14).
+Contract v1.4 (retention & serialization): no new codes; 3 new commands
+(§4.15) and a `retention` catalog kind. Storage stays additive
+(`chapter_retention`).
 """
 
 CANONICAL_CODES = {
@@ -72,9 +75,11 @@ CONTRACT_COMMANDS = [
     # v1.3 — craft catalog & storefront packaging
     "craft_catalog", "craft_apply", "craft_scaffold", "craft_progress",
     "kdp_check", "kdp_package",
+    # v1.4 — retention & serialization kit (§4.15)
+    "craft_retention_check", "craft_retention_report", "craft_retention_worksheet",
 ]
 
-EXPECTED_COMMAND_COUNT = 62
+EXPECTED_COMMAND_COUNT = 65
 
 ROW_FIELDS = {
     "book": ["id", "title", "author", "genre", "premise", "theme", "narrative_structure",

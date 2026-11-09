@@ -27,7 +27,7 @@ Raw probe (2026-11-08, release profile, opt-level 2):
 
 ## Throughput observations (same machine)
 
-- Full E2E suite (184 tests, 4 tiers, ~70 bundles): **~12 s**
+- Full E2E suite (195 tests, 4 tiers, ~70 bundles): **~13 s**
 - Rust unit tests (67): **0.02 s**
 - Lookahead synthesis, 50-turn chapter (10 speakers, SCRIPTED engine):
   5 dependency waves, full parallelism inside waves (unit-tested stress in

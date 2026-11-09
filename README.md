@@ -42,8 +42,8 @@ AUTHR_OS/
 │       ├── localai/          # Phase 5: offline LLM + llama-server client, Kokoro path
 │       ├── publish/          # Phase 6: EPUB 3/SMIL, DOCX, Typst, captions, M4B,
 │       │                     #          ed25519 release signing, benchmark gates
-│       ├── craft/            # v1.3: formats/personas/arcs catalogs, beat engine,
-│       │                     #          KDP check + storefront package builder
+│       ├── craft/            # v1.3/v1.4: formats/personas/arcs catalogs, beat engine,
+│       │                     #          retention kit (SFB-2.0), KDP check + package builder
 │       ├── ipc/              # dispatcher — CLI, Tauri and dev bridge share it
 │       ├── shell/            # Tauri v2 window builder (feature = "gui")
 │       └── main.rs           # `authr` CLI (single-line JSON envelope)
@@ -53,7 +53,7 @@ AUTHR_OS/
 │   ├── components/studios/   # Audio / Video / Localization / Marketing / Craft
 │   ├── stores/               # Zustand domain stores
 │   └── ipc/                  # typed contract surface + transport bridge
-├── tests/                    # 33 modules · 184 E2E tests (pytest + run_e2e.py)
+├── tests/                    # 34 modules · 195 E2E tests (pytest + run_e2e.py)
 └── scripts/ipc-proxy.mjs     # browser dev bridge: POST /api/ipc → CLI
 ```
 
@@ -86,7 +86,7 @@ npm run dev                    # http://localhost:5173
 envelope, so Lexical edits, binder trees and studio tables drive the actual
 Rust core. No Tauri required until packaging.
 
-### 3. E2E test suite (184 tests · 33 modules)
+### 3. E2E test suite (195 tests · 34 modules)
 
 ```bash
 python tests/run_e2e.py                 # all 4 tiers
@@ -103,8 +103,9 @@ Headless environments: the suite sets `AUTHR_MOCK_KEYCHAIN=1`
 
 Every transport — `#[tauri::command]`, the CLI, and the browser dev bridge —
 dispatches through one frozen surface: **`docs/CLI_CONTRACT.md`**
-(v1.3: 62 commands · `{ok,data}` / `{ok:false,error{code,message,category}}` envelopes ·
+(v1.4: 65 commands · `{ok,data}` / `{ok:false,error{code,message,category}}` envelopes ·
 14 canonical error codes across 6 categories · 120 s lease TTL · shadow-format &
 git-message rules). The 9 v1 codes and 35 v1 commands are untouched; v1.1 adds
-the Phase 4/5 studio surface, v1.2 the Phase 6 publishing surface and v1.3 the
-craft/KDP surface — all additively. Changes require a contract version bump.
+the Phase 4/5 studio surface, v1.2 the Phase 6 publishing surface, v1.3 the
+craft/KDP surface and v1.4 the retention/serialization surface — all
+additively. Changes require a contract version bump.

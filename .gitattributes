@@ -1,2 +1,5 @@
 # Prebuilt test binary ships only in the workspace zip, never in source exports.
 src-tauri/target/release/authr export-ignore
+# User uploads are reference material, not app source — never in exports.
+upload/ export-ignore
+tool-results/ export-ignore
