@@ -3,7 +3,8 @@
 //   script    → Speaker Gutter Badges + Emotion Chips + Foley pills visible
 //   readalong → chips/foley visible, gutter hidden, selected segment
 //               highlighted as the read-along cursor (karaoke timeline lands
-//               with Phase 4 audio; per-segment spans are already reserved).
+//               with the audio produce pipeline; per-segment spans are
+//               already reserved).
 //
 // Also owns click-to-select in read-along mode: clicking a paragraph selects
 // its segment (identity resolved from the paragraph's `data-segment-id`).

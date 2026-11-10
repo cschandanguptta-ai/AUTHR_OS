@@ -27,7 +27,7 @@ export function AudioStateBadge({
       title={
         rendered
           ? `Rendered · hash ${segment.audio_hash?.slice(0, 12)} · ${formatMs(segment.audio_duration_ms)}`
-          : 'Unrendered — awaiting synthesis (Phase 5 pipeline)'
+          : 'Unrendered — awaiting synthesis'
       }
     >
       {rendered ? (

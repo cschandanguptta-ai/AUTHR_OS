@@ -235,7 +235,7 @@ export function MarketingStudio() {
               </button>
             </div>
             <p className="text-2xs text-mut leading-tight">
-              Saved to the book row (cover_prompt) — the Phase 6 pipeline feeds it to image generation.
+              Saved to the book row (cover_prompt) — paste it into your image generator; the Scene Studio art pipeline uses its own style catalog.
             </p>
           </div>
         </div>
