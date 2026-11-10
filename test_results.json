@@ -1,6 +1,6 @@
 {
  "suite": "AUTHR_OS Desktop \u2014 Phase 1\u20136 + v1.3\u2013v1.6 Craft, Retention, Video Novel & Provider Ladder acceptance (contract v1.6)",
- "recorded_at": "2026-11-09T15:55:44.851051+00:00",
+ "recorded_at": "2026-11-10T10:23:29.058548+00:00",
  "rust": {
   "toolchain": "rustc 1.99.1",
   "crate": "authr 3.0.0",
@@ -10,7 +10,7 @@
  "e2e_full_suite": {
   "suite": "AUTHR_OS E2E",
   "exit_code": 0,
-  "passed": 214,
+  "passed": 218,
   "failed": 0,
   "tier": null,
   "feature": null,
@@ -20,26 +20,26 @@
   "tier1": {
    "passed": 138,
    "failed": 0,
-   "duration_s": 15.03,
+   "duration_s": 14.95,
    "modules": 21
   },
   "tier2": {
    "passed": 62,
    "failed": 0,
-   "duration_s": 4.32,
+   "duration_s": 4.57,
    "modules": 10
   },
   "tier3": {
    "passed": 6,
    "failed": 0,
-   "duration_s": 2.8,
+   "duration_s": 2.59,
    "modules": 1
   },
   "tier4": {
-   "passed": 8,
+   "passed": 12,
    "failed": 0,
-   "duration_s": 3.77,
-   "modules": 4
+   "duration_s": 11.94,
+   "modules": 5
   }
  },
  "frontend": {
@@ -50,12 +50,12 @@
  },
  "benchmark_gates": {
   "cold_start": {
-   "median_ms": 1.922,
-   "p95_ms": 2.171,
+   "median_ms": 1.722,
+   "p95_ms": 1.968,
    "limit_ms": 1500.0
   },
   "rss": {
-   "peak_mb": 6.27,
+   "peak_mb": 6.34,
    "limit_mb": 50.0
   },
   "binary": {
@@ -65,14 +65,14 @@
   "pass": true
  },
  "totals": {
-  "e2e_tests": 214,
+  "e2e_tests": 218,
   "pass_rate": "100%",
   "commands": 74,
   "error_codes": 14,
-  "test_modules": 36,
+  "test_modules": 37,
   "rust_unit_tests": 135,
   "phases": "1\u20136 complete + v1.3 craft & KDP + v1.4 retention kit + v1.5 video novel studio + v1.6 provider settings ladder & Scene Studio parity + cockpit UI/UX upgrade \u2014 Golden Master v3.0.0-PROD",
   "contract_version": "1.6"
  },
- "verification_note": "Acceptance on 2026-11-09 (contract v1.6): 214/214 E2E + 135/135 Rust unit tests green, tsc + vite clean, cargo build 0 warnings, clippy 0 warnings, all benchmark gates pass. v1.3 adds the craft catalog (25 formats / 37 personas / 18 arcs), beat scaffolding and KDP storefront packaging (kdp_check/kdp_package). Storefront-grade EPUB: cover embedding with dimension validation, title/copyright front matter, DC metadata from the KDP payload. v1.4 adds the SFB-2.0 retention kit (craft_retention_check/report/worksheet, craft_catalog kind=retention): seven-beat chapter model, six ending types with last-3 rotation, 10\u201315 chapter micro-arc cycle, 7\u00d70\u20132 QC rubric with zero-flag rule, A\u2013E worksheet, 1000\u20132000 word guidance and cadence arithmetic. v1.5 adds the video novel studio (video_plan/render/assemble/validate): draft-time media derivation (no-double-work contract), deterministic SCRIPTED image engine (BMP + 5\u00d77 font + seeded palettes), R2I reference sheets with the consistency ladder, R2I_ENDPOINT fail-closed seam, one-pass ffmpeg MP4 (Ken Burns + focal anchors + narration reuse + SRT). v1.6 adds the provider settings ladder (ADR-0012: provider_get/set/test \u2014 args > provider_settings > env > fail-closed, keys in the OS keychain, hardened fetch with retries/backoff/64MiB cap/magic sniffing), the art-style catalog with per-book selection (video_style, novelcast parity, style-seeded deterministic repaints), R2I_ENDPOINT scene frames (segment text + cast bios verbatim), registry-driven ffmpeg assembly with missing_only ensure-render, sandbox-scoped media_read, the Scene Studio storyboard UI (scene cards, repaint-all pool with stop, stage tracker, style picker) and the AI providers settings dialog; frontend workerisation: chapter-stats Web Worker + code-split studios. Cockpit UI/UX upgrade re-verified on this run: Ctrl/Cmd+K command palette, global studio shortcuts, reader settings popover (themes, editor type size, focus mode), modal focus traps + restore, semantic color system with alpha-capable --X-rgb triples, theme-aware status tones, prefers-reduced-motion; zero new dependencies \u2014 tsc + vite clean, full E2E + bench re-run green."
+ "verification_note": "Acceptance on 2026-11-10 (contract v1.6): 218/218 E2E + 135/135 Rust unit tests green, tsc + vite clean, cargo build 0 warnings, clippy 0 warnings, all benchmark gates pass. v1.3 adds the craft catalog (25 formats / 37 personas / 18 arcs), beat scaffolding and KDP storefront packaging (kdp_check/kdp_package). Storefront-grade EPUB: cover embedding with dimension validation, title/copyright front matter, DC metadata from the KDP payload. v1.4 adds the SFB-2.0 retention kit (craft_retention_check/report/worksheet, craft_catalog kind=retention): seven-beat chapter model, six ending types with last-3 rotation, 10\u201315 chapter micro-arc cycle, 7\u00d70\u20132 QC rubric with zero-flag rule, A\u2013E worksheet, 1000\u20132000 word guidance and cadence arithmetic. v1.5 adds the video novel studio (video_plan/render/assemble/validate): draft-time media derivation (no-double-work contract), deterministic SCRIPTED image engine (BMP + 5\u00d77 font + seeded palettes), R2I reference sheets with the consistency ladder, R2I_ENDPOINT fail-closed seam, one-pass ffmpeg MP4 (Ken Burns + focal anchors + narration reuse + SRT). v1.6 adds the provider settings ladder (ADR-0012: provider_get/set/test \u2014 args > provider_settings > env > fail-closed, keys in the OS keychain, hardened fetch with retries/backoff/64MiB cap/magic sniffing), the art-style catalog with per-book selection (video_style, novelcast parity, style-seeded deterministic repaints), R2I_ENDPOINT scene frames (segment text + cast bios verbatim), registry-driven ffmpeg assembly with missing_only ensure-render, sandbox-scoped media_read, the Scene Studio storyboard UI (scene cards, repaint-all pool with stop, stage tracker, style picker) and the AI providers settings dialog; frontend workerisation: chapter-stats Web Worker + code-split studios. Cockpit UI/UX upgrade re-verified on this run: Ctrl/Cmd+K command palette, global studio shortcuts, reader settings popover (themes, editor type size, focus mode), modal focus traps + restore, semantic color system with alpha-capable --X-rgb triples, theme-aware status tones, prefers-reduced-motion; zero new dependencies \u2014 tsc + vite clean, full E2E + bench re-run green."
 }

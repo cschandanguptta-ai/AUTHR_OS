@@ -102,7 +102,7 @@ Theming rule: components use the semantic utilities (`text-ok`, `bg-accent/10`,
 …) — never hardcoded spectrum classes; see `docs/invariants-and-gotchas.md`
 §1.14–1.15.
 
-### 3. E2E test suite (214 tests · 36 modules)
+### 3. E2E test suite (218 tests · 37 modules)
 
 ```bash
 python tests/run_e2e.py                 # all 4 tiers

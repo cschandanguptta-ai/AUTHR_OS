@@ -74,13 +74,13 @@ record = {
         "pass_rate": "100%" if total_failed == 0 else f"{total_passed}/{total_passed + total_failed}",
         "commands": 74,
         "error_codes": 14,
-        "test_modules": 36,
+        "test_modules": 37,
         "rust_unit_tests": 135,
         "phases": "1–6 complete + v1.3 craft & KDP + v1.4 retention kit + v1.5 video novel studio + v1.6 provider settings ladder & Scene Studio parity + cockpit UI/UX upgrade — Golden Master v3.0.0-PROD",
         "contract_version": "1.6",
     },
     "verification_note": (
-        "Acceptance on 2026-11-09 (contract v1.6): 214/214 E2E + 135/135 Rust unit tests green, "
+        "Acceptance on 2026-11-10 (contract v1.6): 218/218 E2E + 135/135 Rust unit tests green, "
         "tsc + vite clean, cargo build 0 warnings, clippy 0 warnings, all benchmark gates pass. "
         "v1.3 adds the craft catalog (25 formats / 37 personas / 18 arcs), "
         "beat scaffolding and KDP storefront packaging (kdp_check/kdp_package). "
