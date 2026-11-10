@@ -146,7 +146,7 @@ export const useManuscriptStore = create<ManuscriptState>((set, get) => ({
       toast('success', `Chapter ${row.chapter_number} created`, row.title);
       return row;
     } catch (err) {
-      toastError('chapter_create failed', err);
+      toastError('Could not create chapter', err);
       return null;
     }
   },
@@ -159,7 +159,7 @@ export const useManuscriptStore = create<ManuscriptState>((set, get) => ({
         chapters: s.chapters.map((c) => (c.id === id ? row : c)),
       }));
     } catch (err) {
-      toastError('chapter_update failed', err);
+      toastError('Could not update chapter', err);
     }
   },
 
@@ -174,7 +174,7 @@ export const useManuscriptStore = create<ManuscriptState>((set, get) => ({
       }
       toast('success', 'Chapter deleted', 'Segments, threads and shadow files cascaded.');
     } catch (err) {
-      toastError('chapter_delete failed', err);
+      toastError('Could not delete chapter', err);
     }
   },
 

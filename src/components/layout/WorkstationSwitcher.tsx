@@ -85,7 +85,7 @@ export function WorkstationSwitcher() {
       const res = await api.gitSnapshot();
       toast('success', 'Snapshot committed', res.commit.slice(0, 12));
     } catch (err) {
-      toastError('git_snapshot failed', err);
+      toastError('Snapshot failed', err);
     }
     setMenuOpen(false);
   };
@@ -107,7 +107,7 @@ export function WorkstationSwitcher() {
               `${res.purged_segments} segments + ${res.purged_threads} threads purged · FTS rebuilt`,
             );
           } catch (err) {
-            toastError('clean_sweep failed', err);
+            toastError('Clean sweep failed', err);
           }
         })();
       },

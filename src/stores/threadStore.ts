@@ -40,7 +40,7 @@ export const useThreadStore = create<ThreadState>((set) => ({
       toast('success', 'Thread introduced', row.thread_title);
       return row;
     } catch (err) {
-      toastError('thread_open failed', err);
+      toastError('Could not open thread', err);
       return null;
     }
   },
@@ -62,7 +62,7 @@ export const useThreadStore = create<ThreadState>((set) => ({
       toast('success', 'Thread paid off', `${row.thread_title} → resolved`);
       return true;
     } catch (err) {
-      toastError('thread_resolve failed', err);
+      toastError('Could not resolve thread', err);
       return false;
     }
   },

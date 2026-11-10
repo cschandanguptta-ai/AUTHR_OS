@@ -49,7 +49,7 @@ export const useVoiceCastStore = create<VoiceCastState>((set, get) => ({
       });
       return row;
     } catch (err) {
-      toastError('character_upsert failed', err);
+      toastError('Voice profile save failed', err);
       return null;
     }
   },
@@ -86,7 +86,7 @@ export const useVoiceCastStore = create<VoiceCastState>((set, get) => ({
       return true;
     } catch (err) {
       // Segments referencing the speaker are rejected by FK first (contract §4.4 #18).
-      toastError('character_delete rejected', err);
+      toastError('Could not remove character', err);
       return false;
     }
   },

@@ -52,7 +52,7 @@ export const useLoreStore = create<LoreState>((set, get) => ({
       });
       return row;
     } catch (err) {
-      toastError('lore_upsert failed', err);
+      toastError('Lore save failed', err);
       return null;
     }
   },
@@ -79,7 +79,7 @@ export const useLoreStore = create<LoreState>((set, get) => ({
       toast('success', 'Lore entry removed', key);
       return true;
     } catch (err) {
-      toastError('lore_delete failed', err);
+      toastError('Lore delete failed', err);
       return false;
     }
   },

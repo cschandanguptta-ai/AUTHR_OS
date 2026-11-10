@@ -106,7 +106,7 @@ function ManuscriptSection({ open, onToggle }: { open: boolean; onToggle: () => 
       const res = await api.segmentSearch({ query: q, limit: 8 });
       setHits(res.hits);
     } catch (err) {
-      toastError('segment_search failed', err);
+      toastError('Search failed', err);
     } finally {
       setSearching(false);
     }
@@ -604,7 +604,7 @@ export function ProjectBinder() {
       const res = await api.projectExport({ out });
       toast('success', 'Bundle exported', `${res.out} · ${res.bytes} bytes`);
     } catch (err) {
-      toastError('project_export failed', err);
+      toastError('Bundle export failed', err);
     }
   };
 

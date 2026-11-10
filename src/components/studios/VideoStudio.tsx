@@ -436,7 +436,7 @@ export function VideoStudio() {
       toast('success', 'Art style set', `${getArtStyle(id).label} — frames repaint deterministically.`);
       await repaintAll();
     } catch (e) {
-      toast('error', 'video_style failed', String(e));
+      toast('error', 'Could not set the art style', String(e));
     }
   };
 

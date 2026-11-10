@@ -129,7 +129,7 @@ export function CraftStudio() {
           arcs: c.arcs ?? [],
         });
       })
-      .catch((err) => toastError('craft_catalog failed', err));
+      .catch((err) => toastError('Could not load the craft catalog', err));
   }, [loadBooks, loadChapters]);
 
   useEffect(() => {
@@ -178,7 +178,7 @@ export function CraftStudio() {
       await loadBooks();
       setProgress(await craftProgress({ book_id: book.id }));
     } catch (err) {
-      toastError('craft_apply failed', err);
+      toastError('Could not apply the craft preset', err);
     } finally {
       setBusy(false);
     }
@@ -215,7 +215,7 @@ export function CraftStudio() {
       await loadBooks();
       setProgress(await craftProgress({ book_id: book.id }));
     } catch (err) {
-      toastError('craft_scaffold failed', err);
+      toastError('Scaffold failed', err);
     } finally {
       setBusy(false);
     }
@@ -227,7 +227,7 @@ export function CraftStudio() {
       const res = await kdpCheck({ book_id: book.id, price_usd: Number(price) || 4.99 });
       setCheckResult(res);
     } catch (err) {
-      toastError('kdp_check failed', err);
+      toastError('Compliance check failed', err);
     }
   };
 
@@ -250,7 +250,7 @@ export function CraftStudio() {
       toast('success', 'KDP package written', res.package_dir);
       setCheckResult(await kdpCheck({ book_id: book.id, price_usd: Number(price) || 4.99 }));
     } catch (err) {
-      toastError('kdp_package failed', err);
+      toastError('Package build failed', err);
     } finally {
       setBusy(false);
     }
@@ -261,7 +261,7 @@ export function CraftStudio() {
     try {
       setRtWorksheet(await craftRetentionWorksheet({ book_id: book.id, chapter_number: rtChapter }));
     } catch (err) {
-      toastError('craft_retention_worksheet failed', err);
+      toastError('Could not load the worksheet', err);
     }
   };
 
@@ -284,7 +284,7 @@ export function CraftStudio() {
         res.qc.revision_required ? `zero-flag: ${res.qc.zero_flags.join(', ')}` : 'no revision flags',
       );
     } catch (err) {
-      toastError('craft_retention_check failed', err);
+      toastError('QC save failed', err);
     } finally {
       setBusy(false);
     }

@@ -10,7 +10,7 @@ import { useManuscriptStore } from '../../stores/manuscriptStore';
 import { bookUpdate } from '../../ipc/api';
 import { btnPrimary, inputClass } from '../layout/Modal';
 import { cn } from '../../lib/utils';
-import { toast } from '../../stores/uiStore';
+import { toast, toastError } from '../../stores/uiStore';
 import type { BookRow } from '../../types/ast';
 
 const STYLE_PRESETS = [
@@ -86,7 +86,10 @@ export function MarketingStudio() {
         cover_prompt: draft.cover_prompt,
         isbn: draft.isbn,
       });
-      toast('success', 'Marketing metadata saved', 'Persisted via book_update (contract #9).');
+      toast('success', 'Marketing metadata saved', 'Persisted to the book row (contract #9).');
+    } catch (err) {
+      // R-08: a failed save must visibly fail — mapped copy, not silence.
+      toastError('Save marketing metadata', err);
     } finally {
       setSaving(false);
     }

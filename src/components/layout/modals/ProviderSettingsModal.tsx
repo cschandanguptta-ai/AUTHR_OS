@@ -98,7 +98,7 @@ export function ProviderSettingsModal({
       setRetries(res.image.settings.retries ?? 1);
       setLlmUrl(res.llm.settings.server_url ?? '');
     } catch (err) {
-      toastError('provider_get failed', err);
+      toastError('Could not load provider settings', err);
     }
   }, []);
 
@@ -130,7 +130,7 @@ export function ProviderSettingsModal({
       await load();
       toast('success', 'Provider settings saved', 'Resolution ladder updated — settings now outrank env.');
     } catch (err) {
-      toastError('provider_set failed', err);
+      toastError('Could not save provider settings', err);
     } finally {
       setSaving(false);
     }
@@ -142,7 +142,7 @@ export function ProviderSettingsModal({
       await load();
       toast('success', 'API key removed', 'Keychain entry authr_img/api_key deleted.');
     } catch (err) {
-      toastError('keychain_delete failed', err);
+      toastError('Could not remove the API key', err);
     }
   };
 
@@ -160,7 +160,7 @@ export function ProviderSettingsModal({
       setTest(res);
     } catch (err) {
       setTest(null);
-      toastError('provider_test failed', err);
+      toastError('Provider probe failed', err);
     } finally {
       setTesting(false);
     }

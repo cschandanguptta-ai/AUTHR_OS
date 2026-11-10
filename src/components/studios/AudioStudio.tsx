@@ -18,7 +18,7 @@ import { VOICE_ENGINE_OPTIONS } from '../../lib/voiceCatalog';
 import { VoicePicker } from '../shared/VoicePicker';
 import { cn, formatBytes } from '../../lib/utils';
 import { inputClass, btnPrimary } from '../layout/Modal';
-import { toast } from '../../stores/uiStore';
+import { toast, toastError } from '../../stores/uiStore';
 import { ProduceRunCard } from './audio/ProduceRunCard';
 import type { CharacterRow } from '../../types/ast';
 
@@ -167,8 +167,7 @@ function PronunciationEditor() {
       const res = await audioPronounce({ names });
       setCheck(res.entries);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      toast('error', 'Pronunciation check failed', msg);
+      toastError('Pronunciation check failed', err);
     } finally {
       setChecking(false);
     }
