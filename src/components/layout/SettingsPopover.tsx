@@ -7,6 +7,7 @@
 import { useRef, useState } from 'react';
 import { Check, Settings2, Sparkles, Type, Columns3 } from 'lucide-react';
 import { useSettingsStore, type AppTheme } from '../../stores/settingsStore';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useDismiss } from '../../hooks/useDismiss';
 import { ProviderSettingsModal } from './modals/ProviderSettingsModal';
 import { cn } from '../../lib/utils';
@@ -22,9 +23,13 @@ const FONT_MAX = 22;
 
 export function SettingsPopover() {
   const [open, setOpen] = useState(false);
-  const [providersOpen, setProvidersOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   useDismiss(wrapRef, () => setOpen(false), open);
+
+  // Provider modal open state lives in the workspace store so ANY surface
+  // (Scene Studio CTA, settings popover) can raise it (R-07).
+  const providerModalOpen = useWorkspaceStore((s) => s.providerModalOpen);
+  const closeProviderModal = useWorkspaceStore((s) => s.closeProviderModal);
 
   const theme = useSettingsStore((s) => s.theme);
   const setTheme = useSettingsStore((s) => s.setTheme);
@@ -133,7 +138,7 @@ export function SettingsPopover() {
             <button
               type="button"
               onClick={() => {
-                setProvidersOpen(true);
+                useWorkspaceStore.getState().openProviderModal();
                 setOpen(false);
               }}
               className="w-full flex items-center gap-2.5 rounded-md border border-line bg-panel2 hover:bg-panel3 px-3 py-2.5 text-left transition-colors"
@@ -185,7 +190,7 @@ export function SettingsPopover() {
         </div>
       )}
 
-      <ProviderSettingsModal open={providersOpen} onClose={() => setProvidersOpen(false)} />
+      <ProviderSettingsModal open={providerModalOpen} onClose={closeProviderModal} />
     </div>
   );
 }

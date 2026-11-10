@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
-import { Activity, ChevronDown, Gauge, ScrollText, SlidersHorizontal, Volume2 } from 'lucide-react';
+import { Activity, ChevronDown, Gauge, ScrollText, SlidersHorizontal, Volume2, AudioLines, Clapperboard } from 'lucide-react';
 import { useManuscriptStore } from '../../stores/manuscriptStore';
 import { useVoiceCastStore } from '../../stores/voiceCastStore';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useChapterStats } from '../../hooks/useChapterStats';
 import {
   CHAPTER_STATUSES,
@@ -298,6 +299,54 @@ export function DynamicInspector() {
               {useManuscriptStore.getState().dirty ? 'unsaved changes' : 'in sync with bundle'}
             </div>
           </div>
+
+          {/* Next-step handoff (R-07): route to audio, then scene, as the
+              chapter becomes eligible — the silent-film trap gets an exit. */}
+          {segments.length > 0 && (
+            <div className="rounded-md border border-line bg-panel2 p-3 grid gap-1.5" data-testid="inspector-handoff">
+              <div className="flex items-center gap-1.5 text-2xs">
+                <AudioLines size={11} className="text-accent" />
+                <span className="text-mut uppercase tracking-wide">Next step</span>
+                {segments.every((s) => s.audio_hash) ? (
+                  <span className="ml-auto text-ok font-medium">audio ready</span>
+                ) : (
+                  <span className="ml-auto text-warn font-medium">
+                    {segments.filter((s) => !s.audio_hash).length} segments without audio
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() =>
+                    useWorkspaceStore.getState().switchStudio('audio', {
+                      chapterId: activeChapterId ?? undefined,
+                      arm: 'produce',
+                    })
+                  }
+                  className="text-2xs text-accent hover:underline flex items-center gap-1"
+                  data-testid="handoff-produce-audio"
+                >
+                  <AudioLines size={10} /> Produce audio for ch {chapter?.chapter_number ?? '—'}
+                </button>
+                {segments.every((s) => s.audio_hash) && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      useWorkspaceStore.getState().switchStudio('video', {
+                        chapterId: activeChapterId ?? undefined,
+                        arm: 'assemble',
+                      })
+                    }
+                    className="text-2xs text-mut hover:text-ink flex items-center gap-1"
+                    data-testid="handoff-assemble"
+                  >
+                    <Clapperboard size={10} /> Assemble the video novel
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <p className="px-4 text-2xs text-mut">No chapter selected.</p>

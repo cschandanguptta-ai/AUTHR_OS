@@ -27,6 +27,7 @@ import {
   Palette,
   Play,
   RefreshCw,
+  Sparkles,
   Square,
   TriangleAlert,
   Volume2,
@@ -35,8 +36,8 @@ import { StudioShell } from '../shared/StudioShell';
 import { EmptyState } from '../shared/EmptyState';
 import { useManuscriptStore } from '../../stores/manuscriptStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { useMediaDataUrl } from '../../hooks/useMediaDataUrl';
 import {
-  mediaDataUrl,
   providerGet,
   videoAssemble,
   videoPlan,
@@ -87,7 +88,6 @@ const PAINT_POOL = 2; // bounded painter pool (novelcast quota-aware parallelism
 function SceneCard({
   scene,
   asset,
-  cacheKey,
   engine,
   onRepaint,
   onFocal,
@@ -95,26 +95,12 @@ function SceneCard({
 }: {
   scene: Block;
   asset: VideoAsset | undefined;
-  cacheKey: number;
   engine: string;
   onRepaint: (scene: Block) => void;
   onFocal: (sceneIndex: number, focal: string) => void;
   busy: boolean;
 }) {
-  const [url, setUrl] = useState<string | null>(null);
-  useEffect(() => {
-    let alive = true;
-    setUrl(null);
-    if (!asset?.path) return () => {};
-    mediaDataUrl(asset.path, asset.sha256)
-      .then((u) => {
-        if (alive) setUrl(u);
-      })
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, [asset?.path, asset?.sha256, cacheKey]);
+  const media = useMediaDataUrl(asset?.path, asset?.sha256 ?? '');
 
   const ladderTone =
     scene.ladder === 'REFS_READY'
@@ -126,16 +112,28 @@ function SceneCard({
   return (
     <div className="border border-line rounded-xl bg-panel2 overflow-hidden flex flex-col" data-scene-card={scene.scene_index}>
       <div className="relative aspect-video bg-app/60">
-        {url ? (
+        {media.url ? (
           <img
-            src={url}
+            src={media.url}
             alt={`Scene ${scene.scene_index + 1} frame`}
             loading="lazy"
             className="absolute inset-0 h-full w-full object-cover"
           />
+        ) : media.error ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-4 text-center">
+            <TriangleAlert size={16} className="text-bad" />
+            <span className="text-2xs text-bad leading-tight" data-testid="card-error">{media.error}</span>
+            <button
+              type="button"
+              onClick={media.retry}
+              className="text-2xs px-2 py-0.5 rounded border border-line text-mut hover:text-ink"
+            >
+              Retry
+            </button>
+          </div>
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-mut">
-            {busy ? (
+            {busy || media.loading ? (
               <>
                 <Loader2 size={18} className="animate-spin text-accent" />
                 <span className="text-2xs font-medium text-accent">Painting scene…</span>
@@ -238,14 +236,8 @@ export function VideoStudio() {
     assemble: 'pending',
     validate: 'pending',
   });
-  const cacheKeyRef = useRef(0);
   const repaintCancelRef = useRef(false);
   const aliveRef = useRef(true);
-  const [ , forceTick] = useState(0);
-  const bumpCache = () => {
-    cacheKeyRef.current += 1;
-    forceTick((t) => t + 1);
-  };
 
   useEffect(() => {
     aliveRef.current = true;
@@ -255,6 +247,23 @@ export function VideoStudio() {
   }, []);
 
   const r2iAvailable = (provider?.image.resolved.endpoint_source ?? 'none') !== 'none';
+  const providerModalOpen = useWorkspaceStore((s) => s.providerModalOpen);
+  const consumeIntent = useWorkspaceStore((s) => s.consumeIntent);
+
+  // One-shot handoff from ProduceRunCard / inspector: pre-arm the chapter.
+  useEffect(() => {
+    const intent = consumeIntent('video');
+    if (intent?.chapterId != null) selectChapter(intent.chapterId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Re-probe the ladder when the provider modal closes — a successful setup
+  // reveals the R2I toggle without leaving the Scene Studio (R-07).
+  useEffect(() => {
+    if (!providerModalOpen && activeStudio === 'video') {
+      providerGet().then(setProvider).catch(() => {});
+    }
+  }, [providerModalOpen, activeStudio]);
 
   const markStage = (k: StageKey, v: StageState) =>
     setStages((s) => ({ ...s, [k]: v }));
@@ -288,7 +297,6 @@ export function VideoStudio() {
         setAssets(r.assets ?? r.rendered);
         markStage('sheets', p.missing_sheets.length === 0 ? 'done' : 'pending');
         markStage('scenes', 'done');
-        bumpCache();
       } catch {
         // Read-only lease / fresh bundle: cards render without pixels.
         markStage('sheets', 'pending');
@@ -354,7 +362,6 @@ export function VideoStudio() {
         });
         setAssets(r.assets ?? r.rendered);
       } catch { /* read-only: keep old assets */ }
-      bumpCache();
       toast('success', 'Scene repainted', `SC${scene.scene_index + 1} · ${engine}`);
     } catch (e) {
       toast('error', 'Repaint failed', String(e));
@@ -405,7 +412,6 @@ export function VideoStudio() {
       });
       setAssets(r.assets ?? r.rendered);
     } catch { /* keep old assets */ }
-    bumpCache();
     setRepaint(null);
     const p = await videoPlan({ chapter_id: activeChapterId });
     setPlan(p);
@@ -462,7 +468,6 @@ export function VideoStudio() {
       });
       setAssets(r.assets ?? r.rendered);
       markStage('scenes', 'done');
-      bumpCache();
       markStage('assemble', 'running');
       setBusy('assemble');
       const a = await videoAssemble({ chapter_id: activeChapterId });
@@ -538,6 +543,40 @@ export function VideoStudio() {
             </span>
           )}
 
+          {/* Narration chip (R-07): SILENT routes to the audio produce run —
+              a silent MP4 can no longer ship unnoticed. */}
+          <button
+            type="button"
+            data-testid="narration-chip"
+            onClick={() => {
+              if (plan && !plan.narration_ready && activeChapterId != null) {
+                useWorkspaceStore.getState().switchStudio('audio', {
+                  chapterId: activeChapterId,
+                  arm: 'produce',
+                });
+              }
+            }}
+            title={
+              plan?.narration_ready
+                ? 'Every scene carries pipeline narration'
+                : 'No narration yet — click to produce chapter audio first'
+            }
+            className={cn(
+              'text-2xs font-mono px-2 py-1 rounded border',
+              !plan
+                ? 'border-line bg-panel2 text-mut'
+                : plan.narration_ready
+                  ? 'border-teal-500/40 bg-teal-500/10 text-teal-300'
+                  : 'border-amber-500/40 bg-amber-500/10 text-warn hover:border-amber-500/70',
+            )}
+          >
+            {plan
+              ? plan.narration_ready
+                ? 'NARRATION READY'
+                : 'NARRATION SILENT →'
+              : 'NARRATION —'}
+          </button>
+
           <div className="ml-auto flex items-center gap-2 flex-wrap">
             {/* Engine chip — the provider ladder, visible */}
             <span
@@ -563,6 +602,17 @@ export function VideoStudio() {
                 aria-pressed={engine === 'R2I_ENDPOINT'}
               >
                 toggle R2I
+              </button>
+            )}
+            {!r2iAvailable && (
+              <button
+                type="button"
+                onClick={() => useWorkspaceStore.getState().openProviderModal('image')}
+                className="text-2xs text-mut hover:text-ink border border-dashed border-line rounded px-2 py-1 flex items-center gap-1"
+                title="No image endpoint configured — the R2I tier stays fail-closed until one resolves"
+                data-testid="provider-cta"
+              >
+                <Sparkles size={10} className="text-accent" /> Set up image provider
               </button>
             )}
             {/* Style picker */}
@@ -699,7 +749,6 @@ export function VideoStudio() {
                   key={b.segment_id}
                   scene={b}
                   asset={assetByRef.get(`SCENE:${b.segment_id}`)}
-                  cacheKey={cacheKeyRef.current}
                   engine={engine}
                   busy={repaintingScene === b.scene_index}
                   onRepaint={(s) => void repaintScene(s)}
@@ -717,7 +766,7 @@ export function VideoStudio() {
                 </div>
                 <div className="flex gap-2 overflow-x-auto pb-1">
                   {sheetAssets.map((a) => (
-                    <SheetThumb key={a.ref} asset={a} cacheKey={cacheKeyRef.current} />
+                    <SheetThumb key={a.ref} asset={a} />
                   ))}
                 </div>
               </div>
@@ -773,7 +822,7 @@ export function VideoStudio() {
               <div className="border border-line rounded-xl bg-panel2 px-4 py-3">
                 <div className="text-xs font-semibold mb-2">Title card</div>
                 {titleAsset ? (
-                  <TitleThumb asset={titleAsset} cacheKey={cacheKeyRef.current} />
+                  <TitleThumb asset={titleAsset} />
                 ) : (
                   <p className="text-2xs text-mut">Rendered by the pipeline (typography card, SCRIPTED on every tier).</p>
                 )}
@@ -792,24 +841,25 @@ export function VideoStudio() {
 }
 
 /** Sheet thumbnail (book-level cast sheet). */
-function SheetThumb({ asset, cacheKey }: { asset: VideoAsset; cacheKey: number }) {
-  const [url, setUrl] = useState<string | null>(null);
-  useEffect(() => {
-    let alive = true;
-    mediaDataUrl(asset.path, asset.sha256)
-      .then((u) => alive && setUrl(u))
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, [asset.path, asset.sha256, cacheKey]);
+function SheetThumb({ asset }: { asset: VideoAsset }) {
+  const media = useMediaDataUrl(asset.path, asset.sha256);
   return (
     <figure className="shrink-0 w-24 border border-line rounded-lg overflow-hidden bg-panel2" title={`${asset.ref} · ${asset.engine}`}>
-      {url ? (
-        <img src={url} alt={`Reference sheet ${asset.ref}`} className="w-24 h-24 object-cover" loading="lazy" />
+      {media.url ? (
+        <img src={media.url} alt={`Reference sheet ${asset.ref}`} className="w-24 h-24 object-cover" loading="lazy" />
+      ) : media.error ? (
+        <button
+          type="button"
+          onClick={media.retry}
+          title={media.error}
+          className="w-24 h-24 flex flex-col items-center justify-center gap-1 text-bad"
+        >
+          <TriangleAlert size={13} />
+          <span className="text-2xs">retry</span>
+        </button>
       ) : (
         <div className="w-24 h-24 flex items-center justify-center text-mut">
-          <Images size={14} />
+          {media.loading ? <Loader2 size={14} className="animate-spin" /> : <Images size={14} />}
         </div>
       )}
       <figcaption className="text-2xs font-mono text-mut px-1.5 py-1 truncate">{asset.ref}</figcaption>
@@ -818,21 +868,18 @@ function SheetThumb({ asset, cacheKey }: { asset: VideoAsset; cacheKey: number }
 }
 
 /** Title-card preview. */
-function TitleThumb({ asset, cacheKey }: { asset: VideoAsset; cacheKey: number }) {
-  const [url, setUrl] = useState<string | null>(null);
-  useEffect(() => {
-    let alive = true;
-    mediaDataUrl(asset.path, asset.sha256)
-      .then((u) => alive && setUrl(u))
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, [asset.path, asset.sha256, cacheKey]);
+function TitleThumb({ asset }: { asset: VideoAsset }) {
+  const media = useMediaDataUrl(asset.path, asset.sha256);
   return (
     <div className="rounded-lg overflow-hidden border border-line aspect-video bg-app/60">
-      {url ? (
-        <img src={url} alt="Title card" className="w-full h-full object-cover" />
+      {media.url ? (
+        <img src={media.url} alt="Title card" className="w-full h-full object-cover" />
+      ) : media.error ? (
+        <div className="h-full flex flex-col items-center justify-center gap-1 text-bad px-3 text-center">
+          <TriangleAlert size={14} />
+          <span className="text-2xs leading-tight">{media.error}</span>
+          <button type="button" onClick={media.retry} className="text-2xs px-2 py-0.5 rounded border border-line text-mut hover:text-ink">Retry</button>
+        </div>
       ) : (
         <div className="h-full flex items-center justify-center text-mut">
           <Loader2 size={14} className="animate-spin" />

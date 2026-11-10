@@ -24,11 +24,16 @@ interface WorkspaceState {
   binderOpen: boolean;
   inspectorOpen: boolean;
   paletteOpen: boolean;
+  /** Provider settings modal open state — any surface can raise it (R-07 CTA). */
+  providerModalOpen: boolean;
+  providerModalFocus: 'image' | 'llm' | null;
   /** Pending one-shot intents per studio — switchStudio(id, payload) writes, the studio consumes. */
   intents: Partial<Record<StudioId, StudioIntent>>;
   setActiveStudio: (studio: StudioId) => void;
   switchStudio: (studio: StudioId, intent?: StudioIntent) => void;
   consumeIntent: (studio: StudioId) => StudioIntent | undefined;
+  openProviderModal: (focus?: 'image' | 'llm') => void;
+  closeProviderModal: () => void;
   setViewMode: (mode: ViewMode) => void;
   setPaneWidth: (pane: PaneKey, width: number) => void;
   resetPaneWidths: () => void;
@@ -44,6 +49,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   binderOpen: true,
   inspectorOpen: true,
   paletteOpen: false,
+  providerModalOpen: false,
+  providerModalFocus: null,
   intents: {},
   setActiveStudio: (studio) => set({ activeStudio: studio }),
   switchStudio: (studio, intent) =>
@@ -62,6 +69,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     }
     return intent;
   },
+  openProviderModal: (focus) =>
+    set({ providerModalOpen: true, providerModalFocus: focus ?? null }),
+  closeProviderModal: () => set({ providerModalOpen: false, providerModalFocus: null }),
   setViewMode: (mode) => set({ viewMode: mode }),
   setPaneWidth: (pane, width) =>
     set((s) => ({
