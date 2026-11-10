@@ -5,6 +5,7 @@ import {
   Crosshair,
   Feather,
   FolderOpen,
+  FolderPlus,
   Gauge,
   Loader2,
   Lock,
@@ -12,8 +13,9 @@ import {
 } from 'lucide-react';
 import { useProjectStore, lastBundlePath } from '../../stores/projectStore';
 import { pruneStaleDrafts } from '../../stores/localizationStore';
+import { IS_DESKTOP } from '../../lib/env';
 import { APP_VERSION } from '../../lib/constants';
-import { btnPrimary, inputClass } from './Modal';
+import { btnGhost, btnPrimary, inputClass } from './Modal';
 
 const FEATURES = [
   {
@@ -70,8 +72,37 @@ export function WelcomeScreen() {
   const [author, setAuthor] = useState('');
   const [newPath, setNewPath] = useState('sandbox.authr');
   const [openPath, setOpenPath] = useState(lastBundlePath());
+  // R-10: on desktop the native dialog is the primary path; the typed input
+  // collapses into an 'Advanced' disclosure. Browser/dev mode keeps typing.
+  const [advancedCreate, setAdvancedCreate] = useState(!IS_DESKTOP);
+  const [advancedOpen, setAdvancedOpen] = useState(!IS_DESKTOP);
 
   const busy = status === 'opening';
+
+  /** Native save dialog → the bundle DIRECTORY path (an .authr directory). */
+  const pickNewBundle = async () => {
+    const { save } = await import('@tauri-apps/plugin-dialog');
+    const suggested = title.trim()
+      ? `${title.trim().replace(/[^\w -]/g, '').trim() || 'New Book'}.authr`
+      : 'NewBundle.authr';
+    const picked = await save({
+      title: 'Create the bundle directory',
+      defaultPath: suggested,
+      filters: [{ name: 'AUTHR_OS bundle', extensions: ['authr'] }],
+    });
+    if (typeof picked === 'string' && picked) setNewPath(picked);
+  };
+
+  /** Native directory picker for an existing .authr bundle. */
+  const pickExistingBundle = async () => {
+    const { open } = await import('@tauri-apps/plugin-dialog');
+    const picked = await open({
+      directory: true,
+      multiple: false,
+      title: 'Open an .authr bundle directory',
+    });
+    if (typeof picked === 'string' && picked) setOpenPath(picked);
+  };
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto">
@@ -154,17 +185,41 @@ export function WelcomeScreen() {
                 </label>
               </div>
               <label className="block">
-                <span className="block text-2xs font-medium text-mut mb-1 uppercase tracking-wide">
-                  Bundle path
+                <span className="flex items-center justify-between text-2xs font-medium text-mut mb-1 uppercase tracking-wide">
+                  Bundle location
+                  {IS_DESKTOP && (
+                    <button
+                      type="button"
+                      onClick={() => setAdvancedCreate((a) => !a)}
+                      className="text-2xs normal-case text-mut hover:text-ink underline decoration-dotted"
+                    >
+                      {advancedCreate ? 'Hide typed path' : 'Advanced: type path'}
+                    </button>
+                  )}
                 </span>
-                <input
-                  className={`${inputClass} font-mono`}
-                  value={newPath}
-                  onChange={(e) => setNewPath(e.target.value)}
-                  placeholder="sandbox.authr"
-                />
+                {IS_DESKTOP && !advancedCreate ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void pickNewBundle()}
+                      className={`${btnGhost} flex-1 justify-start font-mono text-xs truncate`}
+                      title="Opens the native save dialog — the bundle is a directory"
+                      data-testid="pick-new-bundle"
+                    >
+                      <FolderPlus size={13} className="text-accent shrink-0" />
+                      <span className="truncate">{newPath || 'Choose a location…'}</span>
+                    </button>
+                  </div>
+                ) : (
+                  <input
+                    className={`${inputClass} font-mono`}
+                    value={newPath}
+                    onChange={(e) => setNewPath(e.target.value)}
+                    placeholder="sandbox.authr"
+                  />
+                )}
                 <span className="block text-2xs text-mut mt-1.5">
-                  A <span className="font-mono">.authr</span> bundle directory. Leave as{' '}
+                  A <span className="font-mono">.authr</span> bundle directory{IS_DESKTOP ? ' — the native dialog picks the spot' : ''}. Leave as{' '}
                   <span className="font-mono">sandbox.authr</span> to work in the dev sandbox.
                 </span>
               </label>
@@ -193,16 +248,40 @@ export function WelcomeScreen() {
               }}
             >
               <label className="block">
-                <span className="block text-2xs font-medium text-mut mb-1 uppercase tracking-wide">
-                  Bundle path
+                <span className="flex items-center justify-between text-2xs font-medium text-mut mb-1 uppercase tracking-wide">
+                  Bundle location
+                  {IS_DESKTOP && (
+                    <button
+                      type="button"
+                      onClick={() => setAdvancedOpen((a) => !a)}
+                      className="text-2xs normal-case text-mut hover:text-ink underline decoration-dotted"
+                    >
+                      {advancedOpen ? 'Hide typed path' : 'Advanced: type path'}
+                    </button>
+                  )}
                 </span>
-                <input
-                  className={`${inputClass} font-mono`}
-                  value={openPath}
-                  onChange={(e) => setOpenPath(e.target.value)}
-                  placeholder="sandbox.authr"
-                  autoFocus
-                />
+                {IS_DESKTOP && !advancedOpen ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void pickExistingBundle()}
+                      className={`${btnGhost} flex-1 justify-start font-mono text-xs truncate`}
+                      title="Opens the native folder picker — choose the .authr directory"
+                      data-testid="pick-open-bundle"
+                    >
+                      <FolderOpen size={13} className="text-accent shrink-0" />
+                      <span className="truncate">{openPath || 'Choose a bundle directory…'}</span>
+                    </button>
+                  </div>
+                ) : (
+                  <input
+                    className={`${inputClass} font-mono`}
+                    value={openPath}
+                    onChange={(e) => setOpenPath(e.target.value)}
+                    placeholder="sandbox.authr"
+                    autoFocus
+                  />
+                )}
                 <span className="block text-2xs text-mut mt-1.5">
                   Opening acquires the 120s lease. A fresh foreign lease opens the bundle
                   read-only — every write returns <span className="font-mono">READ_ONLY_PROJECT</span>.

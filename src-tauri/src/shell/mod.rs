@@ -36,6 +36,8 @@ pub async fn authr_command(
 /// Run the Tauri app (requires `gui` feature and a desktop environment).
 pub fn run() {
     tauri::Builder::default()
+        // R-10: native open/save dialogs (shell capability, frozen contract untouched).
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![authr_command])
         .run(tauri::generate_context!())
         .expect("AUTHR_OS desktop shell failed to start");

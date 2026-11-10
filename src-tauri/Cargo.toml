@@ -16,7 +16,7 @@ path = "src/main.rs"
 default = []
 # Desktop shell + OS keyring are compiled on real desktop targets:
 # cargo build --features gui,os-keychain
-gui = ["dep:tauri", "dep:tauri-build"]
+gui = ["dep:tauri", "dep:tauri-build", "dep:tauri-plugin-dialog"]
 os-keychain = ["dep:keyring"]
 
 [build-dependencies]
@@ -33,6 +33,9 @@ chrono = { version = "0.4", default-features = false, features = ["clock"] }
 whoami = "1"
 keyring = { version = "3", optional = true, default-features = false, features = ["linux-native"] }
 tauri = { version = "2", optional = true, default-features = false }
+# R-10: native open/save dialogs — a shell capability, NOT a contract change
+# (docs/CLI_CONTRACT.md is untouched; the headless CLI binary never compiles it).
+tauri-plugin-dialog = { version = "2", optional = true, default-features = false }
 # ── Phase 4: audio stack ────────────────────────────────────────────────────
 hound = "3.5"                                   # WAV encode/decode (16-bit PCM)
 rubato = "0.16"                                 # high-quality resampling
