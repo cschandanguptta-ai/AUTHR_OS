@@ -31,6 +31,19 @@ function highlightSelected(root: HTMLElement, selectedSegmentId: string | null) 
   if (target) target.classList.add('seg-active');
 }
 
+/** R-11: paint/unpaint the bulk multi-select outline on every re-render. */
+function highlightBulk(root: HTMLElement, bulkIds: string[]) {
+  root.querySelectorAll('.canvas-paragraph.seg-bulk').forEach((el) => {
+    el.classList.remove('seg-bulk');
+  });
+  for (const id of bulkIds) {
+    const el = root.querySelector(
+      `.canvas-paragraph[data-segment-id="${CSS.escape(id)}"]`,
+    );
+    if (el) el.classList.add('seg-bulk');
+  }
+}
+
 export function useViewModeSync(viewMode: ViewMode): void {
   const [editor] = useLexicalComposerContext();
 
@@ -63,7 +76,21 @@ export function useViewModeSync(viewMode: ViewMode): void {
     return unsub;
   }, [editor, viewMode]);
 
-  // Click-to-select inside read-along mode.
+  // Bulk multi-select outline follows the store (R-11).
+  useEffect(() => {
+    const paint = () => {
+      const root = editor.getRootElement();
+      if (root) highlightBulk(root, useManuscriptStore.getState().bulkSelectedIds);
+    };
+    paint();
+    const unsub = useManuscriptStore.subscribe((s, prev) => {
+      if (s.bulkSelectedIds !== prev.bulkSelectedIds) paint();
+    });
+    return unsub;
+  }, [editor]);
+
+  // Click-to-select inside read-along mode. Ctrl/Cmd+click toggles the
+  // segment in the bulk multi-select instead (R-11).
   useEffect(() => {
     if (viewMode !== 'readalong') return;
     const onClick = (evt: Event) => {
@@ -74,7 +101,11 @@ export function useViewModeSync(viewMode: ViewMode): void {
       const segmentId = paragraph.getAttribute('data-segment-id');
       if (segmentId) {
         e.preventDefault();
-        useManuscriptStore.getState().selectSegment(segmentId);
+        if (e.ctrlKey || e.metaKey) {
+          useManuscriptStore.getState().toggleBulkSegment(segmentId);
+        } else {
+          useManuscriptStore.getState().selectSegment(segmentId);
+        }
       }
     };
     const rootEl = editor.getRootElement()?.parentElement ?? document;

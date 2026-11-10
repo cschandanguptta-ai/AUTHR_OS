@@ -348,6 +348,15 @@ body {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
+/* R-11: bulk multi-select outline — dashed violet so it reads as distinct
+   from the read-along cursor, visible in read-along mode where clicking
+   happens. */
+.editor-readalong .canvas-paragraph.seg-bulk {
+  border-radius: 8px;
+  outline: 1.5px dashed color-mix(in srgb, var(--accent-2) 60%, transparent);
+  outline-offset: 2px;
+}
+
 .editor-readalong .canvas-paragraph {
   cursor: pointer;
 }

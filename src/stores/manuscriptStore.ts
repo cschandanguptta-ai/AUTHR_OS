@@ -32,6 +32,8 @@ interface ManuscriptState {
   activeChapterId: number | null;
   segments: NarrativeSegmentAst[];
   selectedSegmentId: string | null;
+  /** R-11: multi-select for bulk speaker/emotion tagging (order-stable). */
+  bulkSelectedIds: string[];
   dirty: boolean;
   saving: boolean;
   loadingSegments: boolean;
@@ -44,6 +46,10 @@ interface ManuscriptState {
   loadSegments: (chapterId: number) => Promise<NarrativeSegmentAst[]>;
   selectChapter: (chapterId: number | null) => void;
   selectSegment: (segmentId: string | null) => void;
+  toggleBulkSegment: (segmentId: string) => void;
+  bulkSelect: (filter: 'all' | 'dialogue' | 'dialogue_untagged' | 'narration') => void;
+  clearBulk: () => void;
+  applyBulkTag: (patch: { speaker_id?: string; emotion?: string }) => number;
   createChapter: (args: {
     book_id: number;
     chapter_number: number;
@@ -83,6 +89,7 @@ export const useManuscriptStore = create<ManuscriptState>((set, get) => ({
   activeChapterId: null,
   segments: [],
   selectedSegmentId: null,
+  bulkSelectedIds: [],
   dirty: false,
   saving: false,
   loadingSegments: false,
@@ -109,7 +116,7 @@ export const useManuscriptStore = create<ManuscriptState>((set, get) => ({
   },
 
   loadSegments: async (chapterId) => {
-    set({ loadingSegments: true, activeChapterId: chapterId, selectedSegmentId: null });
+    set({ loadingSegments: true, activeChapterId: chapterId, selectedSegmentId: null, bulkSelectedIds: [] });
     try {
       const { segments } = await api.segmentList(chapterId);
       const rows = segments.map(rowToAst);
@@ -135,6 +142,50 @@ export const useManuscriptStore = create<ManuscriptState>((set, get) => ({
 
   selectSegment: (segmentId) => {
     if (get().selectedSegmentId !== segmentId) set({ selectedSegmentId: segmentId });
+  },
+
+  // ── R-11: bulk tagging ────────────────────────────────────────────────
+  toggleBulkSegment: (segmentId) => {
+    set((s) => ({
+      bulkSelectedIds: s.bulkSelectedIds.includes(segmentId)
+        ? s.bulkSelectedIds.filter((id) => id !== segmentId)
+        : [...s.bulkSelectedIds, segmentId],
+    }));
+  },
+
+  bulkSelect: (filter) => {
+    const segs = get().segments;
+    const match = (seg: NarrativeSegmentAst): boolean => {
+      switch (filter) {
+        case 'all':
+          return true;
+        case 'dialogue':
+          return seg.segment_type === 'DIALOGUE';
+        case 'dialogue_untagged':
+          return seg.segment_type === 'DIALOGUE' && seg.speaker_id === 'NARRATOR';
+        case 'narration':
+          return seg.segment_type !== 'DIALOGUE';
+      }
+    };
+    set({ bulkSelectedIds: segs.filter(match).map((s) => s.segment_id) });
+  },
+
+  clearBulk: () => set({ bulkSelectedIds: [] }),
+
+  /**
+   * Apply one speaker/emotion patch to every bulk-selected segment through the
+   * same updateSegment path (optimistic local edit + 400 ms autosave flush),
+   * so the reconcile loop is untouched. Returns the number tagged.
+   */
+  applyBulkTag: (patch) => {
+    const ids = new Set(get().bulkSelectedIds);
+    if (ids.size === 0) return 0;
+    set((s) => ({
+      dirty: true,
+      segments: s.segments.map((seg) => (ids.has(seg.segment_id) ? { ...seg, ...patch } : seg)),
+      bulkSelectedIds: [],
+    }));
+    return ids.size;
   },
 
   createChapter: async (args) => {
@@ -243,6 +294,7 @@ export const useManuscriptStore = create<ManuscriptState>((set, get) => ({
       activeChapterId: null,
       segments: [],
       selectedSegmentId: null,
+      bulkSelectedIds: [],
       dirty: false,
       saving: false,
       loadingSegments: false,

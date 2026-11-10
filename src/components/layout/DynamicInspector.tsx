@@ -1,9 +1,11 @@
-import { useMemo } from 'react';
-import { Activity, ChevronDown, Gauge, ScrollText, SlidersHorizontal, Volume2, AudioLines, Clapperboard } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Activity, CheckCheck, ChevronDown, Gauge, ListChecks, ScrollText, SlidersHorizontal, Volume2, AudioLines, Clapperboard, X } from 'lucide-react';
 import { useManuscriptStore } from '../../stores/manuscriptStore';
 import { useVoiceCastStore } from '../../stores/voiceCastStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { useProjectStore } from '../../stores/projectStore';
 import { useChapterStats } from '../../hooks/useChapterStats';
+import { toast } from '../../stores/uiStore';
 import {
   CHAPTER_STATUSES,
   CHAPTER_STATUS_DOTS,
@@ -39,10 +41,16 @@ export function DynamicInspector() {
   const segments = useManuscriptStore((s) => s.segments);
   const selectedSegmentId = useManuscriptStore((s) => s.selectedSegmentId);
   const updateSegment = useManuscriptStore((s) => s.updateSegment);
+  const bulkSelectedIds = useManuscriptStore((s) => s.bulkSelectedIds);
   const chapters = useManuscriptStore((s) => s.chapters);
   const activeChapterId = useManuscriptStore((s) => s.activeChapterId);
   const updateChapter = useManuscriptStore((s) => s.updateChapter);
   const characters = useVoiceCastStore((s) => s.characters);
+  const readonly = useProjectStore((s) => s.readonly);
+
+  // R-11: pending bulk tag choice — applied on Apply, one transaction per segment.
+  const [bulkSpeaker, setBulkSpeaker] = useState('');
+  const [bulkEmotion, setBulkEmotion] = useState('');
 
   const segment = useMemo(
     () => segments.find((s) => s.segment_id === selectedSegmentId) ?? null,
@@ -53,6 +61,23 @@ export function DynamicInspector() {
     [chapters, activeChapterId],
   );
 
+  const applyBulk = () => {
+    const patch: { speaker_id?: string; emotion?: string } = {};
+    if (bulkSpeaker) patch.speaker_id = bulkSpeaker;
+    if (bulkEmotion) patch.emotion = bulkEmotion;
+    if (Object.keys(patch).length === 0) return;
+    const n = useManuscriptStore.getState().applyBulkTag(patch);
+    if (n > 0) {
+      toast(
+        'success',
+        `Tagged ${n} segment${n === 1 ? '' : 's'}`,
+        `${bulkSpeaker ? `speaker → ${bulkSpeaker}` : ''}${bulkSpeaker && bulkEmotion ? ' · ' : ''}${bulkEmotion ? `emotion → ${bulkEmotion}` : ''} — flows through the regular autosave.`,
+      );
+      setBulkSpeaker('');
+      setBulkEmotion('');
+    }
+  };
+
   // Worker-backed aggregates (ADR-0008): the progress bar reads worker output
   // instead of re-counting every segment on the main thread.
   const stats = useChapterStats(segments);
@@ -62,6 +87,104 @@ export function DynamicInspector() {
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto pb-6">
+      {/* ── Bulk tagging (R-11) ──────────────────────────────────────────── */}
+      <SectionTitle icon={ListChecks}>Bulk tagging</SectionTitle>
+      <div className="px-4 pb-2 grid gap-2" data-testid="bulk-tagging">
+        <div className="flex items-center gap-1.5 flex-wrap" role="group" aria-label="Quick select segments">
+          <span className="text-2xs text-mut mr-0.5">Select:</span>
+          {(
+            [
+              ['all', 'All'],
+              ['dialogue', 'Dialogue'],
+              ['dialogue_untagged', 'Dialogue w/o speaker'],
+              ['narration', 'Narration'],
+            ] as const
+          ).map(([filter, label]) => (
+            <button
+              key={filter}
+              type="button"
+              disabled={readonly || segments.length === 0}
+              onClick={() => useManuscriptStore.getState().bulkSelect(filter)}
+              className="text-2xs px-2 py-0.5 rounded border border-line bg-panel2 hover:bg-panel3 text-mut hover:text-ink disabled:opacity-40 transition-colors"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {bulkSelectedIds.length > 0 ? (
+          <div className="rounded-md border border-accent2/40 bg-panel2 p-2.5 grid gap-2" data-testid="bulk-bar">
+            <div className="flex items-center gap-1.5 text-2xs">
+              <span className="font-mono font-semibold text-ink">{bulkSelectedIds.length}</span>
+              <span className="text-mut">
+                segment{bulkSelectedIds.length === 1 ? '' : 's'} selected — Ctrl/Cmd+click paragraphs to adjust
+              </span>
+              <button
+                type="button"
+                onClick={() => useManuscriptStore.getState().clearBulk()}
+                className="ml-auto text-mut hover:text-ink"
+                aria-label="Clear bulk selection"
+              >
+                <X size={12} />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <select
+                className={`${inputClass} py-1`}
+                value={bulkSpeaker}
+                onChange={(e) => setBulkSpeaker(e.target.value)}
+                aria-label="Bulk speaker"
+              >
+                <option value="">Speaker — keep</option>
+                <option value="NARRATOR">NARRATOR</option>
+                {characters.map((c) => (
+                  <option key={c.character_key} value={c.character_key}>
+                    {c.display_name}
+                  </option>
+                ))}
+              </select>
+              <select
+                className={`${inputClass} py-1`}
+                value={bulkEmotion}
+                onChange={(e) => setBulkEmotion(e.target.value)}
+                aria-label="Bulk emotion"
+              >
+                <option value="">Emotion — keep</option>
+                {[
+                  'neutral',
+                  'tense',
+                  'whisper',
+                  'cold_anger',
+                  'joyful',
+                  'sorrowful',
+                  'defiant',
+                  'serene',
+                  'urgent',
+                  'tender',
+                ].map((emo) => (
+                  <option key={emo} value={emo}>
+                    {emotionLabel(emo)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              type="button"
+              disabled={readonly || (!bulkSpeaker && !bulkEmotion)}
+              onClick={applyBulk}
+              className="flex items-center justify-center gap-1.5 text-2xs px-2.5 py-1.5 rounded-md border border-accent2/50 bg-accent2/10 text-accent2 hover:bg-accent2/20 disabled:opacity-40 transition-colors"
+              data-testid="bulk-apply"
+            >
+              <CheckCheck size={12} /> Apply to {bulkSelectedIds.length} selected
+            </button>
+          </div>
+        ) : (
+          <p className="text-2xs text-mut leading-relaxed">
+            Ctrl/Cmd+click paragraphs in read-along mode — or a quick select above — then apply one
+            speaker/emotion to the whole set. Untagged narration already defaults to NARRATOR.
+          </p>
+        )}
+      </div>
+
       {/* ── Segment inspector ─────────────────────────────────────────────── */}
       <SectionTitle icon={SlidersHorizontal}>Segment inspector</SectionTitle>
       {segment ? (
