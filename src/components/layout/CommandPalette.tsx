@@ -13,6 +13,7 @@ import {
   GitCommitHorizontal,
   Languages,
   Layers,
+  LayoutDashboard,
   Lock,
   LogOut,
   Megaphone,
@@ -27,6 +28,7 @@ import {
 import { useWorkspaceStore, type StudioId, type ViewMode } from '../../stores/workspaceStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useProjectStore } from '../../stores/projectStore';
+import { useManuscriptStore } from '../../stores/manuscriptStore';
 import { useAiAssistStore } from '../../stores/aiAssistStore';
 import { useConfirmStore } from '../../stores/confirmStore';
 import * as api from '../../ipc/api';
@@ -36,7 +38,7 @@ import { IS_MAC, MOD_ALT_KEY, MOD_KEY, cn } from '../../lib/utils';
 
 interface Command {
   id: string;
-  group: 'Navigate' | 'Canvas' | 'Project' | 'Theme';
+  group: 'Navigate' | 'Canvas' | 'Pipeline' | 'Project' | 'Theme';
   label: string;
   hint?: string;
   keys?: string;
@@ -141,6 +143,56 @@ function buildCommands(): Command[] {
       icon: Eye,
       run: () => {
         settings.setTypewriterMode(!settings.typewriterMode);
+        close();
+      },
+    },
+    {
+      id: 'dashboard',
+      group: 'Project',
+      label: 'Open project dashboard',
+      hint: 'real stats + the next best action',
+      icon: LayoutDashboard,
+      run: () => {
+        close();
+        useWorkspaceStore.getState().openDashboard();
+      },
+    },
+    {
+      id: 'produce-audio',
+      group: 'Pipeline',
+      label: 'Pipeline: produce chapter audio',
+      hint: 'plan → synthesize → master → validate → captions',
+      icon: AudioLines,
+      run: () => {
+        ws.switchStudio('audio', {
+          chapterId: useManuscriptStore.getState().activeChapterId ?? undefined,
+          arm: 'produce',
+        });
+        close();
+      },
+    },
+    {
+      id: 'assemble-video',
+      group: 'Pipeline',
+      label: 'Pipeline: assemble the video novel',
+      hint: 'storyboard → frames → MP4 with narration',
+      icon: Clapperboard,
+      run: () => {
+        ws.switchStudio('video', {
+          chapterId: useManuscriptStore.getState().activeChapterId ?? undefined,
+          arm: 'assemble',
+        });
+        close();
+      },
+    },
+    {
+      id: 'publish-card',
+      group: 'Pipeline',
+      label: 'Pipeline: open the publish card',
+      hint: 'EPUB · DOCX · captions · M4B · release signing',
+      icon: Rocket,
+      run: () => {
+        ws.switchStudio('publish', { arm: 'publish' });
         close();
       },
     },

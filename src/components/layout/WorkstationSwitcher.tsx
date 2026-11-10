@@ -8,6 +8,7 @@ import {
   Eye,
   GitCommitHorizontal,
   Languages,
+  LayoutDashboard,
   Lock,
   LogOut,
   Megaphone,
@@ -249,6 +250,19 @@ export function WorkstationSwitcher() {
             <Eye size={11} /> READ-ONLY
           </span>
         )}
+
+        {/* Project dashboard (R-12) */}
+        <button
+          type="button"
+          onClick={() => useWorkspaceStore.getState().openDashboard()}
+          className="flex items-center gap-1.5 px-2 py-1 rounded-md border border-line bg-panel2 hover:bg-panel3 text-mut hover:text-ink text-2xs transition-colors"
+          aria-label="Open project dashboard"
+          title="Project dashboard — real stats + the next best action"
+          data-testid="open-dashboard"
+        >
+          <LayoutDashboard size={12} />
+          <span className="hidden lg:inline">Dashboard</span>
+        </button>
 
         {/* Command palette trigger */}
         <button

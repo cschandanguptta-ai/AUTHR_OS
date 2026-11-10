@@ -7,6 +7,7 @@ import { useGlobalShortcuts } from './hooks/useGlobalShortcuts';
 import { WelcomeScreen } from './components/layout/WelcomeScreen';
 import { WorkstationSwitcher } from './components/layout/WorkstationSwitcher';
 import { CommandPalette } from './components/layout/CommandPalette';
+import { DashboardOverlay } from './components/layout/DashboardOverlay';
 import { Cockpit } from './components/layout/Cockpit';
 import { Toaster } from './components/layout/Toaster';
 import { AppConfirmHost } from './components/shared/AppConfirmHost';
@@ -99,6 +100,7 @@ export default function App() {
         </div>
       </main>
       <CommandPalette />
+      <DashboardOverlay />
       <Toaster />
       <AppConfirmHost />
     </div>

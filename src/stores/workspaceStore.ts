@@ -27,6 +27,13 @@ interface WorkspaceState {
   /** Provider settings modal open state — any surface can raise it (R-07 CTA). */
   providerModalOpen: boolean;
   providerModalFocus: 'image' | 'llm' | null;
+  /** Project dashboard overlay (R-12) — header button, palette action, and
+   *  auto-raised right after a fresh project_init so the bootstrap is visible. */
+  dashboardOpen: boolean;
+  /** True only when the dashboard was opened by a fresh bootstrap (R-12/F-14). */
+  dashboardFresh: boolean;
+  openDashboard: (opts?: { fresh?: boolean }) => void;
+  closeDashboard: () => void;
   /** Pending one-shot intents per studio — switchStudio(id, payload) writes, the studio consumes. */
   intents: Partial<Record<StudioId, StudioIntent>>;
   setActiveStudio: (studio: StudioId) => void;
@@ -49,6 +56,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   binderOpen: true,
   inspectorOpen: true,
   paletteOpen: false,
+  dashboardOpen: false,
+  dashboardFresh: false,
+  openDashboard: (opts) => set({ dashboardOpen: true, dashboardFresh: opts?.fresh ?? false }),
+  closeDashboard: () => set({ dashboardOpen: false, dashboardFresh: false }),
   providerModalOpen: false,
   providerModalFocus: null,
   intents: {},

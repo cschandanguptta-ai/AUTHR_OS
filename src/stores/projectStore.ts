@@ -96,6 +96,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         sessionNonce: get().sessionNonce + 1,
       });
       toast('success', 'Project initialized', res.path);
+      // R-12/F-14: a fresh bootstrap is never silent — the dashboard opens
+      // stating exactly what was created and what to do next.
+      useWorkspaceStore.getState().openDashboard({ fresh: true });
       void get().refreshLockStatus();
       return true;
     } catch (err) {
