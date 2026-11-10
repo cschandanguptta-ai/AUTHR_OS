@@ -34,6 +34,7 @@ import { useConfirmStore } from '../../stores/confirmStore';
 import * as api from '../../ipc/api';
 import { toast, toastError } from '../../stores/uiStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { fuzzyScore } from '../../lib/fuzzy';
 import { IS_MAC, MOD_ALT_KEY, MOD_KEY, cn } from '../../lib/utils';
 
 interface Command {
@@ -319,11 +320,15 @@ export function CommandPalette() {
   const commands = useMemo(() => (open ? buildCommands() : []), [open]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = query.trim();
     if (!q) return commands;
-    return commands.filter((c) =>
-      `${c.group} ${c.label} ${c.hint ?? ''} ${c.keys ?? ''}`.toLowerCase().includes(q),
-    );
+    // R-15: fuzzy matching (substring → subsequence → token typos), command
+    // order preserved so group headers stay stable.
+    return commands
+      .map((c) => ({ c, score: fuzzyScore(q, `${c.group} ${c.label} ${c.hint ?? ''} ${c.keys ?? ''}`) }))
+      .filter((x): x is { c: Command; score: number } => x.score != null)
+      .sort((a, b) => b.score - a.score)
+      .map((x) => x.c);
   }, [commands, query]);
 
   useEffect(() => setIndex(0), [query]);
@@ -362,6 +367,10 @@ export function CommandPalette() {
   };
 
   let lastGroup = '';
+  // With a query the list is score-ranked, so groups would interleave —
+  // collapse to a flat ranked list (standard launcher behavior). No query →
+  // grouped browsing as before.
+  const showHeaders = !query.trim();
 
   return (
     <div
@@ -402,7 +411,7 @@ export function CommandPalette() {
             </div>
           ) : (
             filtered.map((cmd, i) => {
-              const header = cmd.group !== lastGroup ? cmd.group : null;
+              const header = showHeaders && cmd.group !== lastGroup ? cmd.group : null;
               lastGroup = cmd.group;
               const Icon = cmd.icon;
               return (
