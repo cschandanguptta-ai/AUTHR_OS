@@ -12,6 +12,7 @@ import {
   Megaphone,
   MoreHorizontal,
   PenTool,
+  Rocket,
   Sparkles,
   Trash2,
 } from 'lucide-react';
@@ -30,6 +31,7 @@ const STUDIOS: Array<{ id: StudioId; label: string; icon: typeof BookOpen }> = [
   { id: 'localization', label: 'Localization', icon: Languages },
   { id: 'marketing', label: 'Marketing', icon: Megaphone },
   { id: 'craft', label: 'Craft', icon: PenTool },
+  { id: 'publish', label: 'Publish', icon: Rocket },
 ];
 
 /** Lock dot: green = live lease held by this session; amber = read-only foreign lease. */

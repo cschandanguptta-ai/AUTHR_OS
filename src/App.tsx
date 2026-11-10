@@ -29,6 +29,9 @@ const MarketingStudio = lazy(() =>
 const CraftStudio = lazy(() =>
   import('./components/studios/CraftStudio').then((m) => ({ default: m.CraftStudio })),
 );
+const PublishStudio = lazy(() =>
+  import('./components/studios/PublishStudio').then((m) => ({ default: m.PublishStudio })),
+);
 
 function StudioFallback() {
   return (
@@ -88,6 +91,7 @@ export default function App() {
               {activeStudio === 'localization' && <LocalizationStudio />}
               {activeStudio === 'marketing' && <MarketingStudio />}
               {activeStudio === 'craft' && <CraftStudio />}
+              {activeStudio === 'publish' && <PublishStudio />}
             </Suspense>
           )}
         </div>
