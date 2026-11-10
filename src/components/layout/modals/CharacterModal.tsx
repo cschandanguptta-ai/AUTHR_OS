@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Loader2, Trash2 } from 'lucide-react';
 import { Modal, Field, inputClass, btnGhost, btnPrimary, btnDanger } from '../Modal';
+import { VoicePicker } from '../../shared/VoicePicker';
 import { useVoiceCastStore } from '../../../stores/voiceCastStore';
-import { CHARACTER_ROLES, VOICE_ENGINES } from '../../../lib/constants';
+import { CHARACTER_ROLES } from '../../../lib/constants';
+import { VOICE_ENGINE_OPTIONS } from '../../../lib/voiceCatalog';
 import { slugify } from '../../../lib/utils';
 import type { CharacterRow } from '../../../types/ast';
 
@@ -24,7 +26,7 @@ export function CharacterModal({ open, onClose, edit }: Props) {
   const [role, setRole] = useState(edit?.role ?? 'PROTAGONIST');
   const [bio, setBio] = useState(edit?.bio ?? '');
   const [ipa, setIpa] = useState(edit?.ipa_phonetic ?? '');
-  const [voiceEngine, setVoiceEngine] = useState(edit?.voice_engine ?? 'elevenlabs_v2');
+  const [voiceEngine, setVoiceEngine] = useState(edit?.voice_engine || 'SCRIPTED');
   const [voiceId, setVoiceId] = useState(edit?.voice_id ?? '');
   const [baseRate, setBaseRate] = useState(String(edit?.base_rate ?? 1.0));
   const [basePitch, setBasePitch] = useState(String(edit?.base_pitch ?? 1.0));
@@ -66,7 +68,7 @@ export function CharacterModal({ open, onClose, edit }: Props) {
       open={open}
       onClose={onClose}
       title={edit ? `Edit ${edit.display_name}` : 'New character'}
-      subtitle="character_upsert · voice profiles feed the Phase 5 synthesis pipeline"
+      subtitle="character_upsert · voice profiles feed the synthesis pipeline"
       width="max-w-xl"
       footer={
         <>
@@ -129,7 +131,7 @@ export function CharacterModal({ open, onClose, edit }: Props) {
               value={voiceEngine}
               onChange={(e) => setVoiceEngine(e.target.value)}
             >
-              {VOICE_ENGINES.map((v) => (
+              {VOICE_ENGINE_OPTIONS.map((v) => (
                 <option key={v} value={v}>
                   {v}
                 </option>
@@ -137,15 +139,10 @@ export function CharacterModal({ open, onClose, edit }: Props) {
             </select>
           </Field>
         </div>
+        <Field label="Voice">
+          <VoicePicker engine={voiceEngine} value={voiceId} onChange={setVoiceId} />
+        </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Voice id (engine-side)">
-            <input
-              className={`${inputClass} font-mono`}
-              value={voiceId}
-              onChange={(e) => setVoiceId(e.target.value)}
-              placeholder="EXAVITQu4vr4xnSDjMa5"
-            />
-          </Field>
           <Field label="IPA phonetic">
             <input
               className={`${inputClass} font-mono`}

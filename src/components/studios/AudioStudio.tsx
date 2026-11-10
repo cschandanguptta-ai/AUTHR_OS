@@ -14,6 +14,8 @@ import { useManuscriptStore } from '../../stores/manuscriptStore';
 import { useAudioRunStore, type AudioRunRecord } from '../../stores/audioRunStore';
 import { audioCacheStats, audioPronounce, type AudioCacheStats, type PronounceEntry } from '../../ipc/api';
 import { ROLE_BADGES, EMOTION_PRESETS, emotionChipClass } from '../../lib/constants';
+import { VOICE_ENGINE_OPTIONS } from '../../lib/voiceCatalog';
+import { VoicePicker } from '../shared/VoicePicker';
 import { cn, formatBytes } from '../../lib/utils';
 import { inputClass, btnPrimary } from '../layout/Modal';
 import { toast } from '../../stores/uiStore';
@@ -95,28 +97,21 @@ function VoiceRow({ character }: { character: CharacterRow }) {
           )}
         </div>
       </div>
-      <div className="grid grid-cols-[1fr_1fr] gap-3">
-        <label className="grid gap-1">
+      <div className="grid grid-cols-[auto_1fr] gap-3">
+        <label className="grid gap-1 w-48">
           <span className="text-2xs text-mut uppercase tracking-wide">Voice engine</span>
           <select
             className={inputClass}
             value={draft.voice_engine}
             onChange={(e) => setDraft({ ...draft, voice_engine: e.target.value })}
           >
-            {['SCRIPTED', 'KOKORO_LOCAL', 'EDGE_TTS', 'ELEVEN_LABS', 'CARTESIA', 'OPENAI_TTS'].map((e) => (
-              <option key={e} value={e}>{e}</option>
-            ))}
+            {VOICE_ENGINE_OPTIONS.map((e) => <option key={e} value={e}>{e}</option>)}
           </select>
         </label>
-        <label className="grid gap-1">
-          <span className="text-2xs text-mut uppercase tracking-wide">Voice ID</span>
-          <input
-            className={inputClass}
-            value={draft.voice_id}
-            onChange={(e) => setDraft({ ...draft, voice_id: e.target.value })}
-            placeholder="af_bella"
-          />
-        </label>
+        <div className="grid gap-1">
+          <span className="text-2xs text-mut uppercase tracking-wide">Voice</span>
+          <VoicePicker engine={draft.voice_engine} value={draft.voice_id} onChange={(voiceId) => setDraft({ ...draft, voice_id: voiceId })} compact />
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <label className="grid gap-1">
