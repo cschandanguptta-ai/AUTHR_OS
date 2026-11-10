@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { StudioShell } from '../shared/StudioShell';
 import { EmptyState } from '../shared/EmptyState';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { useManuscriptStore } from '../../stores/manuscriptStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useMediaDataUrl } from '../../hooks/useMediaDataUrl';
@@ -427,10 +428,26 @@ export function VideoStudio() {
   };
 
   // ── Style switch: persist per book, then deterministic repaint ────────────
+  // R-16: large chapters pay a real repaint cost (scene count × deterministic
+  // render) — surface the estimate and confirm before burning the pool.
+  const REPAINT_CONFIRM_THRESHOLD = 6;
+  const [styleConfirm, setStyleConfirm] = useState<string | null>(null);
+
   const applyStyle = async (id: string) => {
+    if (!plan) return;
+    if (blocks.length >= REPAINT_CONFIRM_THRESHOLD && id !== styleId) {
+      setStyleConfirm(id);
+      setStyleOpen(false);
+      return;
+    }
+    await applyStyleConfirmed(id);
+  };
+
+  const applyStyleConfirmed = async (id: string) => {
     if (!plan) return;
     setStyleId(id);
     setStyleOpen(false);
+    setStyleConfirm(null);
     try {
       await videoStyle({ book_id: plan.book_id, style_id: id });
       toast('success', 'Art style set', `${getArtStyle(id).label} — frames repaint deterministically.`);
@@ -836,6 +853,18 @@ export function VideoStudio() {
           </>
         )}
       </div>
+
+      {/* R-16: repaint cost confirmation for large chapters */}
+      <ConfirmDialog
+        open={styleConfirm != null}
+        title={`Repaint ${blocks.length} scenes with ${styleConfirm ? getArtStyle(styleConfirm).label : ''}?`}
+        body={`Switching the art style repaints every scene frame deterministically — about ${blocks.length} renders for this chapter. It runs through the paint pool and you can stop it midway, but the chapter will be mixed-style until the repaint finishes. Keep the current style if the timing is bad.`}
+        confirmLabel={`Repaint ${blocks.length} scenes`}
+        onConfirm={() => {
+          if (styleConfirm) void applyStyleConfirmed(styleConfirm);
+        }}
+        onClose={() => setStyleConfirm(null)}
+      />
     </StudioShell>
   );
 }
