@@ -26,6 +26,7 @@ import {
 import { useWorkspaceStore, type StudioId, type ViewMode } from '../../stores/workspaceStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useProjectStore } from '../../stores/projectStore';
+import { useAiAssistStore } from '../../stores/aiAssistStore';
 import * as api from '../../ipc/api';
 import { toast, toastError } from '../../stores/uiStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
@@ -83,6 +84,30 @@ function buildCommands(): Command[] {
     viewMode('clean', 'Canvas: clean prose', FileText, 'Chrome hidden, literary serif'),
     viewMode('script', 'Canvas: production script', Layers, 'Speaker gutters, chips, foley'),
     viewMode('readalong', 'Canvas: read-along', Radio, 'Active segment highlight, no gutter'),
+    {
+      id: 'ai-continue',
+      group: 'Canvas',
+      label: 'AI: continue writing',
+      hint: 'offline deterministic draft at the caret — accept or discard',
+      icon: Sparkles,
+      run: () => {
+        ws.switchStudio('novel');
+        useAiAssistStore.getState().requestAction('continue');
+        close();
+      },
+    },
+    {
+      id: 'ai-rewrite',
+      group: 'Canvas',
+      label: 'AI: rewrite selection',
+      hint: 'tighter rewrite of the selected passage — accept or discard',
+      icon: Sparkles,
+      run: () => {
+        ws.switchStudio('novel');
+        useAiAssistStore.getState().requestAction('rewrite');
+        close();
+      },
+    },
     {
       id: 'toggle-binder',
       group: 'Canvas',

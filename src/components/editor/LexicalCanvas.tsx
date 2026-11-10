@@ -10,6 +10,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   $createTextNode,
   $getRoot,
+  $getSelection,
+  $isRangeSelection,
   EditorState,
   ParagraphNode,
 } from 'lexical';
@@ -21,11 +23,14 @@ import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import {
-  FileText, Layers, Loader2, Radio, RefreshCw, Waves,
+  FileText, Layers, Loader2, Radio, RefreshCw, Sparkles, Wand2, Waves, X,
 } from 'lucide-react';
 import { useManuscriptStore } from '../../stores/manuscriptStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore, type ViewMode } from '../../stores/workspaceStore';
+import { useAiAssistStore, AI_ACTION_LABEL, seedFromText, type AiAction } from '../../stores/aiAssistStore';
+import { localLlmGenerate, providerGet } from '../../ipc/api';
+import { mapError } from '../../ipc/errorCopy';
 import { useAutosave } from '../../hooks/useAutosave';
 import { useChapterStats } from '../../hooks/useChapterStats';
 import { cn } from '../../lib/utils';
@@ -88,6 +93,114 @@ function $readParagraphs(): ParagraphInfo[] {
     out.push({ segmentId, segmentType, speakerId, text: child.getTextContent() });
   }
   return out;
+}
+
+/**
+ * AI assist (R-03): one deterministic offline generation from the selection
+ * (or the whole chapter for summarize), surfaced as an accept/discard
+ * proposal — never auto-committed. Accept applies a single undoable Lexical
+ * transaction.
+ */
+function useAiAssist(editor: ReturnType<typeof useLexicalComposerContext>[0], chapterId: number | null, readonly: boolean) {
+  const busy = useAiAssistStore((s) => s.busy);
+  const proposal = useAiAssistStore((s) => s.proposal);
+  const error = useAiAssistStore((s) => s.error);
+
+  const run = useCallback(
+    async (action: AiAction) => {
+      if (readonly || chapterId == null) return;
+      const assist = useAiAssistStore.getState();
+      if (assist.busy) return;
+      assist.setBusy(action);
+
+      // Read the working text: selection for continue/rewrite, chapter otherwise.
+      let workText = '';
+      let hasSelection = false;
+      editor.getEditorState().read(() => {
+        const sel = $getSelection();
+        if ($isRangeSelection(sel)) {
+          workText = sel.getTextContent();
+          hasSelection = workText.trim().length > 0;
+        }
+      });
+      if (action !== 'summarize' && !hasSelection) {
+        // No selection: continue works from the tail of the chapter text.
+        const segs = useManuscriptStore.getState().segments;
+        workText = segs.slice(-3).map((s) => s.text_content).join(' ').slice(-400);
+      }
+      if (action === 'summarize') {
+        const segs = useManuscriptStore.getState().segments;
+        workText = segs.map((s) => s.text_content).join('\n').slice(0, 4000);
+      }
+
+      const seed = seedFromText(`${action}:${workText}`);
+      const prompts: Record<AiAction, string> = {
+        continue: `Continue the following passage in the same voice, one paragraph, no preamble:\n\n${workText}`,
+        rewrite: `Rewrite the following passage tighter while keeping its meaning, no preamble:\n\n${workText}`,
+        summarize: `Summarize this chapter in 2-3 sentences, no preamble:\n\n${workText}`,
+      };
+
+      try {
+        // server_url comes from the provider ladder when configured (R-03).
+        let serverUrl: string | undefined;
+        try {
+          const p = await providerGet();
+          serverUrl = p.llm.resolved.server_url ?? undefined;
+        } catch { /* offline default */ }
+        const res = await localLlmGenerate({ prompt: prompts[action], max_tokens: 128, seed, server_url: serverUrl });
+        const text = res.text.trim();
+        if (!text) {
+          useAiAssistStore.getState().fail('The engine returned an empty draft — nothing to propose.');
+          return;
+        }
+        useAiAssistStore.getState().propose({
+          action,
+          text,
+          backend: res.backend === 'LLAMA_SERVER' && res.server ? `llama-server · ${res.server}` : res.backend,
+          seed: res.seed ?? seed,
+          effect:
+            action === 'continue'
+              ? 'Insert at the caret'
+              : action === 'rewrite'
+                ? 'Replace the selection'
+                : 'Insert at the caret',
+        });
+      } catch (err) {
+        const mapped = mapError(err);
+        useAiAssistStore.getState().fail(`${mapped.copy.body} ${mapped.detail}`.trim());
+      }
+    },
+    [editor, chapterId, readonly],
+  );
+
+  /** Accept: one undoable transaction. Continue/summarize insert at the caret
+   *  (after the selection, when one exists); rewrite replaces the selection. */
+  const accept = useCallback(() => {
+    const p = useAiAssistStore.getState().proposal;
+    if (!p) return;
+    editor.update(() => {
+      const sel = $getSelection();
+      if ($isRangeSelection(sel)) {
+        if (p.action === 'continue' && !sel.isCollapsed()) {
+          // Keep the original text; append the continuation right after it.
+          const original = sel.getTextContent();
+          sel.insertText(original + p.text);
+        } else {
+          sel.insertText(p.text);
+        }
+      } else {
+        // No caret (blur): append to the last paragraph.
+        const root = $getRoot();
+        const last = root.getLastChild();
+        if (last instanceof ParagraphNode) last.append($createTextNode(p.text));
+      }
+    });
+    useAiAssistStore.getState().resolve();
+  }, [editor]);
+
+  const discard = useCallback(() => useAiAssistStore.getState().resolve(), []);
+
+  return { busy, proposal, error, run, accept, discard };
 }
 
 function CanvasInner() {
@@ -233,6 +346,20 @@ function CanvasInner() {
     }
   };
 
+  // ── AI assist (R-03) ──────────────────────────────────────────────────
+  const ai = useAiAssist(editor, activeChapterId, readonly);
+  const pendingRequest = useAiAssistStore((s) => s.pendingRequest);
+
+  // Command palette / other surfaces request actions; the canvas consumes
+  // them here (the editor owns the transaction).
+  useEffect(() => {
+    if (pendingRequest) {
+      useAiAssistStore.getState().consumeRequest();
+      void ai.run(pendingRequest);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingRequest, ai.run]);
+
   // Wire the debounce to Lexical's change stream (after hooks above).
   const onChangePlugin = useCallback(
     (editorState: EditorState, _e: unknown, tags: Set<string>) => {
@@ -327,6 +454,26 @@ function CanvasInner() {
             <><Waves size={12} className="text-ok" /> synced</>
           )}
         </span>
+
+        {/* AI assist — selection actions (R-03) */}
+        {!readonly && chapter && (
+          <div className="flex items-center gap-1 shrink-0" role="group" aria-label="AI assist">
+            {(['continue', 'rewrite', 'summarize'] as AiAction[]).map((a) => (
+              <button
+                key={a}
+                type="button"
+                disabled={ai.busy !== null}
+                onClick={() => void ai.run(a)}
+                title={`${AI_ACTION_LABEL[a]} — offline deterministic engine, proposal with accept/discard`}
+                data-testid={`ai-${a}`}
+                className="flex items-center gap-1 text-2xs px-1.5 py-1 rounded border border-line bg-panel2 hover:border-accent/50 hover:text-ink text-mut disabled:opacity-50"
+              >
+                {ai.busy === a ? <Loader2 size={10} className="animate-spin text-accent" /> : <Sparkles size={10} className="text-accent" />}
+                {a === 'continue' ? 'Continue' : a === 'rewrite' ? 'Rewrite' : 'Summarize'}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Editor surface */}
@@ -334,6 +481,54 @@ function CanvasInner() {
         {loadingSegments && (
           <div className="absolute inset-0 flex items-center justify-center bg-app/70 z-10">
             <Loader2 className="animate-spin text-accent" size={22} />
+          </div>
+        )}
+        {/* Proposal bar — never auto-commits; Accept is one undoable transaction */}
+        {(ai.proposal || ai.error) && (
+          <div className="sticky top-0 z-20 mx-auto max-w-[900px] px-2 pt-2" data-testid="ai-proposal-bar">
+            <div className="rounded-lg border border-accent/40 bg-panel shadow-xl px-3 py-2.5 grid gap-2">
+              {ai.error ? (
+                <div className="flex items-start gap-2">
+                  <Wand2 size={13} className="text-bad mt-0.5 shrink-0" />
+                  <p className="text-2xs text-bad leading-relaxed flex-1">{ai.error}</p>
+                  <button type="button" onClick={ai.discard} aria-label="Dismiss" className="text-mut hover:text-ink">
+                    <X size={12} />
+                  </button>
+                </div>
+              ) : ai.proposal && (
+                <>
+                  <div className="flex items-center gap-2 flex-wrap text-2xs">
+                    <span className="font-semibold text-ink">{AI_ACTION_LABEL[ai.proposal.action]}</span>
+                    <span className="text-mut">{ai.proposal.effect}</span>
+                    <span className="ml-auto font-mono px-1.5 py-0.5 rounded border border-line text-mut" data-testid="ai-provenance">
+                      {ai.proposal.backend} · seed {ai.proposal.seed}
+                    </span>
+                  </div>
+                  <p className="text-xs leading-relaxed text-ink whitespace-pre-wrap max-h-24 overflow-y-auto">
+                    {ai.proposal.text}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={ai.accept}
+                      className="text-2xs font-medium px-2.5 py-1 rounded bg-accent text-on-accent"
+                      data-testid="ai-accept"
+                    >
+                      Accept & insert
+                    </button>
+                    <button
+                      type="button"
+                      onClick={ai.discard}
+                      className="text-2xs px-2.5 py-1 rounded border border-line text-mut hover:text-ink"
+                      data-testid="ai-discard"
+                    >
+                      Discard
+                    </button>
+                    <span className="text-2xs text-mut/70">undo works normally after accept</span>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         )}
         <div className="mx-auto max-w-[900px]">

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {
+  BookMarked,
   BookOpen,
   ChevronDown,
   ChevronRight,
@@ -9,6 +10,7 @@ import {
   FilePlus2,
   Loader2,
   Mic2,
+  Pencil,
   Plus,
   ScrollText,
   Search,
@@ -37,7 +39,9 @@ import { NewChapterModal } from './modals/NewChapterModal';
 import { CharacterModal } from './modals/CharacterModal';
 import { LoreModal } from './modals/LoreModal';
 import { ThreadModal } from './modals/ThreadModal';
-import type { ChapterRow } from '../../types/ast';
+import { BinderAskBody } from './BinderAskPanel';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
+import type { ChapterRow, CharacterRow, LoreRow } from '../../types/ast';
 
 function SectionHeader({
   icon: Icon,
@@ -81,12 +85,14 @@ function ManuscriptSection({ open, onToggle }: { open: boolean; onToggle: () => 
   const chapters = useManuscriptStore((s) => s.chapters);
   const activeChapterId = useManuscriptStore((s) => s.activeChapterId);
   const selectChapter = useManuscriptStore((s) => s.selectChapter);
+  const deleteChapter = useManuscriptStore((s) => s.deleteChapter);
   const loadedBooks = useManuscriptStore((s) => s.loadedBooks);
   const loadedChapters = useManuscriptStore((s) => s.loadedChapters);
 
   const [query, setQuery] = useState('');
   const [hits, setHits] = useState<SegmentSearchHit[] | null>(null);
   const [searching, setSearching] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ChapterRow | null>(null);
 
   const doSearch = async () => {
     const q = query.trim();
@@ -194,6 +200,7 @@ function ManuscriptSection({ open, onToggle }: { open: boolean; onToggle: () => 
                             chapter={chapter}
                             active={chapter.id === activeChapterId}
                             onSelect={() => selectChapter(chapter.id)}
+                            onDelete={() => setDeleteTarget(chapter)}
                           />
                         ))}
                     </div>
@@ -209,6 +216,19 @@ function ManuscriptSection({ open, onToggle }: { open: boolean; onToggle: () => 
           )}
         </div>
       )}
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title={`Delete chapter ${deleteTarget ? String(deleteTarget.chapter_number).padStart(2, '0') : ''}?`}
+        body={deleteTarget
+          ? `“${deleteTarget.title}” and all of its segments, threads and shadow files will be removed from the bundle. This cascades and cannot be undone.`
+          : ''}
+        confirmLabel="Delete chapter"
+        onConfirm={() => {
+          if (deleteTarget) void deleteChapter(deleteTarget.id);
+          setDeleteTarget(null);
+        }}
+        onClose={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }
@@ -217,30 +237,48 @@ function ChapterRowButton({
   chapter,
   active,
   onSelect,
+  onDelete,
 }: {
   chapter: ChapterRow;
   active: boolean;
   onSelect: () => void;
+  onDelete: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onSelect}
+    <div
       className={cn(
-        'w-full flex items-center gap-2 px-3 py-1 text-left text-[13px] group transition-colors',
-        active ? 'bg-panel3 text-ink' : 'text-mut hover:text-ink hover:bg-panel2',
+        'group flex items-center transition-colors rounded-sm',
+        active ? 'bg-panel3' : 'hover:bg-panel2',
       )}
-      aria-current={active ? 'true' : undefined}
     >
-      <span
-        className={cn('w-1.5 h-1.5 rounded-full shrink-0', CHAPTER_STATUS_DOTS[chapter.status])}
-        title={chapter.status}
-      />
-      <span className="font-mono text-2xs text-mut/70 shrink-0 w-7">
-        {String(chapter.chapter_number).padStart(2, '0')}
-      </span>
-      <span className="truncate">{chapter.title}</span>
-    </button>
+      <button
+        type="button"
+        onClick={onSelect}
+        className={cn(
+          'flex-1 min-w-0 flex items-center gap-2 px-3 py-1 text-left text-[13px]',
+          active ? 'text-ink' : 'text-mut hover:text-ink',
+        )}
+        aria-current={active ? 'true' : undefined}
+      >
+        <span
+          className={cn('w-1.5 h-1.5 rounded-full shrink-0', CHAPTER_STATUS_DOTS[chapter.status])}
+          title={chapter.status}
+        />
+        <span className="font-mono text-2xs text-mut/70 shrink-0 w-7">
+          {String(chapter.chapter_number).padStart(2, '0')}
+        </span>
+        <span className="truncate">{chapter.title}</span>
+      </button>
+      <button
+        type="button"
+        onClick={onDelete}
+        className="opacity-0 group-hover:opacity-100 mr-2 text-mut hover:text-bad shrink-0"
+        aria-label={`Delete chapter ${chapter.title}`}
+        title="Delete chapter — asks for confirmation"
+      >
+        <Trash2 size={11} />
+      </button>
+    </div>
   );
 }
 
@@ -249,6 +287,7 @@ function LoreSection({ open, onToggle }: { open: boolean; onToggle: () => void }
   const lore = useLoreStore((s) => s.lore);
   const loaded = useLoreStore((s) => s.loaded);
   const deleteLore = useLoreStore((s) => s.deleteLore);
+  const [deleteTarget, setDeleteTarget] = useState<LoreRow | null>(null);
 
   return (
     <div>
@@ -294,9 +333,10 @@ function LoreSection({ open, onToggle }: { open: boolean; onToggle: () => void }
                       </span>
                       <button
                         type="button"
-                        onClick={() => void deleteLore(entry.key)}
+                        onClick={() => setDeleteTarget(entry)}
                         className="opacity-0 group-hover:opacity-100 text-mut hover:text-bad"
                         aria-label={`Delete lore entry ${entry.key}`}
+                        title="Delete lore entry — asks for confirmation"
                       >
                         <Trash2 size={11} />
                       </button>
@@ -308,6 +348,29 @@ function LoreSection({ open, onToggle }: { open: boolean; onToggle: () => void }
           )}
         </div>
       )}
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete lore entry?"
+        body={deleteTarget
+          ? `“${deleteTarget.key}” will be removed from the Story Bible. Its IPA pronunciation stops applying at the next synthesis.`
+          : ''}
+        confirmLabel="Delete entry"
+        onConfirm={() => {
+          if (deleteTarget) void deleteLore(deleteTarget.key);
+          setDeleteTarget(null);
+        }}
+        onClose={() => setDeleteTarget(null)}
+      />
+    </div>
+  );
+}
+
+/** Ask your book: local corpus Q&A (rag_index/search/status). */
+function AskSection({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  return (
+    <div>
+      <SectionHeader icon={BookMarked} title="Ask your book" open={open} onToggle={onToggle} />
+      {open && <BinderAskBody />}
     </div>
   );
 }
@@ -316,6 +379,7 @@ function LoreSection({ open, onToggle }: { open: boolean; onToggle: () => void }
 function VoiceCastSection({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   const characters = useVoiceCastStore((s) => s.characters);
   const loaded = useVoiceCastStore((s) => s.loaded);
+  const [editTarget, setEditTarget] = useState<CharacterRow | null>(null);
 
   return (
     <div>
@@ -346,6 +410,15 @@ function VoiceCastSection({ open, onToggle }: { open: boolean; onToggle: () => v
                   >
                     {c.role}
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => setEditTarget(c)}
+                    className="opacity-0 group-hover:opacity-100 text-mut hover:text-accent shrink-0"
+                    aria-label={`Edit ${c.display_name}`}
+                    title="Edit voice profile — opens the cast editor"
+                  >
+                    <Pencil size={11} />
+                  </button>
                 </div>
                 <div className="flex items-center gap-2 pl-5 mt-0.5">
                   <span className="text-2xs font-mono text-accent/80 border border-accent/30 bg-accent/10 rounded px-1">
@@ -362,6 +435,7 @@ function VoiceCastSection({ open, onToggle }: { open: boolean; onToggle: () => v
           )}
         </div>
       )}
+      <CharacterModal key={editTarget?.character_key ?? 'cast-new'} open={editTarget !== null} edit={editTarget ?? undefined} onClose={() => setEditTarget(null)} />
     </div>
   );
 }
@@ -491,6 +565,7 @@ export function ProjectBinder() {
     lore: true,
     cast: true,
     chekhov: true,
+    ask: false,
   });
   const [newChapter, setNewChapter] = useState(false);
   const [newCharacter, setNewCharacter] = useState(false);
@@ -528,6 +603,8 @@ export function ProjectBinder() {
         <VoiceCastSection open={sections.cast} onToggle={() => toggle('cast')} />
         <div className="mx-3 my-1 border-t border-line" />
         <ChekhovSection open={sections.chekhov} onToggle={() => toggle('chekhov')} />
+        <div className="mx-3 my-1 border-t border-line" />
+        <AskSection open={sections.ask} onToggle={() => toggle('ask')} />
       </div>
 
       <footer className="border-t border-line bg-panel2/40 p-2 grid grid-cols-2 gap-1.5">

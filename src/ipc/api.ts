@@ -805,11 +805,19 @@ export function localLlmGenerate(args: {
   temperature?: number;
   seed?: number;
   style_persona?: string;
+  /** Routes to a llama.cpp /completion when set (ladder tier: args > settings > env > offline). */
+  server_url?: string;
 }) {
-  return invoke<{ text: string; backend: string; style_persona?: string }>(
-    'local_llm_generate',
-    args,
-  );
+  return invoke<{
+    text: string;
+    backend: 'OFFLINE_GRAMMAR' | 'LLAMA_SERVER';
+    tokens: number;
+    seed: number;
+    prompt_cache_pinned: boolean;
+    server?: string;
+    style_persona?: string;
+    timings?: Record<string, unknown>;
+  }>('local_llm_generate', args);
 }
 
 // ── 4.16 Video novel studio (v1.5) ───────────────────────────────────────────
