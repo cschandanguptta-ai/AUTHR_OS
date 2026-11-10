@@ -104,6 +104,29 @@ export function CraftStudio() {
   const [checkResult, setCheckResult] = useState<KdpCheckResult | null>(null);
   const [packageResult, setPackageResult] = useState<string | null>(null);
 
+  // R-18: client-side KDP limits — ≤7 keywords × ≤50 chars, ≤2 categories.
+  // Counters are always visible; an over-limit state blocks the package build
+  // with an inline reason (the backend check still runs independently).
+  const kwList = useMemo(
+    () => keywords.split(',').map((s) => s.trim()).filter(Boolean),
+    [keywords],
+  );
+  const kwOverlong = kwList.filter((k) => k.length > 50).length;
+  const catList = useMemo(
+    () => categories.split(',').map((s) => s.trim()).filter(Boolean),
+    [categories],
+  );
+  const kdpInvalid =
+    kwList.length > 7 || kwOverlong > 0 || catList.length > 2;
+  const kdpInvalidReason =
+    kwList.length > 7
+      ? `KDP allows at most 7 keywords — ${kwList.length} entered`
+      : kwOverlong > 0
+        ? `${kwOverlong} keyword${kwOverlong === 1 ? '' : 's'} over the 50-character limit`
+        : catList.length > 2
+          ? 'KDP allows at most 2 categories'
+          : null;
+
   // Retention QC (SFB-2.0) panel state — v1.4
   const QC_LABELS: Array<[string, string, boolean]> = [
     ['opening_attention', 'Opening attention', false],
@@ -667,8 +690,18 @@ export function CraftStudio() {
                 />
               </label>
               <label className="grid gap-1 col-span-1 md:col-span-3">
-                <span className="text-2xs text-mut uppercase tracking-wide">
-                  Keywords (max 7, comma-separated, ≤50 chars each)
+                <span className="text-2xs text-mut uppercase tracking-wide flex items-center justify-between">
+                  <span>Keywords (comma-separated, ≤50 chars each)</span>
+                  <span
+                    className={cn(
+                      'font-mono',
+                      kwList.length > 7 || kwOverlong > 0 ? 'text-bad font-semibold' : 'text-mut',
+                    )}
+                    data-testid="kdp-keyword-counter"
+                  >
+                    {kwList.length}/7
+                    {kwOverlong > 0 ? ` · ${kwOverlong} over 50ch` : ''}
+                  </span>
                 </span>
                 <input
                   className={cn(inputClass, 'text-xs')}
@@ -678,7 +711,18 @@ export function CraftStudio() {
                 />
               </label>
               <label className="grid gap-1 md:col-span-2">
-                <span className="text-2xs text-mut uppercase tracking-wide">Categories (max 2)</span>
+                <span className="text-2xs text-mut uppercase tracking-wide flex items-center justify-between">
+                  <span>Categories</span>
+                  <span
+                    className={cn(
+                      'font-mono',
+                      catList.length > 2 ? 'text-bad font-semibold' : 'text-mut',
+                    )}
+                    data-testid="kdp-category-counter"
+                  >
+                    {catList.length}/2
+                  </span>
+                </span>
                 <input
                   className={cn(inputClass, 'text-xs')}
                   placeholder="Fiction / Mystery & Detective / Cozy"
@@ -717,11 +761,20 @@ export function CraftStudio() {
               <button
                 type="button"
                 onClick={() => void buildPackage()}
-                disabled={busy}
+                disabled={busy || kdpInvalid}
+                title={kdpInvalidReason ?? undefined}
                 className={cn(btnPrimary, 'text-2xs px-3 py-1.5 flex items-center gap-1.5')}
               >
                 <Package size={12} /> {busy ? 'Working…' : 'Build KDP package'}
               </button>
+              {kdpInvalid && (
+                <span
+                  className="text-2xs text-bad flex items-center gap-1"
+                  data-testid="kdp-invalid-reason"
+                >
+                  <TriangleAlert size={11} /> {kdpInvalidReason}
+                </span>
+              )}
               {packageResult && (
                 <span className="font-mono text-2xs text-mut truncate max-w-[380px]" title={packageResult}>
                   {packageResult}
