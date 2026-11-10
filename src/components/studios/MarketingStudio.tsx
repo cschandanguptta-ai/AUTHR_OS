@@ -7,6 +7,7 @@ import { BadgeCheck, Megaphone, PlayCircle, Sparkles, Wand2 } from 'lucide-react
 import { StudioShell } from '../shared/StudioShell';
 import { EmptyState } from '../shared/EmptyState';
 import { useManuscriptStore } from '../../stores/manuscriptStore';
+import { useBookContextStore, resolveActiveBook } from '../../stores/bookContextStore';
 import { bookUpdate } from '../../ipc/api';
 import { btnPrimary, inputClass } from '../layout/Modal';
 import { cn } from '../../lib/utils';
@@ -57,6 +58,8 @@ function buildSocialTags(book: BookRow): string {
 export function MarketingStudio() {
   const books = useManuscriptStore((s) => s.books);
   const loadBooks = useManuscriptStore((s) => s.loadBooks);
+  // R-13: premise and copy follow the global book-context chip.
+  const activeBookId = useBookContextStore((s) => s.activeBookId);
   const [draft, setDraft] = useState<BookRow | null>(null);
   const [style, setStyle] = useState(STYLE_PRESETS[0]);
   const [saving, setSaving] = useState(false);
@@ -66,8 +69,8 @@ export function MarketingStudio() {
   }, [loadBooks]);
 
   useEffect(() => {
-    setDraft(books[0] ?? null);
-  }, [books]);
+    setDraft(resolveActiveBook(books, activeBookId));
+  }, [books, activeBookId]);
 
   const titles = useMemo(() => (draft ? buildTitles(draft) : []), [draft]);
   const description = useMemo(() => (draft ? buildDescription(draft) : ''), [draft]);

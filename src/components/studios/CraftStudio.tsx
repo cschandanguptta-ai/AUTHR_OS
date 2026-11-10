@@ -20,6 +20,7 @@ import { StudioShell } from '../shared/StudioShell';
 import { EmptyState } from '../shared/EmptyState';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { useManuscriptStore } from '../../stores/manuscriptStore';
+import { useBookContextStore, resolveActiveBook } from '../../stores/bookContextStore';
 import {
   craftApply,
   craftCatalog,
@@ -68,7 +69,9 @@ export function CraftStudio() {
   const chapters = useManuscriptStore((s) => s.chapters);
   const loadBooks = useManuscriptStore((s) => s.loadBooks);
   const loadChapters = useManuscriptStore((s) => s.loadChapters);
-  const book = books[0] ?? null;
+  // R-13: follow the global book-context chip instead of always books[0].
+  const activeBookId = useBookContextStore((s) => s.activeBookId);
+  const book = resolveActiveBook(books, activeBookId);
   const [sweepConfirm, setSweepConfirm] = useState(false);
 
   const [catalog, setCatalog] = useState<{

@@ -10,6 +10,7 @@ import { useLoreStore } from './loreStore';
 import { useThreadStore } from './threadStore';
 import { useWorkspaceStore } from './workspaceStore';
 import { useSettingsStore } from './settingsStore';
+import { useBookContextStore } from './bookContextStore';
 
 export type ProjectStatus = 'closed' | 'opening' | 'open';
 
@@ -115,6 +116,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     useVoiceCastStore.getState().reset();
     useLoreStore.getState().reset();
     useThreadStore.getState().reset();
+    useBookContextStore.getState().reset();
     useWorkspaceStore.getState().setActiveStudio('novel');
     useSettingsStore.getState().setTypewriterMode(false);
     set({

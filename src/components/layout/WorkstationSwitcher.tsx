@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import {
   AudioLines,
   BookOpen,
+  ChevronsUpDown,
   Clapperboard,
   Command,
   Eye,
@@ -18,6 +19,8 @@ import {
 } from 'lucide-react';
 import { useWorkspaceStore, type StudioId } from '../../stores/workspaceStore';
 import { useProjectStore } from '../../stores/projectStore';
+import { useManuscriptStore } from '../../stores/manuscriptStore';
+import { useBookContextStore } from '../../stores/bookContextStore';
 import * as api from '../../ipc/api';
 import { toast, toastError } from '../../stores/uiStore';
 import { cn, IS_MAC, MOD_KEY } from '../../lib/utils';
@@ -34,6 +37,86 @@ const STUDIOS: Array<{ id: StudioId; label: string; icon: typeof BookOpen }> = [
   { id: 'craft', label: 'Craft', icon: PenTool },
   { id: 'publish', label: 'Publish', icon: Rocket },
 ];
+
+/**
+ * Book context chip (R-13): the globally selected book. Craft, KDP packaging,
+ * marketing premise and the publish card all follow this pick. With a single
+ * book it renders as a static label; with several, a picker.
+ */
+function BookContextChip() {
+  const books = useManuscriptStore((s) => s.books);
+  const activeBookId = useBookContextStore((s) => s.activeBookId);
+  const setActiveBookId = useBookContextStore((s) => s.setActiveBookId);
+  const [open, setOpen] = useState(false);
+  const chipRef = useRef<HTMLDivElement>(null);
+
+  useDismiss(chipRef, () => setOpen(false), open);
+
+  if (books.length === 0) return null;
+  const active = books.find((b) => b.id === activeBookId) ?? books[0];
+
+  if (books.length === 1) {
+    return (
+      <span
+        className="hidden md:flex items-center gap-1.5 px-2 py-1 rounded-md border border-line bg-panel2 text-2xs text-mut max-w-[180px]"
+        title={`Book context — everything book-scoped follows “${active.title}”`}
+      >
+        <BookOpen size={11} className="text-accent shrink-0" />
+        <span className="truncate">{active.title}</span>
+      </span>
+    );
+  }
+
+  return (
+    <div className="relative" ref={chipRef}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        title={`Book context — ${books.length} books; Craft, KDP and publish follow this pick`}
+        className="hidden md:flex items-center gap-1.5 px-2 py-1 rounded-md border border-line bg-panel2 hover:bg-panel3 text-2xs text-mut hover:text-ink max-w-[180px] transition-colors"
+      >
+        <BookOpen size={11} className="text-accent shrink-0" />
+        <span className="truncate">{active.title}</span>
+        <ChevronsUpDown size={10} className="shrink-0 opacity-70" />
+      </button>
+      {open && (
+        <div
+          role="listbox"
+          aria-label="Active book"
+          className="anim-pop absolute right-0 top-8 z-40 w-64 rounded-lg border border-line2 bg-panel shadow-2xl py-1.5 max-h-72 overflow-y-auto"
+        >
+          {books.map((b) => (
+            <button
+              key={b.id}
+              type="button"
+              role="option"
+              aria-selected={b.id === active.id}
+              onClick={() => {
+                setActiveBookId(b.id);
+                setOpen(false);
+              }}
+              className={cn(
+                'w-full flex items-center gap-2 px-3 py-2 text-[13px] text-left',
+                b.id === active.id ? 'bg-panel3 text-ink' : 'text-mut hover:bg-panel2 hover:text-ink',
+              )}
+            >
+              <BookOpen size={12} className={b.id === active.id ? 'text-accent' : 'text-mut/60'} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate">{b.title}</span>
+                <span className="block text-2xs text-mut/80 truncate">
+                  {b.genre}
+                  {b.premise.trim() ? ' · has premise' : ' · no premise yet'}
+                </span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /** Lock dot: green = live lease held by this session; amber = read-only foreign lease. */
 function LockDot() {
@@ -184,6 +267,7 @@ export function WorkstationSwitcher() {
         <span className="text-[13px] text-ink font-medium truncate max-w-[220px]">
           {manifest?.title ?? 'Untitled bundle'}
         </span>
+        <BookContextChip />
         <LockDot />
         {bundlePath && (
           <span className="hidden xl:inline font-mono text-2xs text-mut truncate max-w-[220px]">

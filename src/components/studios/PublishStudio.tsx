@@ -27,6 +27,7 @@ import { EmptyState } from '../shared/EmptyState';
 import { useManuscriptStore } from '../../stores/manuscriptStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { useBookContextStore } from '../../stores/bookContextStore';
 import {
   publishCaptions,
   publishDocx,
@@ -154,6 +155,10 @@ export function PublishStudio() {
   const bundlePath = useProjectStore((s) => s.bundlePath);
   const readonly = useProjectStore((s) => s.readonly);
   const activeStudio = useWorkspaceStore((s) => s.activeStudio);
+  // R-13: the global book-context chip seeds the picker; picking here feeds it
+  // back so Craft/KDP and marketing follow the same book.
+  const ctxBookId = useBookContextStore((s) => s.activeBookId);
+  const setCtxBookId = useBookContextStore((s) => s.setActiveBookId);
 
   const [bookId, setBookId] = useState<number | null>(null);
   const [epub, setEpub] = useState<PublishEpubResult | null>(null);
@@ -186,8 +191,10 @@ export function PublishStudio() {
   }, [loadBooks, loadChapters]);
 
   useEffect(() => {
-    if (bookId == null && books.length > 0) setBookId(books[0].id);
-  }, [books, bookId]);
+    if (bookId == null && books.length > 0) {
+      setBookId(books.find((b) => b.id === ctxBookId)?.id ?? books[0].id);
+    }
+  }, [books, bookId, ctxBookId]);
 
   // Audio coverage per chapter (drives the honest M4B gate).
   const refreshCoverage = useCallback(async () => {
@@ -373,7 +380,11 @@ export function PublishStudio() {
           <select
             className={cn(inputClass, 'w-52')}
             value={bookId ?? ''}
-            onChange={(e) => setBookId(Number(e.target.value))}
+            onChange={(e) => {
+              const id = Number(e.target.value);
+              setBookId(id);
+              setCtxBookId(id);
+            }}
           >
             {books.map((b) => <option key={b.id} value={b.id}>{b.title}</option>)}
           </select>
