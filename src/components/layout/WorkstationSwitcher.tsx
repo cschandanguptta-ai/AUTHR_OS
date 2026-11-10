@@ -39,6 +39,27 @@ const STUDIOS: Array<{ id: StudioId; label: string; icon: typeof BookOpen }> = [
   { id: 'publish', label: 'Publish', icon: Rocket },
 ];
 
+/** Shortcut index per studio — pinned to the historical Ctrl/Cmd+Alt+1..7 map
+ *  so grouping (R-14) never moves a studio's keys underneath muscle memory. */
+const STUDIO_KEYS: Record<StudioId, number> = {
+  novel: 1,
+  audio: 2,
+  video: 3,
+  localization: 4,
+  marketing: 5,
+  craft: 6,
+  publish: 7,
+};
+
+/** Target IA (D4 §5): three groups over the same seven surfaces — the user's
+ *  mental model (plan/write · make · sell), not the engineering's. Every
+ *  studio stays one click and keeps its shortcut; only the address changes. */
+const STUDIO_GROUPS: Array<{ label: string; ids: StudioId[] }> = [
+  { label: 'Write', ids: ['novel', 'craft'] },
+  { label: 'Produce', ids: ['audio', 'video', 'localization'] },
+  { label: 'Sell', ids: ['marketing', 'publish'] },
+];
+
 /**
  * Book context chip (R-13): the globally selected book. Craft, KDP packaging,
  * marketing premise and the publish card all follow this pick. With a single
@@ -209,36 +230,56 @@ export function WorkstationSwitcher() {
         <span className="text-[13px] font-mono font-semibold text-accent">_OS</span>
       </div>
 
-      {/* Studio tabs */}
-      <nav className="flex items-center ml-2" aria-label="Studios">
-        {STUDIOS.map((s, i) => (
-          <div key={s.id} className="flex items-center">
-            {i > 0 && (
-              <span className="text-mut/50 text-2xs px-1 select-none" aria-hidden="true">
-                ✦
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={() => setActiveStudio(s.id)}
-              aria-current={activeStudio === s.id ? 'page' : undefined}
-              title={`${s.label} studio — ${IS_MAC ? '⌘⌥' : 'Ctrl+Alt+'}${STUDIOS.indexOf(s) + 1}`}
+      {/* Studio tabs — grouped WRITE / PRODUCE / SELL (R-14), shortcuts unchanged */}
+      <nav className="flex items-center ml-1 gap-1" aria-label="Studios">
+        {STUDIO_GROUPS.map((group, gi) => (
+          <div key={group.label} className="flex items-center">
+            {gi > 0 && <span className="w-px h-5 bg-line mx-1.5" aria-hidden />}
+            <div
               className={cn(
-                'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[13px] transition-colors relative',
-                activeStudio === s.id
-                  ? 'bg-panel3 text-ink font-medium'
-                  : 'text-mut hover:text-ink hover:bg-panel2',
+                'flex items-center gap-0.5 rounded-lg px-1 py-0.5 border',
+                group.ids.includes(activeStudio)
+                  ? 'border-accent/30 bg-accent/5'
+                  : 'border-transparent',
               )}
             >
-              <s.icon size={14} strokeWidth={1.8} className={activeStudio === s.id ? 'text-accent' : ''} />
-              <span className="hidden lg:inline">{s.label}</span>
-              {activeStudio === s.id && (
-                <span
-                  aria-hidden="true"
-                  className="absolute -bottom-[7px] left-2.5 right-2.5 h-[2px] rounded-full bg-accent/80"
-                />
-              )}
-            </button>
+              <span
+                className={cn(
+                  'text-[9px] font-semibold tracking-[0.14em] uppercase select-none px-1',
+                  group.ids.includes(activeStudio) ? 'text-accent/80' : 'text-mut/50',
+                )}
+              >
+                {group.label}
+              </span>
+              {group.ids.map((id) => {
+                const s = STUDIOS.find((x) => x.id === id)!;
+                const active = activeStudio === s.id;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setActiveStudio(s.id)}
+                    aria-current={active ? 'page' : undefined}
+                    title={`${s.label} studio — ${IS_MAC ? '⌘⌥' : 'Ctrl+Alt+'}${STUDIO_KEYS[s.id]}`}
+                    className={cn(
+                      'flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] transition-colors relative',
+                      active
+                        ? 'bg-panel3 text-ink font-medium'
+                        : 'text-mut hover:text-ink hover:bg-panel2',
+                    )}
+                  >
+                    <s.icon size={14} strokeWidth={1.8} className={active ? 'text-accent' : ''} />
+                    <span className="hidden lg:inline">{s.label}</span>
+                    {active && (
+                      <span
+                        aria-hidden="true"
+                        className="absolute -bottom-[3px] left-2 right-2 h-[2px] rounded-full bg-accent/80"
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         ))}
       </nav>

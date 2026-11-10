@@ -3,7 +3,7 @@
 // All craft knowledge comes from the offline `craft_catalog`; nothing here
 // calls the network.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   BookTemplate,
   CheckCircle2,
@@ -21,6 +21,7 @@ import { EmptyState } from '../shared/EmptyState';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { useManuscriptStore } from '../../stores/manuscriptStore';
 import { useBookContextStore, resolveActiveBook } from '../../stores/bookContextStore';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
 import {
   craftApply,
   craftCatalog,
@@ -73,6 +74,10 @@ export function CraftStudio() {
   const activeBookId = useBookContextStore((s) => s.activeBookId);
   const book = resolveActiveBook(books, activeBookId);
   const [sweepConfirm, setSweepConfirm] = useState(false);
+  // R-14: the KDP panel's SELL address — Publish studio (and the dashboard)
+  // link here with arm:'publish'; the intent scrolls + focuses the panel.
+  const kdpRef = useRef<HTMLDivElement>(null);
+  const [kdpFlash, setKdpFlash] = useState(false);
 
   const [catalog, setCatalog] = useState<{
     formats: CatalogEntry[];
@@ -133,6 +138,17 @@ export function CraftStudio() {
         });
       })
       .catch((err) => toastError('Could not load the craft catalog', err));
+
+    // Consume a publish intent (R-07/R-14): land directly on the KDP panel.
+    const intent = useWorkspaceStore.getState().consumeIntent('craft');
+    if (intent?.arm === 'publish') {
+      // Wait a frame so the studio body is mounted before scrolling.
+      requestAnimationFrame(() => {
+        kdpRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setKdpFlash(true);
+        window.setTimeout(() => setKdpFlash(false), 2400);
+      });
+    }
   }, [loadBooks, loadChapters]);
 
   useEffect(() => {
@@ -629,7 +645,14 @@ export function CraftStudio() {
           </div>
 
           {/* ── KDP packaging ── */}
-          <div className="border border-line rounded-xl bg-panel2 px-4 py-3 grid gap-2">
+          <div
+            ref={kdpRef}
+            data-testid="kdp-panel"
+            className={cn(
+              'border rounded-xl bg-panel2 px-4 py-3 grid gap-2 scroll-mt-4 transition-colors',
+              kdpFlash ? 'border-accent/60 shadow-[0_0_0_1px_rgba(245,158,11,0.3)]' : 'border-line',
+            )}
+          >
             <div className="flex items-center gap-2 text-xs font-semibold">
               <Package size={14} className="text-accent" /> KDP storefront package
               <span className="text-2xs text-mut font-normal">offline royalty projection — verify rates on kdp.amazon.com</span>
