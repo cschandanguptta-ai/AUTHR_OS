@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { StudioShell } from '../shared/StudioShell';
 import { EmptyState } from '../shared/EmptyState';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { useManuscriptStore } from '../../stores/manuscriptStore';
 import {
   craftApply,
@@ -64,8 +65,11 @@ function Select<T extends CatalogEntry>(props: {
 
 export function CraftStudio() {
   const books = useManuscriptStore((s) => s.books);
+  const chapters = useManuscriptStore((s) => s.chapters);
   const loadBooks = useManuscriptStore((s) => s.loadBooks);
+  const loadChapters = useManuscriptStore((s) => s.loadChapters);
   const book = books[0] ?? null;
+  const [sweepConfirm, setSweepConfirm] = useState(false);
 
   const [catalog, setCatalog] = useState<{
     formats: CatalogEntry[];
@@ -116,6 +120,7 @@ export function CraftStudio() {
 
   useEffect(() => {
     void loadBooks();
+    void loadChapters();
     void craftCatalog()
       .then((c) => {
         setCatalog({
@@ -125,7 +130,7 @@ export function CraftStudio() {
         });
       })
       .catch((err) => toastError('craft_catalog failed', err));
-  }, [loadBooks]);
+  }, [loadBooks, loadChapters]);
 
   useEffect(() => {
     if (!book) return;
@@ -180,6 +185,19 @@ export function CraftStudio() {
   };
 
   const scaffold = async () => {
+    if (!book) return;
+    // Guard (R-06): overwriting synopses destroys written ones — confirm first.
+    if (overwrite) {
+      const written = chapters.some((c) => c.book_id === book.id && c.synopsis.trim().length > 0);
+      if (written) {
+        setSweepConfirm(true);
+        return;
+      }
+    }
+    await runScaffold();
+  };
+
+  const runScaffold = async () => {
     if (!book) return;
     setBusy(true);
     try {
@@ -739,6 +757,18 @@ export function CraftStudio() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={sweepConfirm}
+        title="Overwrite existing synopses?"
+        body="This book already has written chapter synopses. Scaffolding with overwrite replaces every one of them with the arc's beat guidance. This cannot be undone."
+        confirmLabel="Overwrite synopses"
+        onConfirm={() => {
+          setSweepConfirm(false);
+          void runScaffold();
+        }}
+        onClose={() => setSweepConfirm(false)}
+      />
     </StudioShell>
   );
 }

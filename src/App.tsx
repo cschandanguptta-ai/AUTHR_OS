@@ -9,6 +9,7 @@ import { WorkstationSwitcher } from './components/layout/WorkstationSwitcher';
 import { CommandPalette } from './components/layout/CommandPalette';
 import { Cockpit } from './components/layout/Cockpit';
 import { Toaster } from './components/layout/Toaster';
+import { AppConfirmHost } from './components/shared/AppConfirmHost';
 import { useWorkspaceStore } from './stores/workspaceStore';
 
 // Studio code-splitting (latency workstream): the cockpit is the primary
@@ -73,6 +74,7 @@ export default function App() {
       <div className="h-full flex flex-col bg-app text-ink">
         <WelcomeScreen />
         <Toaster />
+        <AppConfirmHost />
       </div>
     );
   }
@@ -98,6 +100,7 @@ export default function App() {
       </main>
       <CommandPalette />
       <Toaster />
+      <AppConfirmHost />
     </div>
   );
 }

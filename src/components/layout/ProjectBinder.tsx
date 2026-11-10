@@ -41,6 +41,7 @@ import { LoreModal } from './modals/LoreModal';
 import { ThreadModal } from './modals/ThreadModal';
 import { BinderAskBody } from './BinderAskPanel';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
+import { useUndoStore } from '../shared/UndoToast';
 import type { ChapterRow, CharacterRow, LoreRow } from '../../types/ast';
 
 function SectionHeader({
@@ -356,7 +357,21 @@ function LoreSection({ open, onToggle }: { open: boolean; onToggle: () => void }
           : ''}
         confirmLabel="Delete entry"
         onConfirm={() => {
-          if (deleteTarget) void deleteLore(deleteTarget.key);
+          if (deleteTarget) {
+            const snapshot = deleteTarget; // inverse is a cheap upsert → UndoToast
+            void deleteLore(snapshot.key).then((ok) => {
+              if (ok) {
+                useUndoStore.getState().show(`Deleted lore entry “${snapshot.key}”`, () => {
+                  void useLoreStore.getState().upsertLore({
+                    key: snapshot.key,
+                    content: snapshot.content,
+                    category: snapshot.category,
+                    ipa_phonetic: snapshot.ipa_phonetic || undefined,
+                  });
+                });
+              }
+            });
+          }
           setDeleteTarget(null);
         }}
         onClose={() => setDeleteTarget(null)}

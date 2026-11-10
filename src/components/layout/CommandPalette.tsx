@@ -28,6 +28,7 @@ import { useWorkspaceStore, type StudioId, type ViewMode } from '../../stores/wo
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useAiAssistStore } from '../../stores/aiAssistStore';
+import { useConfirmStore } from '../../stores/confirmStore';
 import * as api from '../../ipc/api';
 import { toast, toastError } from '../../stores/uiStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
@@ -164,21 +165,31 @@ function buildCommands(): Command[] {
       id: 'clean-sweep',
       group: 'Project',
       label: 'Clean sweep + FTS rebuild',
-      hint: 'Purge purgatory segments and threads',
+      hint: 'purge orphan segments and threads — asks to confirm',
       keys: 'clean_sweep',
       icon: Sparkles,
-      run: async () => {
+      run: () => {
         close();
-        try {
-          const res = await api.cleanSweep();
-          toast(
-            'success',
-            'Clean sweep complete',
-            `${res.purged_segments} segments + ${res.purged_threads} threads purged · FTS rebuilt`,
-          );
-        } catch (err) {
-          toastError('clean_sweep failed', err);
-        }
+        useConfirmStore.getState().ask({
+          title: 'Run clean sweep?',
+          body: 'Purges orphaned segment purgatory rows and threads, then rebuilds the full-text index. It cannot be undone.',
+          confirmLabel: 'Clean sweep',
+          typeToConfirm: 'sweep',
+          onConfirm: () => {
+            void (async () => {
+              try {
+                const res = await api.cleanSweep();
+                toast(
+                  'success',
+                  'Clean sweep complete',
+                  `${res.purged_segments} segments + ${res.purged_threads} threads purged · FTS rebuilt`,
+                );
+              } catch (err) {
+                toastError('clean_sweep failed', err);
+              }
+            })();
+          },
+        });
       },
     },
     {

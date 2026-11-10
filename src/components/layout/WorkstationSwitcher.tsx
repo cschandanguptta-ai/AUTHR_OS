@@ -23,6 +23,7 @@ import { toast, toastError } from '../../stores/uiStore';
 import { cn, IS_MAC, MOD_KEY } from '../../lib/utils';
 import { SettingsPopover } from './SettingsPopover';
 import { useDismiss } from '../../hooks/useDismiss';
+import { useConfirmStore } from '../../stores/confirmStore';
 
 const STUDIOS: Array<{ id: StudioId; label: string; icon: typeof BookOpen }> = [
   { id: 'novel', label: 'Novel', icon: BookOpen },
@@ -90,17 +91,27 @@ export function WorkstationSwitcher() {
   };
 
   const cleanSweep = async () => {
-    try {
-      const res = await api.cleanSweep();
-      toast(
-        'success',
-        'Clean sweep complete',
-        `${res.purged_segments} segments + ${res.purged_threads} threads purged · FTS rebuilt`,
-      );
-    } catch (err) {
-      toastError('clean_sweep failed', err);
-    }
     setMenuOpen(false);
+    useConfirmStore.getState().ask({
+      title: 'Run clean sweep?',
+      body: 'Purges orphaned segment purgatory rows and threads, then rebuilds the full-text index. Attached chapters keep their text — this only removes orphans. It cannot be undone.',
+      confirmLabel: 'Clean sweep',
+      typeToConfirm: 'sweep',
+      onConfirm: () => {
+        void (async () => {
+          try {
+            const res = await api.cleanSweep();
+            toast(
+              'success',
+              'Clean sweep complete',
+              `${res.purged_segments} segments + ${res.purged_threads} threads purged · FTS rebuilt`,
+            );
+          } catch (err) {
+            toastError('clean_sweep failed', err);
+          }
+        })();
+      },
+    });
   };
 
   return (
