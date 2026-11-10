@@ -85,6 +85,14 @@ export function ProduceRunCard() {
     if (activeStudio === 'audio' && activeChapterId) void loadSegments(activeChapterId);
   }, [activeStudio, activeChapterId, loadSegments]);
 
+  // A finished run invalidates the local audio picture — reload the chapter's
+  // segments so the M4B gate and the unrendered counts reflect reality.
+  const runFinished = run?.status === 'done' || run?.status === 'canceled';
+  useEffect(() => {
+    if (runFinished && activeChapterId) void loadSegments(activeChapterId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runFinished, run?.id]);
+
   const chapter = chapters.find((c) => c.id === activeChapterId) ?? null;
   const running = run?.status === 'running';
   const allSynthesized = segments.length > 0 && segments.every((s) => Boolean(s.audio_hash));

@@ -10,6 +10,11 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: false,
+    // The Rust target tree exhausts inotify watches (ENOSPC) — nothing in the
+    // dev bridge needs it; the middleware spawns the release binary directly.
+    watch: {
+      ignored: ['**/src-tauri/target/**'],
+    },
   },
   build: {
     target: 'es2022',
