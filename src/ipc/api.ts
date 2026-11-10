@@ -1,5 +1,6 @@
-// AUTHR_OS — Typed IPC surface: one function per contract command (33 total).
-// Every store and component goes through this module only.
+// AUTHR_OS — Typed IPC surface: one function per contract command (69 of 74;
+// the unwrapped remainder — release/benchmark, local_tts_generate, status
+// probes — stay CLI-first). Every store and component goes through this module.
 // Contract reference: docs/CLI_CONTRACT.md §4.
 
 import { invoke } from './bridge';
@@ -252,6 +253,291 @@ export function cleanSweep() {
   return invoke<{ purged_segments: number; purged_threads: number; fts_rebuilt: boolean }>(
     'clean_sweep',
   );
+}
+
+// ── 4.11 Audio Studio (v1.1) — shapes verified against the release binary ────
+
+export interface AudioCacheStats {
+  root: string;
+  chunks: number;
+  bytes: number;
+  hits: number;
+  misses: number;
+  hit_rate: number;
+}
+
+export function audioCacheStats() {
+  return invoke<AudioCacheStats>('audio_cache_stats', {});
+}
+
+export interface PronounceEntry {
+  name: string;
+  ipa: string;
+  source: 'lexicon' | 'rules';
+}
+
+export function audioPronounce(args: { names: string[] }) {
+  return invoke<{ entries: PronounceEntry[]; count: number }>('audio_pronounce', args);
+}
+
+export interface AudioPlanTurn {
+  idx: number;
+  speaker: string;
+  text_chars?: number;
+  est_ms?: number;
+}
+
+export interface AudioPlanResult {
+  turns: number;
+  speakers: number;
+  waves: AudioPlanTurn[][];
+  wave_count: number;
+  deps: unknown[];
+  continuity: Array<{ turn: number; previous_request_from: string | null; previous_request_id: string | null }>;
+  order: number[];
+  segment_turns: AudioPlanTurn[];
+}
+
+export function audioPlan(args: { chapter_id: number }) {
+  return invoke<AudioPlanResult>('audio_plan', args);
+}
+
+/** Single-segment form (voice preview) → cached/hash/path; chapter form → per-segment results. */
+export type AudioSynthesizeArgs =
+  | { text: string; voice?: string; engine?: string; sample_rate?: number; rate?: number; pitch?: number; ipa_names?: string[] }
+  | { chapter_id: number; engine?: string; sample_rate?: number; ipa_names?: string[]; dry_run?: boolean };
+
+export interface AudioSynthSegmentResult {
+  idx: number;
+  segment_id: string;
+  speaker: string;
+  cached: boolean;
+  hash: string;
+  path: string;
+  duration_ms?: number;
+  request_id?: string;
+  previous_request_id?: string | null;
+}
+
+export type AudioSynthesizeResult =
+  | { cached: boolean; hash: string; engine: string; path: string; duration_ms?: number; request_id?: string }
+  | { chapter_id: number; engine: string; turns: number; cache_hits: number; waves: number; results: AudioSynthSegmentResult[] };
+
+export function audioSynthesize(args: AudioSynthesizeArgs) {
+  return invoke<AudioSynthesizeResult>('audio_synthesize', args);
+}
+
+export type AudioLayerKind = 'SPEECH' | 'SFX' | 'AMBIENT';
+
+export interface AudioMasterLayer {
+  kind: AudioLayerKind;
+  wav: string;
+  gain_db?: number;
+  offset_ms?: number;
+}
+
+export interface AudioAcxReport {
+  pass: boolean;
+  rms_db: number;
+  peak_db: number;
+  noise_floor_db: number;
+  checks: { rms_ok: boolean; peak_ok: boolean; noise_ok: boolean };
+  issues: string[];
+}
+
+export interface AudioMasterResult {
+  out: string;
+  sample_rate: number;
+  layers: number;
+  duck: { ducked_samples: number; ducked_ms: number };
+  metrics: {
+    rms_db: number;
+    peak_db: number;
+    lufs: number;
+    noise_floor_db: number;
+    gain_applied_db: number;
+    limited: boolean;
+    target_rms_db?: number;
+  };
+  acx: AudioAcxReport;
+}
+
+export function audioMaster(args: {
+  layers: AudioMasterLayer[];
+  sample_rate?: number;
+  /** BARE filename — the backend prepends `exports/` (passing a path double-prefixes). */
+  out?: string;
+  target_rms_db?: number;
+  ceiling_db?: number;
+  duck?: boolean;
+  duck_params?: { depth_db?: number; attack_ms?: number; release_ms?: number };
+}) {
+  return invoke<AudioMasterResult>('audio_master', args);
+}
+
+export function audioValidate(args: { wav: string }) {
+  return invoke<AudioAcxReport>('audio_validate', args);
+}
+
+// ── 4.12 Local-First AI & Vector RAG (v1.1) — live-verified shapes ──────────
+
+export interface RagIndexResult {
+  indexed: Record<string, number>;
+  total_chunks: number;
+  dim: number;
+  embedder: string;
+  elapsed_ms: number;
+  sources_requested: string[];
+}
+
+export function ragIndex(args: { sources?: string[]; book_id?: number; embedder?: string } = {}) {
+  return invoke<RagIndexResult>('rag_index', args);
+}
+
+export interface RagHit {
+  chunk_id: string;
+  source: string;
+  ref_id: string;
+  snippet: string;
+  score: number;
+  ranks: { dense?: number; fts?: number };
+}
+
+export interface RagSearchResult {
+  query: string;
+  mode: string;
+  k: number;
+  hits: RagHit[];
+  returned: number;
+  corpus: number;
+  embedder: string;
+  latency_us: number;
+  latency_ms: number;
+}
+
+export function ragSearch(args: { query: string; k?: number; mode?: 'hybrid' | 'dense' | 'fts'; embedder?: string }) {
+  return invoke<RagSearchResult>('rag_search', args);
+}
+
+export interface RagStatusResult {
+  chunks: number;
+  by_source: Record<string, number>;
+  embedder: string;
+  dim: number;
+  modes: string[];
+}
+
+export function ragStatus() {
+  return invoke<RagStatusResult>('rag_status', {});
+}
+
+export interface LocalLlmStatusResult {
+  default_backend: string;
+  server_configured: boolean;
+  server_url?: string | null;
+  resolved_source?: string;
+  capabilities: {
+    grammar_constrained_output: boolean;
+    prompt_prefix_kv_cache: boolean;
+    offline: boolean;
+  };
+}
+
+export function localLlmStatus() {
+  return invoke<LocalLlmStatusResult>('local_llm_status', {});
+}
+
+// ── 4.13 Publishing & Release (v1.2) — live-verified shapes ─────────────────
+
+export interface PublishEpubResult {
+  out: string;
+  format: string;
+  entries: number;
+  chapters: number;
+  overlays: number;
+  duration_ms: number;
+  dc: Record<string, string>;
+  cover?: { embedded: boolean; hint?: string; warnings?: string[] };
+  front_matter?: string[];
+}
+
+export function publishEpub(args: { book_id: number }) {
+  return invoke<PublishEpubResult>('publish_epub', args);
+}
+
+export function publishDocx(args: { book_id: number }) {
+  return invoke<{ out: string; chapters: number; paragraphs: number; words: number }>('publish_docx', args);
+}
+
+export function publishTypst(args: { book_id: number; typ_bin?: string }) {
+  return invoke<{
+    typ: string;
+    pdf?: string | null;
+    compiled: boolean;
+    reason?: string;
+    chapters: number;
+    words: number;
+  }>('publish_typst', args);
+}
+
+export function publishCaptions(args: { chapter_id: number; formats?: string[] }) {
+  return invoke<{
+    chapter_id: number;
+    lrc?: string;
+    vtt?: string;
+    cues: number;
+    duration_ms: number;
+  }>('publish_captions', args);
+}
+
+export function publishM4b(args: { book_id?: number; chapter_id?: number; ffmpeg_bin?: string }) {
+  return invoke<{
+    out: string;
+    bytes: number;
+    chapters: number;
+    duration_ms: number;
+    codec: string;
+    ffmpeg: string;
+  }>('publish_m4b', args);
+}
+
+export interface ReleaseManifestData {
+  artifact: string;
+  artifact_bytes: number;
+  artifact_sha256: string;
+  version: string;
+  pub_date: string;
+  public_key: string;
+  signature: string;
+  platform: { os: string; arch: string };
+  authr_release?: string;
+  url?: string | null;
+}
+
+export function releaseManifest(args: {
+  /** ABSOLUTE path — release_* are bundle-free commands. */
+  artifact: string;
+  version?: string;
+  url?: string;
+  key_hex?: string;
+  out?: string;
+}) {
+  return invoke<{
+    manifest: string;
+    manifest_data: ReleaseManifestData;
+    artifact_bytes: number;
+    artifact_sha256: string;
+    generated_key_hex?: string;
+  }>('release_manifest', args);
+}
+
+export function releaseVerify(args: { manifest: string; artifact?: string }) {
+  return invoke<{
+    valid: boolean;
+    checks: { sha256: boolean; signature: boolean };
+    artifact: string;
+    version: string;
+  }>('release_verify', args);
 }
 
 // ── 4.14 Craft catalog & storefront packaging (contract v1.3) ───────────────

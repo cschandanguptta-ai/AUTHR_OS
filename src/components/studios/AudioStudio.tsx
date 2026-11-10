@@ -1,20 +1,23 @@
-// AudioStudio — Restored Studio 1 (Sprint 8): voice profiling, character
-// casting, pronunciation dictionary and the 3-layer DSP rack visualization.
-// Synthesis itself arrives with Phase 4 (Lookahead TTS + DSP rack); everything
-// editable here is real contract-backed data.
+// AudioStudio — voice profiling, casting, pronunciation, and the in-window
+// produce pipeline (D7 §2, R-01): one Run action takes a chapter from text to
+// an ACX-checked, captioned audiobook. Everything here is real contract-backed
+// data — the old decorative DSP rack is gone; the mastering knobs on the
+// produce card are the actual audio_master parameters.
 
 import { useEffect, useMemo, useState } from 'react';
-import { AudioWaveform, BookA, Loader2, Mic2, Save, Sliders, Sparkles, Trash2 } from 'lucide-react';
+import { AudioWaveform, BookA, Mic2, Save, Sparkles, Trash2 } from 'lucide-react';
 import { StudioShell } from '../shared/StudioShell';
 import { EmptyState } from '../shared/EmptyState';
-import { AudioStateBadge } from '../shared/AudioStateBadge';
 import { useVoiceCastStore } from '../../stores/voiceCastStore';
 import { useLoreStore } from '../../stores/loreStore';
 import { useManuscriptStore } from '../../stores/manuscriptStore';
-import { ROLE_BADGES, VOICE_ENGINES, EMOTION_PRESETS } from '../../lib/constants';
-import { cn } from '../../lib/utils';
+import { useAudioRunStore, type AudioRunRecord } from '../../stores/audioRunStore';
+import { audioCacheStats, audioPronounce, type AudioCacheStats, type PronounceEntry } from '../../ipc/api';
+import { ROLE_BADGES, EMOTION_PRESETS, emotionChipClass } from '../../lib/constants';
+import { cn, formatBytes } from '../../lib/utils';
 import { inputClass, btnPrimary } from '../layout/Modal';
 import { toast } from '../../stores/uiStore';
+import { ProduceRunCard } from './audio/ProduceRunCard';
 import type { CharacterRow } from '../../types/ast';
 
 function SectionTitle({ icon: Icon, children, aside }: {
@@ -75,14 +78,14 @@ function VoiceRow({ character }: { character: CharacterRow }) {
               <Save size={11} /> Save voice
             </button>
           )}
-          {busy && <Loader2 size={13} className="animate-spin text-accent" />}
+          {busy && <span className="text-2xs text-mut">saving…</span>}
           {draft.role !== 'NARRATOR' && (
             <button
               type="button"
               title="Remove from cast (blocked while segments reference this speaker)"
               onClick={async () => {
                 const ok = await deleteCharacter(draft.character_key);
-                if (!ok) toast('warn', 'Cannot delete', 'Segments still reference this speaker.');
+                if (!ok) toast('warn', 'Cannot remove', 'Segments still reference this speaker.');
               }}
               className="text-mut hover:text-bad transition-colors"
               aria-label={`Delete ${draft.display_name}`}
@@ -100,7 +103,9 @@ function VoiceRow({ character }: { character: CharacterRow }) {
             value={draft.voice_engine}
             onChange={(e) => setDraft({ ...draft, voice_engine: e.target.value })}
           >
-            {VOICE_ENGINES.map((e) => <option key={e} value={e}>{e}</option>)}
+            {['SCRIPTED', 'KOKORO_LOCAL', 'EDGE_TTS', 'ELEVEN_LABS', 'CARTESIA', 'OPENAI_TTS'].map((e) => (
+              <option key={e} value={e}>{e}</option>
+            ))}
           </select>
         </label>
         <label className="grid gap-1">
@@ -153,13 +158,43 @@ function PronunciationEditor() {
   const upsertCharacter = useVoiceCastStore((s) => s.upsertCharacter);
   const lore = useLoreStore((s) => s.lore);
   const upsertLore = useLoreStore((s) => s.upsertLore);
+  const [check, setCheck] = useState<PronounceEntry[] | null>(null);
+  const [checking, setChecking] = useState(false);
+
+  const runCheck = async () => {
+    const names = [
+      ...characters.map((c) => c.display_name),
+      ...lore.map((l) => l.key),
+    ].filter(Boolean);
+    if (names.length === 0) return;
+    setChecking(true);
+    try {
+      const res = await audioPronounce({ names });
+      setCheck(res.entries);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast('error', 'Pronunciation check failed', msg);
+    } finally {
+      setChecking(false);
+    }
+  };
 
   return (
     <div className="px-6 grid gap-2" data-testid="pronunciation-dictionary">
-      <p className="text-2xs text-mut">
-        Proper-noun IPA substitution (§6.5 G2P): any token with a non-empty phonetic is
-        injected verbatim before synthesis.
-      </p>
+      <div className="flex items-center gap-2 flex-wrap">
+        <p className="text-2xs text-mut flex-1 min-w-[24ch]">
+          Proper-noun IPA substitution (§6.5 G2P): any token with a non-empty phonetic is
+          injected verbatim before synthesis.
+        </p>
+        <button
+          type="button"
+          onClick={() => void runCheck()}
+          disabled={checking}
+          className="text-2xs px-2 py-1 rounded border border-line text-mut hover:text-ink"
+        >
+          {checking ? 'Checking…' : 'Verify names through the G2P engine'}
+        </button>
+      </div>
       {characters.filter((c) => c.role !== 'NARRATOR').map((c) => (
         <div key={c.character_key} className="flex items-center gap-2">
           <span className="text-xs w-28 truncate" title={c.display_name}>{c.display_name}</span>
@@ -194,6 +229,79 @@ function PronunciationEditor() {
       {characters.length === 0 && lore.length === 0 && (
         <p className="text-2xs text-mut">No cast or lore entries yet.</p>
       )}
+      {check && check.length > 0 && (
+        <div className="grid gap-0.5 border border-line rounded-lg bg-panel px-3 py-2" data-testid="pronounce-check">
+          {check.map((e) => (
+            <div key={e.name} className="flex items-center gap-2 text-2xs font-mono">
+              <span className="text-ink w-32 truncate">{e.name}</span>
+              <span className="text-accent">/{e.ipa}/</span>
+              <span className="text-mut ml-auto">{e.source}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RunHistory() {
+  const history = useAudioRunStore((s) => s.history);
+  const clearHistory = useAudioRunStore((s) => s.clearHistory);
+
+  const verdict = (r: AudioRunRecord) => {
+    if (r.status === 'done') {
+      return r.acx?.pass
+        ? <span className="text-2xs px-1.5 py-0.5 rounded border border-emerald-500/40 bg-emerald-500/10 text-ok">ACX PASS</span>
+        : <span className="text-2xs px-1.5 py-0.5 rounded border border-amber-500/40 bg-amber-500/10 text-warn">ACX CHECK</span>;
+    }
+    if (r.status === 'failed') {
+      return <span className="text-2xs px-1.5 py-0.5 rounded border border-rose-500/40 bg-rose-500/10 text-bad">FAILED</span>;
+    }
+    if (r.status === 'canceled') {
+      return <span className="text-2xs px-1.5 py-0.5 rounded border border-amber-500/40 bg-amber-500/10 text-warn">CANCELED</span>;
+    }
+    return null;
+  };
+
+  return (
+    <div className="px-6 grid gap-1.5">
+      {history.length === 0 ? (
+        <p className="text-2xs text-mut">
+          No runs yet — the last 12 produce runs land here with their ACX verdict and artifacts.
+        </p>
+      ) : (
+        <>
+          {history.map((r) => (
+            <div key={r.id} className="border border-line rounded-lg bg-panel2 px-3 py-2 grid gap-1" data-testid="run-history-row">
+              <div className="flex items-center gap-2 flex-wrap text-2xs">
+                <span className="font-mono text-mut">
+                  {new Date(r.finishedAt ?? r.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+                <span className="text-ink font-medium">{r.chapterLabel}</span>
+                <span className="font-mono text-mut">{r.engine}</span>
+                <span className="text-mut">{r.segments} segments</span>
+                {verdict(r)}
+                {r.acx && (
+                  <span className="font-mono text-mut/80">
+                    RMS {r.acx.rms_db.toFixed(1)} · Peak {r.acx.peak_db.toFixed(1)} · Noise {r.acx.noise_floor_db.toFixed(1)}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2 flex-wrap text-2xs font-mono text-mut/80">
+                {[r.artifacts.masterWav, r.artifacts.vtt, r.artifacts.lrc, r.artifacts.m4b]
+                  .filter(Boolean)
+                  .map((a) => <span key={a}>✓ {a}</span>)}
+                {r.status === 'failed' && <span className="text-bad/80">{r.error?.title}</span>}
+              </div>
+            </div>
+          ))}
+          <div>
+            <button type="button" onClick={clearHistory} className="text-2xs text-mut hover:text-ink underline decoration-dotted">
+              Clear history
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -203,27 +311,40 @@ export function AudioStudio() {
   const loadCharacters = useVoiceCastStore((s) => s.loadCharacters);
   const loadLore = useLoreStore((s) => s.loadLore);
   const segments = useManuscriptStore((s) => s.segments);
-  const [layerState, setLayerState] = useState<Record<string, { muted: boolean; solo: boolean }>>({
-    speech: { muted: false, solo: false },
-    sfx: { muted: false, solo: false },
-    ambient: { muted: false, solo: false },
-  });
+  const selectedSegmentId = useManuscriptStore((s) => s.selectedSegmentId);
+  const updateSegment = useManuscriptStore((s) => s.updateSegment);
+  const [cache, setCache] = useState<AudioCacheStats | null>(null);
 
   useEffect(() => {
     void loadCharacters();
     void loadLore();
+    audioCacheStats().then(setCache).catch(() => setCache(null));
   }, [loadCharacters, loadLore]);
 
-  const unrendered = useMemo(() => segments.filter((s) => !s.audio_hash).length, [segments]);
-  const castable = characters.filter((c) => c.role !== 'NARRATOR');
+  const castable = useMemo(() => characters.filter((c) => c.role !== 'NARRATOR'), [characters]);
+  const selectedSegment = segments.find((s) => s.segment_id === selectedSegmentId) ?? null;
+
+  const applyEmotion = (id: string, label: string) => {
+    if (!selectedSegment) {
+      toast('warn', 'No segment selected', 'Click a paragraph in the editor, then apply an emotion here.');
+      return;
+    }
+    updateSegment(selectedSegment.segment_id, { emotion: id });
+    toast('info', `Emotion: ${label}`, `Applied to the selected segment — saved with the next autosave.`);
+  };
 
   return (
     <StudioShell
       icon={AudioWaveform}
       title="Audio Studio"
-      subtitle="Voice profiling · casting · pronunciation · 3-layer DSP rack preview"
+      subtitle="Voice profiling · casting · pronunciation · produce chapter audio"
     >
       <div className="pb-10">
+        <SectionTitle icon={AudioWaveform}>Produce run — chapter audiobook</SectionTitle>
+        <div className="px-6">
+          <ProduceRunCard />
+        </div>
+
         <SectionTitle icon={Mic2}>Voice Cast Rack — profiling</SectionTitle>
         <div className="px-6 grid gap-3">
           {castable.length === 0 ? (
@@ -240,81 +361,50 @@ export function AudioStudio() {
         <SectionTitle icon={BookA}>Pronunciation dictionary</SectionTitle>
         <PronunciationEditor />
 
-        <SectionTitle icon={Sparkles}>Emotion presets</SectionTitle>
+        <SectionTitle
+          icon={Sparkles}
+          aside={selectedSegment
+            ? <span className="text-2xs text-mut font-mono">applies to selected segment #{selectedSegment.sequence_order}</span>
+            : undefined}
+        >
+          Emotion presets — one-click on the selected segment
+        </SectionTitle>
         <div className="px-6 grid grid-cols-5 gap-2">
           {EMOTION_PRESETS.map((e) => (
-            <div key={e.id} className="border border-line rounded-lg bg-panel2 px-3 py-2.5" title={e.hint}>
+            <button
+              key={e.id}
+              type="button"
+              onClick={() => applyEmotion(e.id, e.label)}
+              title={selectedSegment ? `${e.hint} — apply to the selected segment` : e.hint}
+              className={cn(
+                'border rounded-lg px-3 py-2.5 text-left transition-colors hover:border-accent/50',
+                selectedSegment?.emotion === e.id ? e.chip : 'border-line bg-panel2',
+              )}
+            >
               <div className="text-xs font-semibold">{e.label}</div>
               <div className="text-2xs text-mut mt-0.5 leading-tight">{e.hint}</div>
-            </div>
+            </button>
           ))}
         </div>
-
-        <SectionTitle
-          icon={Sliders}
-          aside={<span className="text-2xs text-mut font-mono">sidechain −18 dB · attack 120 ms · release 750 ms</span>}
-        >
-          3-layer mastering rack (visual preview — DSP ships in Phase 4)
-        </SectionTitle>
-        <div className="px-6 grid gap-2">
-          {[
-            { id: 'speech', label: 'Layer 1 — Multi-Voice Speech', engine: 'per-character voice profiles' },
-            { id: 'sfx', label: 'Layer 2 — Spot-SFX Foley', engine: '40-cue bundled Foley library' },
-            { id: 'ambient', label: 'Layer 3 — Ambient Bed', engine: 'ducked under speech · procedural loops' },
-          ].map((layer) => {
-            const st = layerState[layer.id];
-            return (
-              <div key={layer.id} className="flex items-center gap-3 border border-line rounded-xl bg-panel2 px-4 py-3">
-                <AudioWaveform size={15} className="text-accent shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs font-semibold">{layer.label}</div>
-                  <div className="text-2xs text-mut">{layer.engine}</div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setLayerState((s) => ({ ...s, [layer.id]: { ...st, muted: !st.muted } }))}
-                  className={cn(
-                    'text-2xs px-2 py-1 rounded border font-mono',
-                    st.muted ? 'border-red-500/40 bg-red-500/10 text-bad' : 'border-line text-mut hover:text-ink',
-                  )}
-                >
-                  {st.muted ? 'MUTED' : 'LIVE'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLayerState((s) => ({ ...s, [layer.id]: { ...st, solo: !st.solo } }))}
-                  className={cn(
-                    'text-2xs px-2 py-1 rounded border font-mono',
-                    st.solo ? 'border-amber-500/40 bg-amber-500/10 text-warn' : 'border-line text-mut hover:text-ink',
-                  )}
-                >
-                  {st.solo ? 'SOLO' : 'SOLO'}
-                </button>
-              </div>
-            );
-          })}
-        </div>
+        {selectedSegment && (
+          <p className="px-6 pt-2 text-2xs text-mut">
+            Selected segment emotion: <span className={cn('text-2xs px-1.5 py-0.5 rounded border ml-1', emotionChipClass(selectedSegment.emotion))}>
+              {selectedSegment.emotion}
+            </span>
+          </p>
+        )}
 
         <SectionTitle
           icon={AudioWaveform}
-          aside={<span className="text-2xs text-mut font-mono">{unrendered} unrendered in open chapter</span>}
-        >
-          Render queue (open chapter)
-        </SectionTitle>
-        <div className="px-6 grid gap-1">
-          {segments.length === 0 ? (
-            <p className="text-2xs text-mut">Open a chapter in the cockpit to queue its segments.</p>
-          ) : (
-            segments.map((s) => (
-              <div key={s.segment_id} className="flex items-center gap-3 border-b border-line/60 py-1.5">
-                <span className="font-mono text-2xs text-mut w-8">#{s.sequence_order}</span>
-                <span className="text-xs truncate flex-1" title={s.text_content}>{s.text_content}</span>
-                <span className="text-2xs text-mut">{s.emotion}</span>
-                <AudioStateBadge segment={{ audio_hash: s.audio_hash, audio_duration_ms: s.audio_duration_ms }} />
-              </div>
-            ))
+          aside={cache && (
+            <span className="text-2xs text-mut font-mono">
+              {cache.chunks} chunks · {formatBytes(cache.bytes)} · hit rate {(cache.hit_rate * 100).toFixed(0)}%
+            </span>
           )}
-        </div>
+        >
+          Run history
+        </SectionTitle>
+        <RunHistory />
       </div>
     </StudioShell>
   );
