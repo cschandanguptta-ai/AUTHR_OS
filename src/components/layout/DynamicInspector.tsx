@@ -15,8 +15,15 @@ import {
 } from '../../lib/constants';
 import { cn, formatNumber, formatMs } from '../../lib/utils';
 import { AudioStateBadge } from '../shared/AudioStateBadge';
+import { Select } from '../shared/Select';
 import { inputClass } from './Modal';
 import type { SegmentType } from '../../types/ast';
+
+const EMOTIONS = [
+  'neutral', 'tense', 'whisper', 'cold_anger', 'joyful',
+  'sorrowful', 'defiant', 'serene', 'urgent', 'tender',
+] as const;
+
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -128,44 +135,25 @@ export function DynamicInspector() {
               </button>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <select
-                className={`${inputClass} py-1`}
+              <Select
                 value={bulkSpeaker}
-                onChange={(e) => setBulkSpeaker(e.target.value)}
-                aria-label="Bulk speaker"
-              >
-                <option value="">Speaker — keep</option>
-                <option value="NARRATOR">NARRATOR</option>
-                {characters.map((c) => (
-                  <option key={c.character_key} value={c.character_key}>
-                    {c.display_name}
-                  </option>
-                ))}
-              </select>
-              <select
-                className={`${inputClass} py-1`}
+                onChange={setBulkSpeaker}
+                ariaLabel="Bulk speaker"
+                options={[
+                  { value: '', label: 'Speaker — keep' },
+                  { value: 'NARRATOR', label: 'NARRATOR' },
+                  ...characters.map((c) => ({ value: c.character_key, label: c.display_name })),
+                ]}
+              />
+              <Select
                 value={bulkEmotion}
-                onChange={(e) => setBulkEmotion(e.target.value)}
-                aria-label="Bulk emotion"
-              >
-                <option value="">Emotion — keep</option>
-                {[
-                  'neutral',
-                  'tense',
-                  'whisper',
-                  'cold_anger',
-                  'joyful',
-                  'sorrowful',
-                  'defiant',
-                  'serene',
-                  'urgent',
-                  'tender',
-                ].map((emo) => (
-                  <option key={emo} value={emo}>
-                    {emotionLabel(emo)}
-                  </option>
-                ))}
-              </select>
+                onChange={setBulkEmotion}
+                ariaLabel="Bulk emotion"
+                options={[
+                  { value: '', label: 'Emotion — keep' },
+                  ...EMOTIONS.map((emo) => ({ value: emo, label: emotionLabel(emo) })),
+                ]}
+              />
             </div>
             <button
               type="button"
@@ -209,63 +197,34 @@ export function DynamicInspector() {
           </div>
 
           <Row label="Type">
-            <select
-              className={`${inputClass} py-1`}
+            <Select
               value={segment.segment_type}
-              onChange={(e) =>
+              onChange={(v) =>
                 updateSegment(segment.segment_id, {
-                  segment_type: e.target.value as SegmentType,
+                  segment_type: v as SegmentType,
                 })
               }
-            >
-              {SEGMENT_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {SEGMENT_TYPE_LABELS[t]}
-                </option>
-              ))}
-            </select>
+              options={SEGMENT_TYPES.map((t) => ({ value: t, label: SEGMENT_TYPE_LABELS[t] }))}
+            />
           </Row>
 
           <Row label="Speaker">
-            <select
-              className={`${inputClass} py-1`}
+            <Select
               value={segment.speaker_id}
-              onChange={(e) =>
-                updateSegment(segment.segment_id, { speaker_id: e.target.value })
-              }
-            >
-              <option value="NARRATOR">NARRATOR</option>
-              {characters.map((c) => (
-                <option key={c.character_key} value={c.character_key}>
-                  {c.display_name}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => updateSegment(segment.segment_id, { speaker_id: v })}
+              options={[
+                { value: 'NARRATOR', label: 'NARRATOR' },
+                ...characters.map((c) => ({ value: c.character_key, label: c.display_name })),
+              ]}
+            />
           </Row>
 
           <Row label="Emotion">
-            <select
-              className={`${inputClass} py-1`}
+            <Select
               value={segment.emotion}
-              onChange={(e) => updateSegment(segment.segment_id, { emotion: e.target.value })}
-            >
-              {[
-                'neutral',
-                'tense',
-                'whisper',
-                'cold_anger',
-                'joyful',
-                'sorrowful',
-                'defiant',
-                'serene',
-                'urgent',
-                'tender',
-              ].map((emo) => (
-                <option key={emo} value={emo}>
-                  {emotionLabel(emo)}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => updateSegment(segment.segment_id, { emotion: v })}
+              options={EMOTIONS.map((emo) => ({ value: emo, label: emotionLabel(emo) }))}
+            />
           </Row>
 
           <div className="mt-1">

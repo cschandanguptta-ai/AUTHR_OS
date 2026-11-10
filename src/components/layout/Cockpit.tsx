@@ -1,7 +1,8 @@
 import { useCallback, useRef } from 'react';
-import { Minimize2 } from 'lucide-react';
+import { BookOpen, Minimize2 } from 'lucide-react';
 import { useWorkspaceStore, PANE_DEFAULTS, type PaneKey } from '../../stores/workspaceStore';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { StudioShell } from '../shared/StudioShell';
 import { ProjectBinder } from './ProjectBinder';
 import { DynamicInspector } from './DynamicInspector';
 import { LexicalCanvas } from '../editor/LexicalCanvas';
@@ -104,6 +105,15 @@ export function Cockpit() {
   }
 
   return (
+    /* R-17 unified chrome: the Cockpit adopts the StudioShell header family;
+       the three-pane geometry and the in-canvas toolbar are untouched — the
+       shell only contributes the title row every other studio shares. */
+    <StudioShell
+      icon={BookOpen}
+      title="Novel Cockpit"
+      subtitle="Manuscript canvas · project binder · dynamic inspector"
+      scroll={false}
+    >
     <div className="flex flex-1 min-h-0">
       {binderOpen && (
         <>
@@ -135,5 +145,6 @@ export function Cockpit() {
         </>
       )}
     </div>
+    </StudioShell>
   );
 }
