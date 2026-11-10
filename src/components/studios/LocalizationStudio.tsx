@@ -1,23 +1,26 @@
-// LocalizationStudio — Restored Studio 4 (Sprint 8): multilingual translation
-// workspace over chapter segments plus a YouTube script import parser.
-// Translation memory / auto-translate arrive with later phases; the import
-// parser and per-language draft storage are fully local and real.
+// LocalizationStudio — multilingual translation workspace over chapter
+// segments plus a YouTube script import parser (R-02): drafts persist through
+// studio switches and bundle switches via localizationStore (debounced 400 ms
+// writes, 'Draft saved HH:MM' chip). The import parser is honest about its
+// scope: it parses and previews — chapter import is a roadmap item, and the
+// copy says exactly that.
 
-import { useEffect, useMemo, useState } from 'react';
-import { Globe2, Import, Languages, Plus, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Check, Globe2, Import, Languages, Plus, Trash2 } from 'lucide-react';
 import { StudioShell } from '../shared/StudioShell';
 import { EmptyState } from '../shared/EmptyState';
 import { useManuscriptStore } from '../../stores/manuscriptStore';
+import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
+import {
+  clearBundleDrafts,
+  locKey,
+  useLocalizationStore,
+} from '../../stores/localizationStore';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { btnDanger, btnPrimary, inputClass } from '../layout/Modal';
 import { cn } from '../../lib/utils';
 import { toast } from '../../stores/uiStore';
-
-interface LangEntry {
-  id: string;
-  name: string;
-  translations: Record<string, string>; // segment_id → draft
-}
 
 const STARTER_LANGUAGES = ['Español', 'Français', 'Deutsch', 'Português (BR)'];
 
@@ -35,6 +38,10 @@ function parseScript(raw: string): Array<{ text: string; type: string }> {
     });
 }
 
+function savedClock(savedAt: number): string {
+  return new Date(savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
 export function LocalizationStudio() {
   const segments = useManuscriptStore((s) => s.segments);
   const chapters = useManuscriptStore((s) => s.chapters);
@@ -42,34 +49,112 @@ export function LocalizationStudio() {
   const selectChapter = useManuscriptStore((s) => s.selectChapter);
   const loadSegments = useManuscriptStore((s) => s.loadSegments);
   const activeStudio = useWorkspaceStore((s) => s.activeStudio);
+  const bundlePath = useProjectStore((s) => s.bundlePath) ?? '';
 
-  const [languages, setLanguages] = useState<LangEntry[]>([]);
+  const entries = useLocalizationStore((s) => s.entries);
+  const saveDraft = useLocalizationStore((s) => s.saveDraft);
+  const removeLanguage = useLocalizationStore((s) => s.removeLanguage);
+  const ensureLanguage = useLocalizationStore((s) => s.ensureLanguage);
+  const syncRail = useLocalizationStore((s) => s.syncRail);
+
   const [activeLang, setActiveLang] = useState<string>('');
   const [importText, setImportText] = useState('');
   const [newLang, setNewLang] = useState('');
+  const [clearOpen, setClearOpen] = useState(false);
+  const debounceRef = useRef<Map<string, number>>(new Map());
+  const pendingRef = useRef<Map<string, { lang: string; chapterId: number; segmentId: string; value: string }>>(new Map());
+
+  const flushKey = (k: string) => {
+    const pending = pendingRef.current.get(k);
+    if (!pending) return;
+    pendingRef.current.delete(k);
+    debounceRef.current.delete(k);
+    saveDraft(bundlePath, pending.chapterId, pending.lang, pending.segmentId, pending.value, languagesRef.current);
+    setEcho((e) => {
+      if (e[pending.segmentId] !== pending.value) return e;
+      const next = { ...e };
+      delete next[pending.segmentId];
+      return next;
+    });
+  };
+
+  const flushAllPending = () => {
+    const timers = debounceRef.current;
+    timers.forEach((t) => window.clearTimeout(t));
+    timers.clear();
+    const keys = [...pendingRef.current.keys()];
+    keys.forEach((k) => flushKey(k));
+  };
 
   useEffect(() => {
     if (activeStudio === 'localization') void loadSegments(activeChapterId ?? 0);
   }, [activeStudio, activeChapterId, loadSegments]);
 
-  const lang = languages.find((l) => l.id === activeLang) ?? null;
   const chapter = chapters.find((c) => c.id === activeChapterId) ?? null;
 
+  // The language rail persists per bundle+chapter (shared across languages).
+  const railKey = bundlePath && chapter ? `${bundlePath}::${chapter.id}` : null;
+  const languages = useMemo(() => {
+    if (!railKey || !bundlePath || !chapter) return [];
+    for (const [k, v] of Object.entries(entries)) {
+      if (k.startsWith(`${railKey}::`) && v.languages.length > 0) return v.languages;
+    }
+    return [];
+  }, [entries, railKey, bundlePath, chapter]);
+  const languagesRef = useRef<string[]>([]);
+  languagesRef.current = languages;
+
+  const langEntry = useMemo(() => {
+    if (!bundlePath || !chapter || !activeLang) return null;
+    return entries[locKey(bundlePath, chapter.id, activeLang)] ?? null;
+  }, [entries, bundlePath, chapter, activeLang]);
+
+  const storeDrafts = langEntry?.drafts ?? {};
+  // Local echo for snappy typing; the persisted store receives the value on a
+  // 400 ms debounce (mirror of the editor's useAutosave pattern).
+  const [echo, setEcho] = useState<Record<string, string>>({});
+  const translations = useMemo(() => ({ ...storeDrafts, ...echo }), [storeDrafts, echo]);
   const parsed = useMemo(() => parseScript(importText), [importText]);
 
+  // Language/chapter switch: flush pending debounces, reset the echo layer.
+  useEffect(() => {
+    flushAllPending();
+    setEcho({});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeLang, chapter?.id, bundlePath]);
+
   const addLanguage = (name: string) => {
-    const id = `${name}-${Date.now()}`;
-    setLanguages((l) => [...l, { id, name, translations: {} }]);
-    setActiveLang(id);
+    if (!bundlePath || !chapter) {
+      toast('warn', 'No chapter', 'Select a chapter before adding a target language.');
+      return;
+    }
+    const next = languages.includes(name) ? languages : [...languages, name];
+    ensureLanguage(bundlePath, chapter.id, name, next);
+    setActiveLang(name);
+  };
+
+  const dropLanguage = (name: string) => {
+    if (bundlePath && chapter) removeLanguage(bundlePath, chapter.id, name);
+    const next = languages.filter((l) => l !== name);
+    if (bundlePath && chapter) syncRail(bundlePath, chapter.id, next);
+    if (activeLang === name) setActiveLang('');
   };
 
   const setTranslation = (segmentId: string, value: string) => {
-    setLanguages((ls) =>
-      ls.map((l) =>
-        l.id === activeLang ? { ...l, translations: { ...l.translations, [segmentId]: value } } : l,
-      ),
+    if (!bundlePath || !chapter || !activeLang) return;
+    setEcho((e) => ({ ...e, [segmentId]: value }));
+    const k = `${activeLang}::${segmentId}`;
+    pendingRef.current.set(k, { lang: activeLang, chapterId: chapter.id, segmentId, value });
+    const t = debounceRef.current.get(k);
+    if (t) window.clearTimeout(t);
+    debounceRef.current.set(
+      k,
+      window.setTimeout(() => flushKey(k), 400),
     );
   };
+
+  const savedAt = langEntry?.savedAt ?? 0;
+  const translatedCount = Object.values(translations).filter(Boolean).length;
 
   const importScript = () => {
     if (!chapter) {
@@ -81,10 +166,18 @@ export function LocalizationStudio() {
       return;
     }
     toast(
-      'success',
+      'info',
       `Parsed ${parsed.length} paragraphs`,
-      'Import lands as chapter segments in a later phase — preview validated.',
+      'Preview only — parses and checks the segment split; chapter import arrives with the import roadmap item.',
     );
+  };
+
+  const clearDrafts = () => {
+    if (!bundlePath) return;
+    const removed = clearBundleDrafts(bundlePath);
+    setActiveLang('');
+    setClearOpen(false);
+    toast('info', 'Drafts cleared', `${removed} saved language draft${removed === 1 ? '' : 's'} removed for this bundle.`);
   };
 
   return (
@@ -92,32 +185,36 @@ export function LocalizationStudio() {
       icon={Globe2}
       title="Localization Studio"
       subtitle="Multilingual translation drafts · YouTube script import · sync-ready segment tables"
+      actions={
+        savedAt > 0 ? (
+          <span className="flex items-center gap-1.5 text-2xs text-ok" data-testid="draft-saved-chip">
+            <Check size={11} /> Draft saved {savedClock(savedAt)}
+          </span>
+        ) : undefined
+      }
     >
       <div className="pb-10">
         {/* Language rail */}
         <div className="px-6 pt-5 flex items-center gap-2 flex-wrap">
           <Languages size={13} className="text-accent" />
-          {languages.map((l) => (
-            <span key={l.id} className="inline-flex items-center">
+          {languages.map((name) => (
+            <span key={name} className="inline-flex items-center">
               <button
                 type="button"
-                onClick={() => setActiveLang(l.id)}
+                onClick={() => setActiveLang(name)}
                 className={cn(
                   'px-2.5 py-1 text-2xs rounded-lg border transition-colors',
-                  activeLang === l.id
+                  activeLang === name
                     ? 'border-accent/60 bg-accent/10 text-accent font-semibold'
                     : 'border-line text-mut hover:text-ink',
                 )}
               >
-                {l.name}
+                {name}
               </button>
               <button
                 type="button"
-                aria-label={`Remove ${l.name}`}
-                onClick={() => {
-                  setLanguages((ls) => ls.filter((x) => x.id !== l.id));
-                  if (activeLang === l.id) setActiveLang('');
-                }}
+                aria-label={`Remove ${name}`}
+                onClick={() => dropLanguage(name)}
                 className="ml-0.5 text-mut hover:text-bad"
               >
                 <Trash2 size={11} />
@@ -161,6 +258,15 @@ export function LocalizationStudio() {
               </button>
             ))}
           </span>
+          {languages.length > 0 && bundlePath && (
+            <button
+              type="button"
+              onClick={() => setClearOpen(true)}
+              className={cn(btnDanger, 'ml-auto text-2xs px-2 py-1')}
+            >
+              Clear drafts
+            </button>
+          )}
         </div>
 
         <div className="px-6 pt-4 flex items-center gap-3 flex-wrap">
@@ -176,19 +282,19 @@ export function LocalizationStudio() {
               ))}
             </select>
           </label>
-          {lang && (
+          {activeLang && chapter && (
             <span className="font-mono text-2xs text-mut">
-              {Object.values(lang.translations).filter(Boolean).length}/{segments.length} translated
+              {translatedCount}/{segments.length} translated
             </span>
           )}
         </div>
 
-        {segments.length === 0 || !lang ? (
+        {segments.length === 0 || !activeLang ? (
           <EmptyState
             icon={Languages}
-            title={lang ? 'No segments in this chapter' : 'Add a target language'}
+            title={activeLang ? 'No segments in this chapter' : 'Add a target language'}
             hint={
-              lang
+              activeLang
                 ? 'Pick a chapter with drafted segments to start translating.'
                 : 'Choose a starter language above or type your own to open the translation table.'
             }
@@ -205,8 +311,8 @@ export function LocalizationStudio() {
                 </div>
                 <textarea
                   className={cn(inputClass, 'text-xs min-h-[54px] leading-relaxed')}
-                  placeholder={`${lang.name} translation…`}
-                  value={lang.translations[s.segment_id] ?? ''}
+                  placeholder={`${activeLang} translation…`}
+                  value={translations[s.segment_id] ?? ''}
                   onChange={(e) => setTranslation(s.segment_id, e.target.value)}
                 />
               </div>
@@ -214,7 +320,7 @@ export function LocalizationStudio() {
           </div>
         )}
 
-        {/* YouTube script import */}
+        {/* YouTube script import — honest scope */}
         <div className="px-6 pt-6">
           <div className="border border-line rounded-xl bg-panel2 px-4 py-3">
             <div className="flex items-center gap-2 text-xs font-semibold mb-2">
@@ -239,6 +345,9 @@ export function LocalizationStudio() {
                 Clear
               </button>
             </div>
+            <p className="text-2xs text-mut mt-2 leading-tight">
+              Parses and previews only — persistence arrives with chapter import (roadmap).
+            </p>
             {parsed.length > 0 && (
               <div className="mt-3 grid gap-1 max-h-40 overflow-y-auto">
                 {parsed.slice(0, 12).map((p, i) => (
@@ -252,6 +361,15 @@ export function LocalizationStudio() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={clearOpen}
+        title="Clear localization drafts?"
+        body="Every saved translation draft for this bundle (all chapters, all languages) will be removed from local storage. Bundle content is untouched — only unsaved-in-bundle drafts are lost."
+        confirmLabel="Clear drafts"
+        onConfirm={clearDrafts}
+        onClose={() => setClearOpen(false)}
+      />
     </StudioShell>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   BookOpen,
   Clapperboard,
@@ -11,6 +11,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { useProjectStore, lastBundlePath } from '../../stores/projectStore';
+import { pruneStaleDrafts } from '../../stores/localizationStore';
 import { APP_VERSION } from '../../lib/constants';
 import { btnPrimary, inputClass } from './Modal';
 
@@ -57,6 +58,12 @@ export function WelcomeScreen() {
   const status = useProjectStore((s) => s.status);
   const initProject = useProjectStore((s) => s.initProject);
   const openProject = useProjectStore((s) => s.openProject);
+
+  // Draft hygiene (R-02): on Welcome open, drop persisted localization drafts
+  // that are neither from the last opened bundle nor touched for 14 days.
+  useEffect(() => {
+    pruneStaleDrafts(lastBundlePath());
+  }, []);
 
   const [mode, setMode] = useState<'create' | 'open'>('create');
   const [title, setTitle] = useState('');
