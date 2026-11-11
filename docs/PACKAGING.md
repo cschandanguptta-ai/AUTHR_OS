@@ -10,7 +10,7 @@
 
 All five targets are pre-configured in `tauri.conf.json` (`bundle.targets`).
 Release binaries stay under the 25 MB installer budget (current core binary:
-**10.1 MB**, see `docs/BENCHMARKS.md`).
+**11.3 MB**, see `docs/BENCHMARKS.md`).
 
 ## Build commands
 

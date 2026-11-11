@@ -1,12 +1,12 @@
 # RUN_ON_LAPTOP.md — from download to running app in ~10 minutes
 
 You have two packages. Both contain the identical, fully verified source tree
-(168/168 E2E + 67/67 unit tests green, contract v1.2, 56 commands).
+(223/223 E2E + 135/135 unit tests green, contract v1.6, 74 commands).
 
 | Zip | Contents | Use it when |
 |---|---|---|
-| `AUTHR_OS_source.zip` | clean source only (no build artifacts) | you want to build everything from scratch, or read/modify the code |
-| `AUTHR_OS_workspace.zip` | source **+ prebuilt Linux x86_64 core binary** (`src-tauri/target/release/authr`) **+ compiled frontend** (`dist/`) | you want to run tests and the app immediately on a Linux/WSL machine |
+| `AUTHR_OS_docs.zip` | full source + complete docs (no build artifacts) | you want to build everything from scratch, or read/modify the code |
+| `AUTHR_OS_v3.0.0-PROD.zip` | source **+ prebuilt Linux x86_64 core binary** (`src-tauri/target/release/authr`) **+ compiled frontend** (`dist/`) | you want to run tests and the app immediately on a Linux/WSL machine |
 
 ## 1. Prerequisites
 
@@ -25,19 +25,19 @@ LLM fallback — is compiled in; no services to install.
 ## 2. Quickstart (any OS)
 
 ```bash
-unzip AUTHR_OS_workspace.zip && cd AUTHR_OS   # or AUTHR_OS_source.zip
+unzip AUTHR_OS_v3.0.0-PROD.zip && cd AUTHR_OS   # or AUTHR_OS_docs.zip
 npm install                                    # always; node_modules is not shipped
 npm run build                                  # tsc --noEmit + vite build → dist/
 cd src-tauri && cargo build --release          # → target/release/authr
 cd .. && python3 -m pip install pytest         # once
-AUTHR_MOCK_KEYCHAIN=1 python3 -m pytest tests/ -q     # expect: 168 passed
-./src-tauri/target/release/authr --contract    # expect: 56 commands, version 1.2
+AUTHR_MOCK_KEYCHAIN=1 python3 -m pytest tests/ -q     # expect: 223 passed
+./src-tauri/target/release/authr --contract    # expect: 74 commands, version 1.6
 npm run dev                                    # open http://localhost:5173
 ```
 
 `npm run dev` is the full Author's Cockpit in a plain browser: the vite
 middleware (`scripts/ipc-proxy.mjs`) spawns the real `authr` binary, so every
-edit drives the actual Rust core. On the workspace zip under Linux you can skip
+edit drives the actual Rust core. On the PROD zip under Linux you can skip
 the two build steps — binary and `dist/` are already there.
 
 Windows PowerShell: set env vars with `$env:AUTHR_MOCK_KEYCHAIN = "1"`; the
@@ -78,12 +78,12 @@ npm install -D @tauri-apps/cli && npx tauri build
 python3 tests/run_e2e.py --json                 # per-tier official runner
 python3 scripts/refresh_acceptance.py .         # regenerates test_results.json
 ./src-tauri/target/release/authr benchmark_run --args '{}' --bundle /tmp/bm
-cd src-tauri && cargo test --release            # 67 unit tests
+cd src-tauri && cargo test --release            # 135 unit tests
 ```
 
 Benchmark gates (must print `pass: true`): cold start < 1500 ms, peak RSS
-< 50 MB, binary < 25 MB. On the shipped Linux build expect ≈1.8 ms / 6.3 MB /
-10.1 MB.
+< 50 MB, binary < 25 MB. On the shipped Linux build expect ≈1.7 ms / 6.4 MB /
+11.3 MB.
 
 ## 6. If something breaks
 
