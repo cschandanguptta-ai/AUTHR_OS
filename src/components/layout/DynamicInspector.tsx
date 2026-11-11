@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Activity, CheckCheck, ChevronDown, Gauge, ListChecks, ScrollText, SlidersHorizontal, Volume2, AudioLines, Clapperboard, X } from 'lucide-react';
 import { useManuscriptStore } from '../../stores/manuscriptStore';
 import { useVoiceCastStore } from '../../stores/voiceCastStore';
+import { useLoreStore } from '../../stores/loreStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useChapterStats } from '../../hooks/useChapterStats';
@@ -53,6 +54,7 @@ export function DynamicInspector() {
   const activeChapterId = useManuscriptStore((s) => s.activeChapterId);
   const updateChapter = useManuscriptStore((s) => s.updateChapter);
   const characters = useVoiceCastStore((s) => s.characters);
+  const lore = useLoreStore((s) => s.lore);
   const readonly = useProjectStore((s) => s.readonly);
 
   // R-11: pending bulk tag choice — applied on Apply, one transaction per segment.
@@ -63,6 +65,14 @@ export function DynamicInspector() {
     () => segments.find((s) => s.segment_id === selectedSegmentId) ?? null,
     [segments, selectedSegmentId],
   );
+  // Phase 4: segment → lore cross-links. Name-occurrence match over the Story
+  // Bible (FTS indexes content; the binder's lore section carries the reverse
+  // direction). Stated honestly in the UI as a name match, not a semantic one.
+  const referencedLore = useMemo(() => {
+    if (!segment) return [];
+    const text = segment.text_content.toLowerCase();
+    return lore.filter((l) => l.key.trim().length >= 3 && text.includes(l.key.toLowerCase()));
+  }, [lore, segment]);
   const chapter = useMemo(
     () => chapters.find((c) => c.id === activeChapterId) ?? null,
     [chapters, activeChapterId],
@@ -226,6 +236,27 @@ export function DynamicInspector() {
               options={EMOTIONS.map((emo) => ({ value: emo, label: emotionLabel(emo) }))}
             />
           </Row>
+
+          {/* Phase 4: referenced lore — Story Bible entries whose key appears
+              in this segment's text (name match, not semantic inference). */}
+          {referencedLore.length > 0 && (
+            <div className="grid gap-1" data-testid="segment-lore-links">
+              <span className="text-2xs text-mut uppercase tracking-wide">Story Bible hits</span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {referencedLore.map((l) => (
+                  <span
+                    key={l.key}
+                    className="text-2xs font-mono px-1.5 py-0.5 rounded border border-line bg-panel2 text-mut"
+                    title={`${l.category} · ${l.content}`}
+                  >
+                    <ScrollText size={9} className="inline mr-1 -mt-px text-accent" />
+                    {l.key}
+                  </span>
+                ))}
+                <span className="text-2xs text-mut/60">matched by name</span>
+              </div>
+            </div>
+          )}
 
           <div className="mt-1">
             <div className="flex items-center justify-between text-2xs text-mut mb-1">

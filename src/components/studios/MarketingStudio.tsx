@@ -3,7 +3,7 @@
 // composer. Marketing fields persist through book_update (contract #9).
 
 import { useEffect, useMemo, useState } from 'react';
-import { BadgeCheck, Megaphone, PlayCircle, Sparkles, Wand2 } from 'lucide-react';
+import { BadgeCheck, Megaphone, PlayCircle, RefreshCw, Sparkles, Wand2 } from 'lucide-react';
 import { StudioShell } from '../shared/StudioShell';
 import { EmptyState } from '../shared/EmptyState';
 import { useManuscriptStore } from '../../stores/manuscriptStore';
@@ -44,6 +44,45 @@ function buildDescription(book: BookRow): string {
   ].filter(Boolean).join('\n');
 }
 
+/** Phase 4: register-aware builders. The storefront register follows the KDP
+ *  description window (200–4000 chars); the back-cover register is the
+ *  print-jacket voice — hook, premise, closing question, no subscribe line. */
+type CopyRegister = 'storefront' | 'back-cover';
+
+function buildBackCover(book: BookRow, variant: number): string {
+  const hookSrc = book.premise.trim() || book.title;
+  const hooks = [
+    `${hookSrc.split(/[.!?]/)[0].trim()}.`,
+    `Some doors only open once. ${hookSrc.split(/[.!?]/)[0].trim()}.`,
+    `Every story has a price. Here is this one: ${hookSrc.split(/[.!?]/)[0].trim()}.`,
+  ];
+  const hook = hooks[variant % hooks.length];
+  return [
+    hook,
+    book.premise.trim() ? book.premise.trim() : `A ${book.genre.toLowerCase()} told in ${plural(book.target_chapters, 'chapter')}.`,
+    book.theme ? `A story about ${book.theme.toLowerCase()}.` : '',
+    `\n${book.genre} · ${book.narrative_structure.replace(/_/g, ' ').toLowerCase()} structure`,
+    '\nOpen the first page. The vault does not stay shut.',
+  ].filter(Boolean).join('\n');
+}
+
+function buildStorefront(book: BookRow, variant: number): string {
+  const base = buildDescription(book);
+  if (variant === 0) return base;
+  // Deterministic variation: rotate the premise sentence into the lead and
+  // reframe the theme line — honest local drafts, no network, no AI mimicry.
+  const premise = book.premise.trim();
+  const alt = [
+    `${premise ? `${premise}\n\n` : ''}${base}`,
+    [
+      `What readers sign up for: ${premise || `a ${book.genre.toLowerCase()} of ${book.theme || 'consequence'}.`}`,
+      book.theme ? `At its core: ${book.theme.toLowerCase()}.` : '',
+      `${plural(book.target_chapters, 'chapter')} · ${book.target_word_count.toLocaleString('en-US')} words · ${book.narrative_structure.replace(/_/g, ' ').toLowerCase()} structure.`,
+    ].filter(Boolean).join('\n'),
+  ];
+  return alt[(variant - 1) % alt.length];
+}
+
 function buildCoverPrompt(book: BookRow, style: string): string {
   const subject = book.premise.split(/[.!?]/)[0].trim() || book.title;
   return `${book.genre.toLowerCase()} book cover, ${subject.toLowerCase()} --ar 2:3 --style ${style.toLowerCase()}`;
@@ -63,6 +102,9 @@ export function MarketingStudio() {
   const [draft, setDraft] = useState<BookRow | null>(null);
   const [style, setStyle] = useState(STYLE_PRESETS[0]);
   const [saving, setSaving] = useState(false);
+  // Phase 4: description register (storefront vs back-cover) + variation.
+  const [register, setRegister] = useState<CopyRegister>('storefront');
+  const [variant, setVariant] = useState(0);
 
   useEffect(() => {
     void loadBooks();
@@ -73,7 +115,10 @@ export function MarketingStudio() {
   }, [books, activeBookId]);
 
   const titles = useMemo(() => (draft ? buildTitles(draft) : []), [draft]);
-  const description = useMemo(() => (draft ? buildDescription(draft) : ''), [draft]);
+  const description = useMemo(
+    () => (draft ? (register === 'storefront' ? buildStorefront(draft, variant) : buildBackCover(draft, variant)) : ''),
+    [draft, register, variant],
+  );
   const coverPrompt = useMemo(() => (draft ? buildCoverPrompt(draft, style) : ''), [draft, style]);
   const tags = useMemo(() => (draft ? buildSocialTags(draft) : ''), [draft]);
 
@@ -174,10 +219,57 @@ export function MarketingStudio() {
                 </div>
               ))}
             </div>
-            <label className="grid gap-1 mt-1">
+            {/* Phase 4: register selector — storefront blurb vs back-cover jacket
+                copy, each with its own length window and a deterministic
+                regenerate-with-variation action (local builders, no network). */}
+            <div className="flex items-center gap-2 flex-wrap mt-1" role="group" aria-label="Description register">
+              <span className="text-2xs text-mut uppercase tracking-wide">Register</span>
+              {(
+                [
+                  ['storefront', 'Storefront', 'KDP description window: 200–4000 characters'],
+                  ['back-cover', 'Back cover', 'Print-jacket voice: ~150–250 words, hook-first'],
+                ] as Array<[CopyRegister, string, string]>
+              ).map(([id, label, hint]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setRegister(id)}
+                  aria-pressed={register === id}
+                  title={hint}
+                  className={cn(
+                    'text-2xs px-2.5 py-1 rounded-lg border transition-colors',
+                    register === id
+                      ? 'border-accent/60 bg-accent/10 text-accent font-semibold'
+                      : 'border-line text-mut hover:text-ink',
+                  )}
+                  data-testid={`register-${id}`}
+                >
+                  {label}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  setVariant((v) => v + 1);
+                  // Replace a saved copy too — the action IS the regeneration;
+                  // undo = press again (builders are deterministic).
+                  setDraft((d) => (d ? { ...d, marketing_copy: '' } : d));
+                }}
+                className="text-2xs px-2 py-1 rounded-lg border border-line text-mut hover:text-ink"
+                title="Regenerate the draft in this register with the next deterministic variation"
+                data-testid="regenerate-copy"
+              >
+                <RefreshCw size={10} className="inline mr-1 -mt-0.5" /> Regenerate
+              </button>
+            </div>
+            <label className="grid gap-1">
               <span className="text-2xs text-mut uppercase tracking-wide flex items-center justify-between">
                 Description
-                <span className="font-mono">{description.length} chars</span>
+                <span className="font-mono">
+                  {register === 'storefront'
+                    ? `${(draft.marketing_copy || description).length}/4000 chars (KDP 200–4000)`
+                    : `${(draft.marketing_copy || description).trim().split(/\s+/).filter(Boolean).length} words · target 150–250`}
+                </span>
               </span>
               <textarea
                 className={cn(inputClass, 'min-h-[90px] text-xs leading-relaxed')}

@@ -90,6 +90,7 @@ function SceneCard({
   scene,
   asset,
   engine,
+  renderEstimate,
   onRepaint,
   onFocal,
   busy,
@@ -97,6 +98,10 @@ function SceneCard({
   scene: Block;
   asset: VideoAsset | undefined;
   engine: string;
+  /** Phase 4: per-scene render estimate — what one repaint costs in frames
+   *  and which engine/model answers. Null when no image provider resolves
+   *  (the SCRIPTED engine renders seeded local frames at zero marginal cost). */
+  renderEstimate: string | null;
   onRepaint: (scene: Block) => void;
   onFocal: (sceneIndex: number, focal: string) => void;
   busy: boolean;
@@ -182,6 +187,15 @@ function SceneCard({
             <Volume2 size={11} className="text-ok shrink-0" aria-label="narration ready" />
           )}
         </div>
+        {renderEstimate && (
+          <div
+            className="text-2xs text-mut/80 font-mono truncate"
+            title="Per-scene render estimate — one frame per repaint, answered by this engine/model. Pricing depends on your endpoint's plan."
+            data-testid={`scene-estimate-${scene.scene_index}`}
+          >
+            {renderEstimate}
+          </div>
+        )}
         <div className="flex items-center gap-1.5 flex-wrap">
           {scene.characters.slice(0, 3).map((k) => (
             <span
@@ -248,6 +262,12 @@ export function VideoStudio() {
   }, []);
 
   const r2iAvailable = (provider?.image.resolved.endpoint_source ?? 'none') !== 'none';
+  // Phase 4: per-scene render estimate. The frozen contract carries no pricing
+  // data, so the estimate is what can be stated honestly: one frame per
+  // repaint, answered by this engine/model — never an invented currency amount.
+  const renderEstimate: string | null = r2iAvailable
+    ? `renders 1 frame · ${provider?.image.settings.model?.trim() || 'custom endpoint'}`
+    : null;
   const providerModalOpen = useWorkspaceStore((s) => s.providerModalOpen);
   const consumeIntent = useWorkspaceStore((s) => s.consumeIntent);
 
@@ -767,6 +787,7 @@ export function VideoStudio() {
                   scene={b}
                   asset={assetByRef.get(`SCENE:${b.segment_id}`)}
                   engine={engine}
+                  renderEstimate={renderEstimate}
                   busy={repaintingScene === b.scene_index}
                   onRepaint={(s) => void repaintScene(s)}
                   onFocal={setFocalFor}

@@ -289,7 +289,40 @@ function LoreSection({ open, onToggle }: { open: boolean; onToggle: () => void }
   const lore = useLoreStore((s) => s.lore);
   const loaded = useLoreStore((s) => s.loaded);
   const deleteLore = useLoreStore((s) => s.deleteLore);
+  const chapters = useManuscriptStore((s) => s.chapters);
+  const selectChapter = useManuscriptStore((s) => s.selectChapter);
   const [deleteTarget, setDeleteTarget] = useState<LoreRow | null>(null);
+  // Phase 4: lore → segment cross-links. One FTS scan per entry; hits jump
+  // straight to the chapter that mentions the entry (bidirectional with the
+  // inspector's Story Bible hits).
+  const [scanKey, setScanKey] = useState<string | null>(null);
+  const [scanHits, setScanHits] = useState<SegmentSearchHit[] | null>(null);
+  const [scanning, setScanning] = useState(false);
+
+  const findScenes = async (entry: LoreRow) => {
+    if (scanKey === entry.key) {
+      setScanKey(null);
+      setScanHits(null);
+      return;
+    }
+    setScanKey(entry.key);
+    setScanning(true);
+    setScanHits(null);
+    try {
+      const res = await api.segmentSearch({ query: entry.key, limit: 5 });
+      setScanHits(res.hits);
+    } catch (err) {
+      toastError('Scene scan failed', err);
+      setScanKey(null);
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const chapterLabel = (chapterId: number): string => {
+    const c = chapters.find((x) => x.id === chapterId);
+    return c ? `Ch ${c.chapter_number} — ${c.title}` : `chapter #${chapterId}`;
+  };
 
   return (
     <div>
@@ -316,32 +349,76 @@ function LoreSection({ open, onToggle }: { open: boolean; onToggle: () => void }
                     {category.replace('_', ' ')}
                   </div>
                   {entries.map((entry) => (
-                    <div
-                      key={entry.key}
-                      className="group flex items-center gap-2 px-3 py-1 hover:bg-panel2"
-                      title={entry.content}
-                    >
-                      <CircleDot size={10} className="text-mut shrink-0" />
-                      <span className="text-[13px] text-mut group-hover:text-ink truncate flex-1">
-                        {entry.key}
-                      </span>
-                      <span
-                        className={cn(
-                          'text-2xs border rounded px-1 py-px shrink-0',
-                          LORE_CATEGORY_BADGES[entry.category] ?? LORE_CATEGORY_BADGES.GENERAL,
-                        )}
+                    <div key={entry.key} className="group">
+                      <div
+                        className="flex items-center gap-2 px-3 py-1 hover:bg-panel2"
+                        title={entry.content}
                       >
-                        {entry.ipa_phonetic ? 'IPA' : ''}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setDeleteTarget(entry)}
-                        className="opacity-0 group-hover:opacity-100 text-mut hover:text-bad"
-                        aria-label={`Delete lore entry ${entry.key}`}
-                        title="Delete lore entry — asks for confirmation"
-                      >
-                        <Trash2 size={11} />
-                      </button>
+                        <CircleDot size={10} className="text-mut shrink-0" />
+                        <span className="text-[13px] text-mut group-hover:text-ink truncate flex-1">
+                          {entry.key}
+                        </span>
+                        <span
+                          className={cn(
+                            'text-2xs border rounded px-1 py-px shrink-0',
+                            LORE_CATEGORY_BADGES[entry.category] ?? LORE_CATEGORY_BADGES.GENERAL,
+                          )}
+                        >
+                          {entry.ipa_phonetic ? 'IPA' : ''}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => void findScenes(entry)}
+                          className={cn(
+                            'shrink-0 transition-opacity',
+                            scanKey === entry.key
+                              ? 'text-accent opacity-100'
+                              : 'opacity-0 group-hover:opacity-100 text-mut hover:text-accent',
+                          )}
+                          aria-label={`Find scenes mentioning ${entry.key}`}
+                          title="FTS scan — segments whose text mentions this entry (full-text index)"
+                          data-testid={`lore-scan-${entry.key}`}
+                        >
+                          <Crosshair size={11} className={scanning && scanKey === entry.key ? 'animate-pulse' : ''} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteTarget(entry)}
+                          className="opacity-0 group-hover:opacity-100 text-mut hover:text-bad"
+                          aria-label={`Delete lore entry ${entry.key}`}
+                          title="Delete lore entry — asks for confirmation"
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      </div>
+                      {scanKey === entry.key && (
+                        <div className="mx-3 mb-1.5 rounded-md border border-line bg-panel2 px-2.5 py-1.5 grid gap-1" data-testid={`lore-scan-result-${entry.key}`}>
+                          {scanning ? (
+                            <span className="text-2xs text-mut">Scanning the full-text index…</span>
+                          ) : !scanHits || scanHits.length === 0 ? (
+                            <span className="text-2xs text-mut">
+                              No segment mentions “{entry.key}” yet — the index covers written prose.
+                            </span>
+                          ) : (
+                            scanHits.map((h) => (
+                              <button
+                                key={h.segment_id}
+                                type="button"
+                                onClick={() => {
+                                  selectChapter(h.chapter_id);
+                                  setScanKey(null);
+                                  setScanHits(null);
+                                }}
+                                className="text-left text-2xs text-mut hover:text-ink grid gap-0.5 px-1 py-0.5 rounded hover:bg-panel3"
+                                title="Open this chapter in the cockpit"
+                              >
+                                <span className="text-ink/80 font-medium">{chapterLabel(h.chapter_id)}</span>
+                                <span className="truncate text-mut/70">{h.text_content}</span>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

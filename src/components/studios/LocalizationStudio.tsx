@@ -110,6 +110,13 @@ export function LocalizationStudio() {
   }, [entries, bundlePath, chapter, activeLang]);
 
   const storeDrafts = langEntry?.drafts ?? {};
+  // Phase 4: per-language completion — non-empty persisted drafts for that
+  // language on the active chapter, surfaced on every rail tab.
+  const translatedFor = (lang: string): number => {
+    if (!bundlePath || !chapter) return 0;
+    const e = entries[locKey(bundlePath, chapter.id, lang)];
+    return Object.values(e?.drafts ?? {}).filter(Boolean).length;
+  };
   // Local echo for snappy typing; the persisted store receives the value on a
   // 400 ms debounce (mirror of the editor's useAutosave pattern).
   const [echo, setEcho] = useState<Record<string, string>>({});
@@ -208,8 +215,18 @@ export function LocalizationStudio() {
                     ? 'border-accent/60 bg-accent/10 text-accent font-semibold'
                     : 'border-line text-mut hover:text-ink',
                 )}
+                title={`${translatedFor(name)} of ${segments.length} source segments translated in ${name}`}
               >
                 {name}
+                <span
+                  className={cn(
+                    'ml-1.5 font-mono text-[10px] tabular-nums',
+                    activeLang === name ? 'opacity-90' : 'opacity-70',
+                  )}
+                  data-testid={`loc-progress-${name}`}
+                >
+                  {translatedFor(name)}/{segments.length}
+                </span>
               </button>
               <button
                 type="button"
