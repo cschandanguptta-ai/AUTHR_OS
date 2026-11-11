@@ -15,7 +15,7 @@ import { cn } from '../../lib/utils';
 const THEMES: Array<{ id: AppTheme; label: string; swatch: string; accentDot: string }> = [
   { id: 'dark', label: 'Dark', swatch: 'bg-[#101013]', accentDot: 'bg-[#f59e0b]' },
   { id: 'midnight', label: 'Midnight', swatch: 'bg-[#080d1c]', accentDot: 'bg-[#7c8cff]' },
-  { id: 'sepia', label: 'Sepia', swatch: 'bg-[#fbf7ee]', accentDot: 'bg-[#b45309]' },
+  { id: 'sepia', label: 'Sepia', swatch: 'bg-[#fbf7ee]', accentDot: 'bg-[#a34a08]' },
 ];
 
 const FONT_MIN = 14;

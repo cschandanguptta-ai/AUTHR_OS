@@ -15,6 +15,7 @@ import {
   Download,
   FileBadge,
   FileText,
+  History,
   Loader2,
   PackageCheck,
   Play,
@@ -28,6 +29,7 @@ import { useManuscriptStore } from '../../stores/manuscriptStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useBookContextStore } from '../../stores/bookContextStore';
+import { usePublishRunStore, type PublishArtifact } from '../../stores/publishRunStore';
 import {
   publishCaptions,
   publishDocx,
@@ -40,7 +42,7 @@ import {
   type PublishEpubResult,
 } from '../../ipc/api';
 import { mapError } from '../../ipc/errorCopy';
-import { cn, formatBytes, formatMs } from '../../lib/utils';
+import { cn, formatBytes, formatMs, plural } from '../../lib/utils';
 import { btnPrimary, inputClass } from '../layout/Modal';
 import type { ChapterRow } from '../../types/ast';
 
@@ -185,6 +187,12 @@ export function PublishStudio() {
 
   const [capsChapterId, setCapsChapterId] = useState<number | null>(null);
 
+  // RA-07: every completed run (done or failed) lands in the artifacts & run
+  // history column — the Audio studio's run-history pattern, publish edition.
+  const logRun = usePublishRunStore((s) => s.record);
+  const log = (label: string, status: 'done' | 'failed', artifacts: PublishArtifact[], error?: string) =>
+    logRun({ label, status, artifacts, error });
+
   useEffect(() => {
     void loadBooks();
     void loadChapters();
@@ -252,9 +260,13 @@ export function PublishStudio() {
       const res = await publishEpub({ book_id: book.id });
       setEpub(res);
       setArtifactPath(joinAbs(bundlePath, res.out));
+      log('EPUB 3', 'done', [
+        { path: joinAbs(bundlePath, res.out), extra: `${plural(res.entries, 'entry', 'entries')} · ${plural(res.chapters, 'chapter')} · ${plural(res.overlays, 'overlay')}` },
+      ]);
     } catch (err) {
       const mapped = mapError(err);
       patchEpubRow({ error: `${mapped.copy.body} ${mapped.detail}`.trim() });
+      log('EPUB 3', 'failed', [], `${mapped.copy.body} ${mapped.detail}`.trim());
     } finally {
       patchEpubRow({ busy: false });
     }
@@ -266,9 +278,13 @@ export function PublishStudio() {
     try {
       const res = await publishDocx({ book_id: book.id });
       setDocx(res);
+      log('DOCX manuscript', 'done', [
+        { path: joinAbs(bundlePath, res.out), extra: `${plural(res.paragraphs, 'paragraph')} · ${plural(res.words, 'word', 'words')}` },
+      ]);
     } catch (err) {
       const mapped = mapError(err);
       patchDocxRow({ error: `${mapped.copy.body} ${mapped.detail}`.trim() });
+      log('DOCX manuscript', 'failed', [], `${mapped.copy.body} ${mapped.detail}`.trim());
     } finally {
       patchDocxRow({ busy: false });
     }
@@ -280,9 +296,13 @@ export function PublishStudio() {
     try {
       const res = await publishTypst({ book_id: book.id });
       setTyp(res);
+      const artifacts: PublishArtifact[] = [{ path: joinAbs(bundlePath, res.typ) }];
+      if (res.pdf) artifacts.push({ path: joinAbs(bundlePath, res.pdf), extra: 'PDF compiled' });
+      log('Typst print PDF', 'done', artifacts, res.compiled ? undefined : res.reason);
     } catch (err) {
       const mapped = mapError(err);
       patchTypRow({ error: `${mapped.copy.body} ${mapped.detail}`.trim() });
+      log('Typst print PDF', 'failed', [], `${mapped.copy.body} ${mapped.detail}`.trim());
     } finally {
       patchTypRow({ busy: false });
     }
@@ -294,9 +314,14 @@ export function PublishStudio() {
     try {
       const res = await publishCaptions({ chapter_id: chapter.id });
       setCaps({ chapterId: chapter.id, lrc: res.lrc, vtt: res.vtt, cues: res.cues, duration_ms: res.duration_ms });
+      const artifacts: PublishArtifact[] = [];
+      if (res.vtt) artifacts.push({ path: joinAbs(bundlePath, res.vtt), extra: `${plural(res.cues, 'cue')} · ${formatMs(res.duration_ms)}` });
+      if (res.lrc) artifacts.push({ path: joinAbs(bundlePath, res.lrc) });
+      log(`Captions — ch ${chapter.chapter_number}`, 'done', artifacts);
     } catch (err) {
       const mapped = mapError(err);
       patchCapsRow({ error: `${mapped.copy.body} ${mapped.detail}`.trim() });
+      log(`Captions — ch ${chapter.chapter_number}`, 'failed', [], `${mapped.copy.body} ${mapped.detail}`.trim());
     } finally {
       patchCapsRow({ busy: false });
     }
@@ -305,6 +330,7 @@ export function PublishStudio() {
   const runM4b = async () => {
     if (!book) return;
     patchM4bRow({ busy: true, error: null });
+    const scopeLabel = m4bScope === 'book' ? 'Whole book' : `Chapter ${chapters.find((c) => c.id === m4bScope)?.chapter_number ?? '?'}`;
     try {
       const args = m4bScope === 'book' ? { book_id: book.id } : { chapter_id: m4bScope };
       const res = await publishM4b(args);
@@ -315,9 +341,13 @@ export function PublishStudio() {
         codec: res.codec,
         scope: m4bScope === 'book' ? 'whole book' : `chapter ${chapters.find((c) => c.id === m4bScope)?.chapter_number ?? '?'}`,
       });
+      log(`M4B audiobook — ${scopeLabel}`, 'done', [
+        { path: joinAbs(bundlePath, res.out), bytes: res.bytes, extra: `${formatMs(res.duration_ms)} · ${res.codec}` },
+      ]);
     } catch (err) {
       const mapped = mapError(err);
       patchM4bRow({ error: `${mapped.copy.body} ${mapped.detail}`.trim() });
+      log(`M4B audiobook — ${scopeLabel}`, 'failed', [], `${mapped.copy.body} ${mapped.detail}`.trim());
     } finally {
       patchM4bRow({ busy: false });
     }
@@ -335,9 +365,13 @@ export function PublishStudio() {
         key: res.generated_key_hex,
       });
       setVerify(null);
+      log('Sign manifest (ed25519)', 'done', [
+        { path: res.manifest, bytes: res.artifact_bytes, extra: `sha ${res.artifact_sha256.slice(0, 12)}…` },
+      ]);
     } catch (err) {
       const mapped = mapError(err);
       patchRelRow({ error: `${mapped.copy.body} ${mapped.detail}`.trim() });
+      log('Sign manifest (ed25519)', 'failed', [], `${mapped.copy.body} ${mapped.detail}`.trim());
     } finally {
       patchRelRow({ busy: false });
     }
@@ -349,9 +383,16 @@ export function PublishStudio() {
     try {
       const res = await releaseVerify({ manifest: manifest.manifest, artifact: artifactPath.trim() || undefined });
       setVerify({ valid: res.valid, sha256: res.checks.sha256, signature: res.checks.signature });
+      log(
+        'Release verify',
+        res.valid ? 'done' : 'failed',
+        [],
+        res.valid ? undefined : `sha256 ${res.checks.sha256 ? 'match' : 'MISMATCH'} · signature ${res.checks.signature ? 'valid' : 'INVALID'} — artifact tampered or wrong key`,
+      );
     } catch (err) {
       const mapped = mapError(err);
       patchVerRow({ error: `${mapped.copy.body} ${mapped.detail}`.trim() });
+      log('Release verify', 'failed', [], `${mapped.copy.body} ${mapped.detail}`.trim());
     } finally {
       patchVerRow({ busy: false });
     }
@@ -391,7 +432,10 @@ export function PublishStudio() {
         </label>
       }
     >
-      <div className="pb-10 max-w-3xl studio-cards">
+      {/* RA-07: the right column is the artifacts & run history — the SELL
+          group's most commercial surface no longer carries a dead half-screen. */}
+      <div className="pb-10 studio-cards grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px] items-start">
+        <div className="min-w-0 max-w-3xl">
         <div className="px-6 pt-5 grid gap-3">
           <div>
             <RowShell
@@ -403,7 +447,7 @@ export function PublishStudio() {
             />
             {epub && (
               <div className="grid gap-1 pt-2">
-                <ArtifactLine path={joinAbs(bundlePath, epub.out)} extra={`${epub.entries} entries · ${epub.chapters} chapters · ${epub.overlays} overlays`} />
+                <ArtifactLine path={joinAbs(bundlePath, epub.out)} extra={`${plural(epub.entries, 'entry', 'entries')} · ${plural(epub.chapters, 'chapter')} · ${plural(epub.overlays, 'overlay')}`} />
                 {epub.cover && !epub.cover.embedded && (
                   <p className="text-2xs text-warn/90">{epub.cover.hint}</p>
                 )}
@@ -421,7 +465,7 @@ export function PublishStudio() {
             />
             {docx && (
               <div className="grid gap-1 pt-2">
-                <ArtifactLine path={joinAbs(bundlePath, docx.out)} extra={`${docx.paragraphs} paragraphs · ${docx.words} words`} />
+                <ArtifactLine path={joinAbs(bundlePath, docx.out)} extra={`${plural(docx.paragraphs, 'paragraph')} · ${plural(docx.words, 'word', 'words')}`} />
               </div>
             )}
           </div>
@@ -468,7 +512,7 @@ export function PublishStudio() {
             </RowShell>
             {caps && (
               <div className="grid gap-1 pt-2">
-                {caps.vtt && <ArtifactLine path={joinAbs(bundlePath, caps.vtt)} extra={`${caps.cues} cues · ${formatMs(caps.duration_ms)}`} />}
+                {caps.vtt && <ArtifactLine path={joinAbs(bundlePath, caps.vtt)} extra={`${plural(caps.cues, 'cue')} · ${formatMs(caps.duration_ms)}`} />}
                 {caps.lrc && <ArtifactLine path={joinAbs(bundlePath, caps.lrc)} />}
               </div>
             )}
@@ -598,7 +642,83 @@ export function PublishStudio() {
             </div>
           )}
         </div>
+        </div>
+
+        {/* RA-07: artifacts & run history — every completed run lands here
+            with its artifact paths, sizes and verdicts (Audio pattern). */}
+        <aside
+          className="px-6 xl:pl-0 xl:pr-6 xl:pt-5 xl:sticky xl:top-0"
+          aria-label="Artifacts and run history"
+          data-testid="publish-run-history"
+        >
+          <PublishRunHistory />
+        </aside>
       </div>
     </StudioShell>
+  );
+}
+
+/** RA-07: the publish-side run history — newest first, capped at 12, with
+ *  copyable artifact paths. Lives in a zustand store so it survives studio
+ *  tab switches, exactly like the Audio studio's produce-run history. */
+function PublishRunHistory() {
+  const history = usePublishRunStore((s) => s.history);
+  const clear = usePublishRunStore((s) => s.clear);
+
+  return (
+    <div className="grid gap-1.5">
+      <div className="flex items-center gap-1.5 mb-1">
+        <History size={12} className="text-accent" />
+        <span className="text-2xs font-semibold tracking-wider text-mut uppercase">
+          Artifacts &amp; run history
+        </span>
+      </div>
+      {history.length === 0 ? (
+        <p className="text-2xs text-mut leading-relaxed rounded-lg border border-line bg-panel2 px-3 py-2.5">
+          Nothing exported yet — every EPUB, DOCX, PDF, caption, M4B and signed
+          manifest lands here with its path and counts. Failed runs keep their
+          error copy so the fix is one glance away.
+        </p>
+      ) : (
+        <>
+          {history.map((r) => (
+            <div
+              key={r.id}
+              className="border border-line rounded-lg bg-panel2 px-3 py-2 grid gap-1"
+              data-testid="publish-history-row"
+            >
+              <div className="flex items-center gap-2 flex-wrap text-2xs">
+                <span className="font-mono text-mut">
+                  {new Date(r.finishedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+                <span className="text-ink font-medium">{r.label}</span>
+                {r.status === 'done' ? (
+                  <span className="text-2xs px-1.5 py-0.5 rounded border border-emerald-500/40 bg-emerald-500/10 text-ok">DONE</span>
+                ) : (
+                  <span className="text-2xs px-1.5 py-0.5 rounded border border-rose-500/40 bg-rose-500/10 text-bad">FAILED</span>
+                )}
+              </div>
+              {r.artifacts.length > 0 && (
+                <div className="grid gap-1">
+                  {r.artifacts.map((a) => (
+                    <ArtifactLine key={a.path} path={a.path} bytes={a.bytes} extra={a.extra} />
+                  ))}
+                </div>
+              )}
+              {r.error && <p className="text-2xs text-bad/90 leading-relaxed">{r.error}</p>}
+            </div>
+          ))}
+          <div>
+            <button
+              type="button"
+              onClick={clear}
+              className="text-2xs text-mut hover:text-ink underline decoration-dotted"
+            >
+              Clear history
+            </button>
+          </div>
+        </>
+      )}
+    </div>
   );
 }

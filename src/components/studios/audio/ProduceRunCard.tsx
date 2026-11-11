@@ -19,7 +19,7 @@ import { useManuscriptStore } from '../../../stores/manuscriptStore';
 import { useAudioRunStore, AUDIO_RUN_STAGES, type AudioRunStageId } from '../../../stores/audioRunStore';
 import { useWorkspaceStore } from '../../../stores/workspaceStore';
 import { VOICE_ENGINES } from '../../../lib/constants';
-import { cn, formatMs } from '../../../lib/utils';
+import { cn, formatMs, plural } from '../../../lib/utils';
 import { btnPrimary, inputClass } from '../../layout/Modal';
 
 const CLOUD_ENGINES = VOICE_ENGINES.filter((e) => e !== 'KOKORO_LOCAL');
@@ -345,7 +345,7 @@ export function ProduceRunCard() {
             </div>
           )}
           <div className="text-2xs text-mut">
-            {run.segments} segments · {formatMs(run.audioMs)} audio
+            {plural(run.segments, 'segment')} · {formatMs(run.audioMs)} audio
             {run.finishedAt ? ` · finished ${new Date(run.finishedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
           </div>
           {run.status === 'done' && (

@@ -509,7 +509,9 @@ export function CraftStudio() {
             </div>
             {rtReport && (
               <div className="flex items-center gap-2 flex-wrap text-2xs font-mono text-mut">
-                <span>
+                <span
+                  title="Serialization cadence: reserve = drafted-not-published chapters, published = shipped episodes, buffer ≈ weeks of runway at the current release rhythm."
+                >
                   reserve {rtReport.cadence.reserve_chapters} · published{' '}
                   {rtReport.cadence.published_chapters} · buffer ≈{' '}
                   {rtReport.cadence.buffer_weeks} wk
@@ -521,6 +523,7 @@ export function CraftStudio() {
                       ? 'border-emerald-500/40 bg-emerald-500/10 text-ok'
                       : 'border-amber-500/40 bg-amber-500/10 text-warn',
                   )}
+                  title={`buffer < 4 means fewer than four weeks of published-buffer runway remain — serialized releases outrun the draft pile${rtReport.cadence.buffer_healthy ? ' (not the case here)' : ''}. Draft or schedule ahead to rebuild the buffer.`}
                 >
                   {rtReport.cadence.buffer_healthy ? 'buffer healthy' : 'buffer < 4'}
                 </span>

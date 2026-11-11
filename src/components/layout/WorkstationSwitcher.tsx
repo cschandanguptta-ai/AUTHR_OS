@@ -26,7 +26,7 @@ import { useManuscriptStore } from '../../stores/manuscriptStore';
 import { useBookContextStore } from '../../stores/bookContextStore';
 import * as api from '../../ipc/api';
 import { toast, toastError } from '../../stores/uiStore';
-import { cn, IS_MAC, MOD_KEY } from '../../lib/utils';
+import { cn, IS_MAC, MOD_KEY, plural } from '../../lib/utils';
 import { SettingsPopover } from './SettingsPopover';
 import { useDismiss } from '../../hooks/useDismiss';
 import { useConfirmStore } from '../../stores/confirmStore';
@@ -224,7 +224,7 @@ export function WorkstationSwitcher() {
             toast(
               'success',
               'Clean sweep complete',
-              `${res.purged_segments} segments + ${res.purged_threads} threads purged · FTS rebuilt`,
+              `${plural(res.purged_segments, 'segment')} + ${plural(res.purged_threads, 'thread')} purged · FTS rebuilt`,
             );
           } catch (err) {
             toastError('Clean sweep failed', err);
@@ -248,7 +248,12 @@ export function WorkstationSwitcher() {
       {/* Studio tabs — grouped WRITE / PRODUCE / SELL (R-14), shortcuts unchanged */}
       <nav className="flex items-center ml-1 gap-1" aria-label="Studios">
         {STUDIO_GROUPS.map((group, gi) => (
-          <div key={group.label} className="flex items-center">
+          <div
+            key={group.label}
+            role="group"
+            aria-label={`${group.label} studios`}
+            className="flex items-center"
+          >
             {gi > 0 && <span className="w-px h-5 bg-line mx-1.5" aria-hidden />}
             <div
               className={cn(

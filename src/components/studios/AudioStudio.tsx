@@ -16,7 +16,7 @@ import { audioCacheStats, audioPronounce, type AudioCacheStats, type PronounceEn
 import { ROLE_BADGES, EMOTION_PRESETS, emotionChipClass } from '../../lib/constants';
 import { VOICE_ENGINE_OPTIONS } from '../../lib/voiceCatalog';
 import { VoicePicker } from '../shared/VoicePicker';
-import { cn, formatBytes } from '../../lib/utils';
+import { cn, formatBytes, plural } from '../../lib/utils';
 import { inputClass, btnPrimary } from '../layout/Modal';
 import { toast, toastError } from '../../stores/uiStore';
 import { ProduceRunCard } from './audio/ProduceRunCard';
@@ -273,7 +273,7 @@ function RunHistory() {
                 </span>
                 <span className="text-ink font-medium">{r.chapterLabel}</span>
                 <span className="font-mono text-mut">{r.engine}</span>
-                <span className="text-mut">{r.segments} segments</span>
+                <span className="text-mut">{plural(r.segments, 'segment')}</span>
                 {verdict(r)}
                 {r.acx && (
                   <span className="font-mono text-mut/80">

@@ -10,7 +10,7 @@ import { useManuscriptStore } from '../../stores/manuscriptStore';
 import { useBookContextStore, resolveActiveBook } from '../../stores/bookContextStore';
 import { bookUpdate } from '../../ipc/api';
 import { btnPrimary, inputClass } from '../layout/Modal';
-import { cn } from '../../lib/utils';
+import { cn, plural } from '../../lib/utils';
 import { toast, toastError } from '../../stores/uiStore';
 import type { BookRow } from '../../types/ast';
 
@@ -39,7 +39,7 @@ function buildDescription(book: BookRow): string {
     book.premise || `A ${book.genre.toLowerCase()} story about ${book.theme || 'what we owe each other'}.`,
     book.theme ? `Theme: ${book.theme}.` : '',
     `Narrative structure: ${book.narrative_structure.replace(/_/g, ' ').toLowerCase()}.`,
-    `${book.target_chapters} chapters · ${book.target_word_count.toLocaleString('en-US')} words.`,
+    `${plural(book.target_chapters, 'chapter')} · ${book.target_word_count.toLocaleString('en-US')} words.`,
     '\nSubscribe for chapter drops and behind-the-scenes audio drama.',
   ].filter(Boolean).join('\n');
 }

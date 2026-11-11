@@ -35,7 +35,7 @@ import * as api from '../../ipc/api';
 import { toast, toastError } from '../../stores/uiStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { fuzzyScore } from '../../lib/fuzzy';
-import { IS_MAC, MOD_ALT_KEY, MOD_KEY, cn } from '../../lib/utils';
+import { IS_MAC, MOD_ALT_KEY, MOD_KEY, cn, plural } from '../../lib/utils';
 
 interface Command {
   id: string;
@@ -235,7 +235,7 @@ function buildCommands(): Command[] {
                 toast(
                   'success',
                   'Clean sweep complete',
-                  `${res.purged_segments} segments + ${res.purged_threads} threads purged · FTS rebuilt`,
+                  `${plural(res.purged_segments, 'segment')} + ${plural(res.purged_threads, 'thread')} purged · FTS rebuilt`,
                 );
               } catch (err) {
                 toastError('Clean sweep failed', err);

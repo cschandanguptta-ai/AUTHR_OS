@@ -85,13 +85,18 @@
   --line-rgb: 221 210 184;
   --line-2-rgb: 201 187 156;
   --ink-rgb: 64 56 42;
-  /* Darkened from #8a7d63 — 11px labels need ≥4:1 against #fbf7ee. */
-  --muted-rgb: 117 104 77;
-  --accent-rgb: 180 83 9;
+  /* Darkened from #8a7d63 — 11px labels need ≥4:1 against #fbf7ee.
+     RA-06/D6-Phase3: #756850 → #6E6148 for AA headroom on every panel tier. */
+  --muted-rgb: 110 97 72;
+  /* RA-06/D6-Phase3: accent darkened #B45309 → #A34A08 — small accent text
+     now clears WCAG AA on app bg (5.27), panel (5.55) and panel2 (4.91). */
+  --accent-rgb: 163 74 8;
   --accent-2-rgb: 109 91 184;
-  --ok-rgb: 15 138 95;
-  --warn-rgb: 180 83 9;
-  --bad-rgb: 190 74 74;
+  /* Darkened to #0B704C — the old #0F8A5F scored 4.07:1 on panel, under AA. */
+  --ok-rgb: 11 112 76;
+  --warn-rgb: 163 74 8;
+  /* Darkened to #B03C3C — the old #BE4A4A scored 4.07:1 on panel2. */
+  --bad-rgb: 176 60 60;
   --on-accent-rgb: 255 247 237;
 
   --app-bg: rgb(var(--app-rgb));
