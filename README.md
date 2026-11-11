@@ -6,8 +6,10 @@ professional authors, novelists, scriptwriters, and audio dramatists.
 Architecture: **Tauri v2 + Rust Core Runtime + React 19 / TypeScript / Vite /
 Tailwind CSS / Meta's Lexical AST** under a Zero-Double-Work paradigm.
 
-> **Run this on a new machine?** Start with **`RUN_ON_LAPTOP.md`** —
-> prerequisites, per-OS build/run/installer steps, and what works offline.
+> **Run this on a new machine?** Start with **`RUN_ON_LAPTOP.md`** (all-OS:
+> prerequisites, build/run/installer steps, what works offline) — or
+> **`RUN_ON_WINDOWS.md`** for the dedicated Windows 10/11 walk-through
+> (PowerShell commands, WebView2/MSVC notes, MSI + NSIS installer build).
 
 | Component | Status |
 |-----------|--------|
@@ -102,7 +104,7 @@ Theming rule: components use the semantic utilities (`text-ok`, `bg-accent/10`,
 …) — never hardcoded spectrum classes; see `docs/invariants-and-gotchas.md`
 §1.14–1.15.
 
-### 3. E2E test suite (223 tests · 39 modules)
+### 3. E2E test suite (229 tests · 41 modules)
 
 ```bash
 python tests/run_e2e.py                 # all 4 tiers

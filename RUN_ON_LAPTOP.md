@@ -1,7 +1,11 @@
 # RUN_ON_LAPTOP.md — from download to running app in ~10 minutes
 
+**On Windows 10/11?** Use **`RUN_ON_WINDOWS.md`** instead — same pipeline,
+PowerShell-native commands, MSVC/WebView2 prerequisites, and the MSI + NSIS
+installer build.
+
 You have two packages. Both contain the identical, fully verified source tree
-(223/223 E2E + 135/135 unit tests green, contract v1.6, 74 commands).
+(229/229 E2E + 135/135 unit tests green, contract v1.6, 74 commands).
 
 | Zip | Contents | Use it when |
 |---|---|---|
@@ -30,7 +34,7 @@ npm install                                    # always; node_modules is not shi
 npm run build                                  # tsc --noEmit + vite build → dist/
 cd src-tauri && cargo build --release          # → target/release/authr
 cd .. && python3 -m pip install pytest         # once
-AUTHR_MOCK_KEYCHAIN=1 python3 -m pytest tests/ -q     # expect: 223 passed
+AUTHR_MOCK_KEYCHAIN=1 python3 -m pytest tests/ -q     # expect: 229 passed
 ./src-tauri/target/release/authr --contract    # expect: 74 commands, version 1.6
 npm run dev                                    # open http://localhost:5173
 ```
