@@ -44,7 +44,7 @@ function buildDescription(book: BookRow): string {
   ].filter(Boolean).join('\n');
 }
 
-/** Phase 4: register-aware builders. The storefront register follows the KDP
+/** Roadmap stage 4: register-aware builders. The storefront register follows the KDP
  *  description window (200–4000 chars); the back-cover register is the
  *  print-jacket voice — hook, premise, closing question, no subscribe line. */
 type CopyRegister = 'storefront' | 'back-cover';
@@ -102,7 +102,7 @@ export function MarketingStudio() {
   const [draft, setDraft] = useState<BookRow | null>(null);
   const [style, setStyle] = useState(STYLE_PRESETS[0]);
   const [saving, setSaving] = useState(false);
-  // Phase 4: description register (storefront vs back-cover) + variation.
+  // Roadmap stage 4: description register (storefront vs back-cover) + variation.
   const [register, setRegister] = useState<CopyRegister>('storefront');
   const [variant, setVariant] = useState(0);
 
@@ -219,7 +219,7 @@ export function MarketingStudio() {
                 </div>
               ))}
             </div>
-            {/* Phase 4: register selector — storefront blurb vs back-cover jacket
+            {/* Roadmap stage 4: register selector — storefront blurb vs back-cover jacket
                 copy, each with its own length window and a deterministic
                 regenerate-with-variation action (local builders, no network). */}
             <div className="flex items-center gap-2 flex-wrap mt-1" role="group" aria-label="Description register">

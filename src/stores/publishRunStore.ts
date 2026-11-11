@@ -1,4 +1,4 @@
-// AUTHR_OS — publish run history (RA-07, UX re-assessment D6 Phase 3). The
+// AUTHR_OS — publish run history (RA-07, UX re-assessment D6 stage 3). The
 // Publish & Export studio previously rendered its cards in a single left
 // column with a dead right half at 1440 px; the right column is now the
 // artifacts & run history surface, reusing the Audio run-history pattern:

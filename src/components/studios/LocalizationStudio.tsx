@@ -110,7 +110,7 @@ export function LocalizationStudio() {
   }, [entries, bundlePath, chapter, activeLang]);
 
   const storeDrafts = langEntry?.drafts ?? {};
-  // Phase 4: per-language completion — non-empty persisted drafts for that
+  // Roadmap stage 4: per-language completion — non-empty persisted drafts for that
   // language on the active chapter, surfaced on every rail tab.
   const translatedFor = (lang: string): number => {
     if (!bundlePath || !chapter) return 0;

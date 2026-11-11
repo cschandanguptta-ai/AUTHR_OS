@@ -65,7 +65,7 @@ export function DynamicInspector() {
     () => segments.find((s) => s.segment_id === selectedSegmentId) ?? null,
     [segments, selectedSegmentId],
   );
-  // Phase 4: segment → lore cross-links. Name-occurrence match over the Story
+  // Roadmap stage 4: segment → lore cross-links. Name-occurrence match over the Story
   // Bible (FTS indexes content; the binder's lore section carries the reverse
   // direction). Stated honestly in the UI as a name match, not a semantic one.
   const referencedLore = useMemo(() => {
@@ -237,7 +237,7 @@ export function DynamicInspector() {
             />
           </Row>
 
-          {/* Phase 4: referenced lore — Story Bible entries whose key appears
+          {/* Roadmap stage 4: referenced lore — Story Bible entries whose key appears
               in this segment's text (name match, not semantic inference). */}
           {referencedLore.length > 0 && (
             <div className="grid gap-1" data-testid="segment-lore-links">

@@ -292,7 +292,7 @@ function LoreSection({ open, onToggle }: { open: boolean; onToggle: () => void }
   const chapters = useManuscriptStore((s) => s.chapters);
   const selectChapter = useManuscriptStore((s) => s.selectChapter);
   const [deleteTarget, setDeleteTarget] = useState<LoreRow | null>(null);
-  // Phase 4: lore → segment cross-links. One FTS scan per entry; hits jump
+  // Roadmap stage 4: lore → segment cross-links. One FTS scan per entry; hits jump
   // straight to the chapter that mentions the entry (bidirectional with the
   // inspector's Story Bible hits).
   const [scanKey, setScanKey] = useState<string | null>(null);

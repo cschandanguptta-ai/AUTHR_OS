@@ -98,7 +98,7 @@ function SceneCard({
   scene: Block;
   asset: VideoAsset | undefined;
   engine: string;
-  /** Phase 4: per-scene render estimate — what one repaint costs in frames
+  /** Roadmap stage 4: per-scene render estimate — what one repaint costs in frames
    *  and which engine/model answers. Null when no image provider resolves
    *  (the SCRIPTED engine renders seeded local frames at zero marginal cost). */
   renderEstimate: string | null;
@@ -262,7 +262,7 @@ export function VideoStudio() {
   }, []);
 
   const r2iAvailable = (provider?.image.resolved.endpoint_source ?? 'none') !== 'none';
-  // Phase 4: per-scene render estimate. The frozen contract carries no pricing
+  // Roadmap stage 4: per-scene render estimate. The frozen contract carries no pricing
   // data, so the estimate is what can be stated honestly: one frame per
   // repaint, answered by this engine/model — never an invented currency amount.
   const renderEstimate: string | null = r2iAvailable

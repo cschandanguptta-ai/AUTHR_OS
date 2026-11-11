@@ -1,5 +1,5 @@
 // AUTHR_OS — first-run product tour state (F-14 completion, UX re-assessment
-// D6 Phase 2). Three steps — WRITE / PRODUCE / SELL — shown once after the
+// D6 stage 2). Three steps — WRITE / PRODUCE / SELL — shown once after the
 // first bootstrap, dismissible forever (localStorage flag), replayable from
 // the maintenance menu. Zero interference for returning users: the flag is
 // checked before anything mounts.
