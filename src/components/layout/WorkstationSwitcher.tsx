@@ -180,7 +180,9 @@ function LockDot() {
       data-testid="lease-chip"
     >
       <span className={cn('w-2 h-2 rounded-full', tone)} />
-      <span className="hidden md:inline">{readonly ? 'READ-ONLY' : 'OPEN HERE'}</span>
+      <span className="hidden md:inline whitespace-nowrap">
+        {readonly ? 'READ-ONLY' : 'OPEN HERE'}
+      </span>
     </button>
   );
 }
