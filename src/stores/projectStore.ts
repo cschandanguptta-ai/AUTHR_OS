@@ -15,12 +15,60 @@ import { useBookContextStore } from './bookContextStore';
 export type ProjectStatus = 'closed' | 'opening' | 'open';
 
 const LAST_BUNDLE_KEY = 'authr_os.last_bundle';
+// RA-03: recent bundles — (path, title, last-opened), max 5, localStorage
+// (same persistence tier as last_bundle; survives relaunch in the Tauri
+// WebView profile and in browser dev). Lease semantics unchanged: recents
+// open through the very same openProject path.
+const RECENTS_KEY = 'authr_os.recent_bundles';
+const RECENTS_MAX = 5;
 
 export function lastBundlePath(): string {
   try {
     return window.localStorage.getItem(LAST_BUNDLE_KEY) ?? '';
   } catch {
     return '';
+  }
+}
+
+export interface RecentBundle {
+  path: string;
+  title: string;
+  lastOpened: number;
+}
+
+export function listRecents(): RecentBundle[] {
+  try {
+    const raw = window.localStorage.getItem(RECENTS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as RecentBundle[];
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((r) => r && typeof r.path === 'string')
+      .sort((a, b) => (b.lastOpened ?? 0) - (a.lastOpened ?? 0))
+      .slice(0, RECENTS_MAX);
+  } catch {
+    return [];
+  }
+}
+
+function rememberRecent(path: string, title: string): void {
+  try {
+    const next = [
+      { path, title, lastOpened: Date.now() },
+      ...listRecents().filter((r) => r.path !== path),
+    ].slice(0, RECENTS_MAX);
+    window.localStorage.setItem(RECENTS_KEY, JSON.stringify(next));
+  } catch {
+    /* private mode — ignore */
+  }
+}
+
+export function removeRecent(path: string): void {
+  try {
+    const next = listRecents().filter((r) => r.path !== path);
+    window.localStorage.setItem(RECENTS_KEY, JSON.stringify(next));
+  } catch {
+    /* private mode — ignore */
   }
 }
 
@@ -33,6 +81,8 @@ interface ProjectState {
   lockInfo: LockStatus | null;
   defaultBookId: number | null;
   sessionNonce: number;
+  /** Wall-clock time the current bundle was opened (RA-05 lease chip). */
+  openedAt: number;
   openProject: (path: string) => Promise<boolean>;
   initProject: (path: string, title: string, author: string) => Promise<boolean>;
   closeProject: () => Promise<void>;
@@ -48,6 +98,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   lockInfo: null,
   defaultBookId: null,
   sessionNonce: 0,
+  openedAt: 0,
 
   openProject: async (path) => {
     set({ status: 'opening' });
@@ -58,6 +109,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       } catch {
         /* private mode — ignore */
       }
+      rememberRecent(path, res.manifest.title);
       set({
         status: 'open',
         bundlePath: path,
@@ -66,6 +118,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         cloudSyncGuard: res.cloud_sync_guard,
         defaultBookId: null,
         sessionNonce: get().sessionNonce + 1,
+        openedAt: Date.now(),
       });
       toast('success', 'Bundle open', path);
       void get().refreshLockStatus();
@@ -86,6 +139,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       } catch {
         /* private mode — ignore */
       }
+      rememberRecent(res.path, res.manifest.title);
       set({
         status: 'open',
         bundlePath: res.path,
@@ -94,6 +148,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         cloudSyncGuard: false,
         defaultBookId: res.book_id,
         sessionNonce: get().sessionNonce + 1,
+        openedAt: Date.now(),
       });
       toast('success', 'Project initialized', res.path);
       // R-12/F-14: a fresh bootstrap is never silent — the dashboard opens
@@ -130,6 +185,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       cloudSyncGuard: false,
       lockInfo: null,
       defaultBookId: null,
+      openedAt: 0,
     });
   },
 

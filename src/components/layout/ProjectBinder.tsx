@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   BookMarked,
   BookOpen,
@@ -23,6 +23,7 @@ import { useVoiceCastStore } from '../../stores/voiceCastStore';
 import { useLoreStore } from '../../stores/loreStore';
 import { useThreadStore } from '../../stores/threadStore';
 import { useProjectStore } from '../../stores/projectStore';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
 import * as api from '../../ipc/api';
 import { toast, toastError } from '../../stores/uiStore';
 import {
@@ -585,6 +586,18 @@ export function ProjectBinder() {
   const [newChapter, setNewChapter] = useState(false);
   const [newCharacter, setNewCharacter] = useState(false);
   const [newLore, setNewLore] = useState(false);
+  // RA-01: any surface (dashboard NBA, palette) can request the New Chapter
+  // dialog through the workspace nonce; the binder owns the modal state.
+  const newChapterNonce = useWorkspaceStore((s) => s.newChapterNonce);
+  useEffect(() => {
+    if (newChapterNonce > 0) setNewChapter(true);
+  }, [newChapterNonce]);
+  // RA-08 companion: the canvas gutter's "add to cast" affordance opens the
+  // CharacterModal pre-seeded with the segment's speaker key.
+  const castModalPrefill = useWorkspaceStore((s) => s.castModalPrefill);
+  useEffect(() => {
+    if (castModalPrefill !== null) setNewCharacter(true);
+  }, [castModalPrefill]);
   const chapterCount = useManuscriptStore((s) => s.chapters.length);
   const totalWords = useManuscriptStore((s) =>
     s.chapters.reduce((acc, c) => acc + (c.actual_word_count ?? 0), 0),
@@ -658,7 +671,15 @@ export function ProjectBinder() {
       </footer>
 
       <NewChapterModal open={newChapter} onClose={() => setNewChapter(false)} />
-      <CharacterModal open={newCharacter} onClose={() => setNewCharacter(false)} />
+      <CharacterModal
+        key={castModalPrefill ?? 'cast-create'}
+        open={newCharacter}
+        prefillSpeaker={castModalPrefill ?? undefined}
+        onClose={() => {
+          setNewCharacter(false);
+          if (castModalPrefill !== null) useWorkspaceStore.getState().closeCastModal();
+        }}
+      />
       <LoreModal open={newLore} onClose={() => setNewLore(false)} />
     </div>
   );

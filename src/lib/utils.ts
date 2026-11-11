@@ -63,6 +63,31 @@ export function truncate(text: string, max: number): string {
   return `${text.slice(0, max - 1)}…`;
 }
 
+/** "8 entries · 1 chapter" — count + correctly pluralised unit (RA-06). */
+export function plural(n: number, one: string, many?: string): string {
+  return `${formatNumber(n)} ${n === 1 ? one : (many ?? `${one}s`)}`;
+}
+
+/** "sera_vantine" → "Sera Vantine" — humanises raw speaker keys (RA-08). */
+export function humanizeKey(key: string): string {
+  const cleaned = key.replace(/[_-]+/g, ' ').trim();
+  if (!cleaned) return key;
+  return cleaned.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/** Coarse relative time for the recents list (RA-03): "just now", "12m ago". */
+export function timeAgo(ts: number): string {
+  const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
+  if (s < 45) return 'just now';
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.round(h / 24);
+  if (d < 14) return `${d}d ago`;
+  return new Date(ts).toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
 export function timestampSlug(): string {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, '0');

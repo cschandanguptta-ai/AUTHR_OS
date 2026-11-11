@@ -11,6 +11,7 @@ import { DashboardOverlay } from './components/layout/DashboardOverlay';
 import { Cockpit } from './components/layout/Cockpit';
 import { Toaster } from './components/layout/Toaster';
 import { AppConfirmHost } from './components/shared/AppConfirmHost';
+import { SmallWidthNotice } from './components/shared/SmallWidthNotice';
 import { useWorkspaceStore } from './stores/workspaceStore';
 
 // Studio code-splitting (latency workstream): the cockpit is the primary
@@ -73,6 +74,7 @@ export default function App() {
   if (status !== 'open') {
     return (
       <div className="h-full flex flex-col bg-app text-ink">
+        <SmallWidthNotice />
         <WelcomeScreen />
         <Toaster />
         <AppConfirmHost />
@@ -82,6 +84,7 @@ export default function App() {
 
   return (
     <div className="h-full flex flex-col bg-app text-ink">
+      <SmallWidthNotice />
       <WorkstationSwitcher />
       <main className="flex-1 min-h-0 flex flex-col" aria-label="Active studio">
         {/* key remount gives each studio switch a soft crossfade (anim-fade) */}

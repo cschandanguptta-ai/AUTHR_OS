@@ -23,7 +23,7 @@ import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import {
-  FileText, Layers, Loader2, Radio, RefreshCw, Sparkles, Wand2, Waves, X,
+  CircleAlert, FileText, Layers, Loader2, PlugZap, Radio, RefreshCw, Sparkles, Wand2, Waves, X,
 } from 'lucide-react';
 import { useManuscriptStore } from '../../stores/manuscriptStore';
 import { useProjectStore } from '../../stores/projectStore';
@@ -507,6 +507,26 @@ function CanvasInner() {
                   <p className="text-xs leading-relaxed text-ink whitespace-pre-wrap max-h-24 overflow-y-auto">
                     {ai.proposal.text}
                   </p>
+                  {ai.proposal.backend === 'OFFLINE_GRAMMAR' && (
+                    <div
+                      className="flex items-center gap-2 flex-wrap rounded-md border border-warn/30 bg-warn/5 px-2.5 py-1.5"
+                      data-testid="ai-fallback-note"
+                    >
+                      <CircleAlert size={11} className="text-warn shrink-0" />
+                      <span className="text-2xs text-mut leading-relaxed flex-1 min-w-[24ch]">
+                        Offline grammar engine — deterministic filler, not model prose. Connect an
+                        LLM server for real continuations; output stays marked until then.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => useWorkspaceStore.getState().openProviderModal('llm')}
+                        className="flex items-center gap-1 text-2xs font-medium px-2 py-1 rounded border border-accent/50 bg-accent/10 hover:bg-accent/20 text-ink"
+                        data-testid="ai-connect-provider"
+                      >
+                        <PlugZap size={10} className="text-accent" /> Connect an LLM server
+                      </button>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2">
                     <button
                       type="button"

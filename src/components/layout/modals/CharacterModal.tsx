@@ -5,7 +5,7 @@ import { VoicePicker } from '../../shared/VoicePicker';
 import { useVoiceCastStore } from '../../../stores/voiceCastStore';
 import { CHARACTER_ROLES } from '../../../lib/constants';
 import { VOICE_ENGINE_OPTIONS } from '../../../lib/voiceCatalog';
-import { slugify } from '../../../lib/utils';
+import { humanizeKey, slugify } from '../../../lib/utils';
 import type { CharacterRow } from '../../../types/ast';
 
 interface Props {
@@ -13,16 +13,24 @@ interface Props {
   onClose: () => void;
   /** When provided, the modal edits this profile instead of creating one. */
   edit?: CharacterRow;
+  /** RA-08: raw speaker key from a dialogue segment not in the cast — the
+   *  create form opens pre-seeded so "Add to rack" makes the segment valid.
+   *  The key is preserved verbatim so it matches the segment's speaker_id. */
+  prefillSpeaker?: string;
 }
 
 /** CharacterModal — character_upsert with all profile fields incl. the 5-engine picker. */
-export function CharacterModal({ open, onClose, edit }: Props) {
+export function CharacterModal({ open, onClose, edit, prefillSpeaker }: Props) {
   const upsertCharacter = useVoiceCastStore((s) => s.upsertCharacter);
   const deleteCharacter = useVoiceCastStore((s) => s.deleteCharacter);
 
-  const [keyEdited, setKeyEdited] = useState(false);
-  const [characterKey, setCharacterKey] = useState(edit?.character_key ?? '');
-  const [displayName, setDisplayName] = useState(edit?.display_name ?? '');
+  const [keyEdited, setKeyEdited] = useState(Boolean(edit) || Boolean(prefillSpeaker));
+  const [characterKey, setCharacterKey] = useState(
+    edit?.character_key ?? prefillSpeaker ?? '',
+  );
+  const [displayName, setDisplayName] = useState(
+    edit?.display_name ?? (prefillSpeaker ? humanizeKey(prefillSpeaker) : ''),
+  );
   const [role, setRole] = useState(edit?.role ?? 'PROTAGONIST');
   const [bio, setBio] = useState(edit?.bio ?? '');
   const [ipa, setIpa] = useState(edit?.ipa_phonetic ?? '');
@@ -68,7 +76,11 @@ export function CharacterModal({ open, onClose, edit }: Props) {
       open={open}
       onClose={onClose}
       title={edit ? `Edit ${edit.display_name}` : 'New character'}
-      subtitle="character_upsert · voice profiles feed the synthesis pipeline"
+      subtitle={
+        prefillSpeaker && !edit
+          ? `character_upsert · pre-seeded from dialogue speaker “${prefillSpeaker}” — the key is preserved so the segment matches`
+          : 'character_upsert · voice profiles feed the synthesis pipeline'
+      }
       width="max-w-xl"
       footer={
         <>

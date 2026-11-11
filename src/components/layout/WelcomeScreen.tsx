@@ -7,11 +7,15 @@ import {
   FolderOpen,
   FolderPlus,
   Gauge,
+  History,
   Loader2,
   Lock,
+  Play,
   Plus,
+  X,
 } from 'lucide-react';
-import { useProjectStore, lastBundlePath } from '../../stores/projectStore';
+import { useProjectStore, lastBundlePath, listRecents, removeRecent, type RecentBundle } from '../../stores/projectStore';
+import { timeAgo } from '../../lib/utils';
 import { pruneStaleDrafts } from '../../stores/localizationStore';
 import { IS_DESKTOP } from '../../lib/env';
 import { APP_VERSION } from '../../lib/constants';
@@ -79,6 +83,12 @@ export function WelcomeScreen() {
 
   const busy = status === 'opening';
 
+  // RA-03: recents are read on each render (cheap localStorage read) with a
+  // tick to force re-render after a removal.
+  const [recentsTick, setRecentsTick] = useState(0);
+  const recents: RecentBundle[] = listRecents();
+  const last = recents[0] ?? null;
+
   /** Native save dialog → the bundle DIRECTORY path (an .authr directory). */
   const pickNewBundle = async () => {
     const { save } = await import('@tauri-apps/plugin-dialog');
@@ -108,7 +118,7 @@ export function WelcomeScreen() {
     <div className="flex-1 min-h-0 overflow-y-auto">
       <div className="mx-auto w-full max-w-4xl px-6 py-14 anim-fade">
         {/* Wordmark */}
-        <div className="flex flex-col items-center text-center gap-3 mb-12">
+        <div className="flex flex-col items-center text-center gap-3 mb-8">
           <div className="inline-flex items-baseline gap-1 rounded-xl border border-line2 bg-panel px-6 py-3 shadow-lg">
             <span className="text-2xl font-semibold tracking-[0.18em] text-ink">AUTHR</span>
             <span className="text-2xl font-mono font-semibold text-accent">_OS</span>
@@ -119,8 +129,37 @@ export function WelcomeScreen() {
           </p>
         </div>
 
+        {/* RA-03: continue where you left off — one click back into the lease. */}
+        {last && (
+          <div
+            className="rounded-xl border border-accent/40 bg-panel shadow-xl px-5 py-4 mb-5 flex items-center gap-4 flex-wrap"
+            data-testid="continue-last"
+          >
+            <div className="w-9 h-9 rounded-lg border border-line bg-panel2 flex items-center justify-center text-accent shrink-0">
+              <BookOpen size={16} />
+            </div>
+            <div className="flex-1 min-w-[16ch]">
+              <div className="text-[13px] font-semibold text-ink">Continue where you left off</div>
+              <div className="text-2xs text-mut truncate" title={last.path}>
+                {last.title || 'Untitled bundle'} · {timeAgo(last.lastOpened)} ·{' '}
+                <span className="font-mono">{last.path}</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => void openProject(last.path)}
+              disabled={busy}
+              className={btnPrimary}
+              data-testid="continue-last-button"
+            >
+              {busy ? <Loader2 size={14} className="animate-spin" /> : <Play size={13} />}
+              Continue
+            </button>
+          </div>
+        )}
+
         {/* Forms */}
-        <div className="rounded-xl border border-line2 bg-panel shadow-xl overflow-hidden mb-12">
+        <div className="rounded-xl border border-line2 bg-panel shadow-xl overflow-hidden mb-5">
           <div className="flex border-b border-line" role="tablist" aria-label="Project actions">
             <button
               type="button"
@@ -301,8 +340,53 @@ export function WelcomeScreen() {
           )}
         </div>
 
-        {/* Feature strip */}
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {/* RA-03: recent bundles (max 5) — the manual open form stays above. */}
+        {recents.length > 0 && (
+          <div
+            className="rounded-xl border border-line bg-panel px-5 py-4 mb-12"
+            data-testid="recent-bundles"
+            data-tick={recentsTick}
+          >
+            <div className="flex items-center gap-2 mb-2.5">
+              <History size={13} className="text-accent" />
+              <span className="text-2xs font-semibold tracking-wider text-mut uppercase">
+                Recent bundles
+              </span>
+              <span className="text-2xs text-mut/70">opens through the same lease path</span>
+            </div>
+            <div className="grid gap-1">
+              {recents.map((r) => (
+                <div key={r.path} className="flex items-center gap-2 group">
+                  <button
+                    type="button"
+                    onClick={() => void openProject(r.path)}
+                    disabled={busy}
+                    className="flex-1 min-w-0 flex items-center gap-2 px-2 py-1.5 rounded-md text-left hover:bg-panel2 transition-colors"
+                    title={`Open ${r.path}`}
+                  >
+                    <FolderOpen size={12} className="text-mut shrink-0" />
+                    <span className="text-2xs text-ink truncate">{r.title || 'Untitled bundle'}</span>
+                    <span className="text-2xs text-mut/70 shrink-0">· {timeAgo(r.lastOpened)}</span>
+                    <span className="text-2xs text-mut/50 font-mono truncate hidden sm:inline">{r.path}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      removeRecent(r.path);
+                      setRecentsTick((t) => t + 1);
+                    }}
+                    className="w-6 h-6 rounded text-mut/50 hover:text-bad opacity-0 group-hover:opacity-100 focus-visible:opacity-100 flex items-center justify-center"
+                    aria-label={`Forget ${r.title || r.path}`}
+                    title="Remove from recents (does not delete the bundle)"
+                  >
+                    <X size={11} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className={`grid gap-3 sm:grid-cols-2 lg:grid-cols-3 ${recents.length > 0 ? '' : 'mt-12'}`}>
           {FEATURES.map((f) => (
             <div
               key={f.title}

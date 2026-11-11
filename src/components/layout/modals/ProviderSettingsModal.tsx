@@ -18,6 +18,7 @@ import {
   PlugZap,
 } from 'lucide-react';
 import { Modal, Field, inputClass, btnPrimary, btnGhost } from '../Modal';
+import { useWorkspaceStore } from '../../../stores/workspaceStore';
 import {
   providerGet,
   providerSet,
@@ -108,6 +109,24 @@ export function ProviderSettingsModal({
       void load();
     }
   }, [open, load]);
+
+  // RA-02: surfaces that raise this modal can request the LLM section focused
+  // ("Connect an LLM server" from the AI proposal bar) — scroll to it and put
+  // the server-URL input in the keyboard path immediately.
+  const focusRequest = useWorkspaceStore((s) => s.providerModalFocus);
+  useEffect(() => {
+    if (!open || focusRequest !== 'llm') return;
+    const t = window.setTimeout(() => {
+      document
+        .getElementById('provider-section-llm')
+        ?.scrollIntoView({ block: 'start' });
+      (document.getElementById('provider-llm-url') as HTMLElement | null)?.focus({
+        preventScroll: true,
+      });
+    }, 60);
+    return () => window.clearTimeout(t);
+  }, [open, focusRequest]);
+
 
   const save = async () => {
     setSaving(true);
@@ -273,7 +292,7 @@ export function ProviderSettingsModal({
         <div className="border-t border-line" />
 
         {/* ── Local LLM server ─────────────────────────────────────────── */}
-        <section className="grid gap-3">
+        <section className="grid gap-3" id="provider-section-llm" data-testid="provider-llm-section">
           <div className="flex items-center gap-2">
             <BrainCircuit size={14} className="text-accent" />
             <h3 className="text-xs font-semibold tracking-wider text-mut uppercase">
@@ -289,6 +308,7 @@ export function ProviderSettingsModal({
           <Field label="Server URL">
             <input
               className={inputClass}
+              id="provider-llm-url"
               value={llmUrl}
               onChange={(e) => setLlmUrl(e.target.value)}
               placeholder="http://127.0.0.1:8080"

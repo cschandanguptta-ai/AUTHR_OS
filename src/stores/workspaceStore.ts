@@ -34,6 +34,15 @@ interface WorkspaceState {
   dashboardFresh: boolean;
   openDashboard: (opts?: { fresh?: boolean }) => void;
   closeDashboard: () => void;
+  /** RA-01 deep-link: bumped when any surface requests the New Chapter dialog
+   *  (dashboard NBA ladder, palette). ProjectBinder watches the nonce. */
+  newChapterNonce: number;
+  requestNewChapter: () => void;
+  /** RA-08 companion: prefill speaker key for "add to cast" from the canvas
+   *  gutter. ProjectBinder opens CharacterModal with this pre-seeded. */
+  castModalPrefill: string | null;
+  openCastModal: (prefillSpeaker?: string) => void;
+  closeCastModal: () => void;
   /** Pending one-shot intents per studio — switchStudio(id, payload) writes, the studio consumes. */
   intents: Partial<Record<StudioId, StudioIntent>>;
   setActiveStudio: (studio: StudioId) => void;
@@ -60,6 +69,12 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   dashboardFresh: false,
   openDashboard: (opts) => set({ dashboardOpen: true, dashboardFresh: opts?.fresh ?? false }),
   closeDashboard: () => set({ dashboardOpen: false, dashboardFresh: false }),
+  newChapterNonce: 0,
+  requestNewChapter: () => set((s) => ({ newChapterNonce: s.newChapterNonce + 1 })),
+  castModalPrefill: null,
+  openCastModal: (prefillSpeaker) =>
+    set({ castModalPrefill: prefillSpeaker ?? null }),
+  closeCastModal: () => set({ castModalPrefill: null }),
   providerModalOpen: false,
   providerModalFocus: null,
   intents: {},

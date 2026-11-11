@@ -500,3 +500,50 @@ input[type='range'] {
     transition: none;
   }
 }
+
+/* ── Small-width guard (RA-04) ─────────────────────────────────────────────
+   Below 480 px: one strategy applied globally — stack, wrap, scroll, and say
+   it honestly (SmallWidthNotice). Desktop/tablet widths are untouched. */
+
+@media (max-width: 479px) {
+  /* Workstation header: scroll horizontally, never clip a control. */
+  .app-header {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .app-header::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Studio shell headers wrap instead of squeezing the title out. */
+  .studio-header {
+    flex-wrap: wrap;
+  }
+  .studio-header .ml-auto {
+    margin-left: 0;
+  }
+
+  /* Full-width form controls inside studio card stacks. */
+  .studio-cards select,
+  .studio-cards input {
+    width: 100%;
+    max-width: none;
+  }
+  .studio-cards label {
+    width: 100%;
+  }
+
+  /* Artifact / result rows wrap instead of clipping the trailing actions. */
+  .artifact-line {
+    flex-wrap: wrap;
+  }
+  .artifact-line .min-w-0 {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  /* Card grids that Tailwind keeps multi-column at any width collapse to one. */
+  .cards-2col {
+    grid-template-columns: 1fr !important;
+  }
+}

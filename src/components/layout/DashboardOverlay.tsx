@@ -2,8 +2,8 @@
 // commands (book_list / chapter_list / character_list / lore_list /
 // audio_cache_stats / craft_retention_report / kdp_check), a bootstrap
 // summary for fresh bundles (F-14), and a deterministic next-best-action
-// ladder (D5 §5.3): no cast → tag → produce audio → scene → publish.
-// Every stat fails closed — a failed probe hides its card, never fakes one.
+// ladder (RA-01: maturity first — lib/nba.ts). Every stat fails closed — a
+// failed probe hides its card, never fakes one.
 
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -11,12 +11,14 @@ import {
   BookOpen,
   Clapperboard,
   Feather,
+  FilePlus2,
   HeartPulse,
   Layers,
   LayoutDashboard,
   Loader2,
   Package,
   PackageCheck,
+  PenLine,
   RefreshCw,
   ScrollText,
   Sparkles,
@@ -28,6 +30,7 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useManuscriptStore } from '../../stores/manuscriptStore';
 import { useBookContextStore, resolveActiveBook } from '../../stores/bookContextStore';
+import { buildNbaLadder, type NbaId } from '../../lib/nba';
 import * as api from '../../ipc/api';
 import type { ChapterRow } from '../../types/ast';
 import { cn, formatNumber } from '../../lib/utils';
@@ -46,11 +49,22 @@ interface DashboardData {
 }
 
 type Nba = {
-  id: string;
+  id: NbaId;
   label: string;
   detail: string;
   icon: typeof Users;
   go: () => void;
+};
+
+/** Icon per ladder id — navigation lives in the overlay, ordering in lib/nba.ts. */
+const NBA_ICONS: Record<NbaId, typeof Users> = {
+  'first-chapter': FilePlus2,
+  write: PenLine,
+  cast: Users,
+  tag: Tags,
+  produce: AudioLines,
+  scene: Clapperboard,
+  kdp: Package,
 };
 
 function StatCard({
@@ -186,63 +200,48 @@ export function DashboardOverlay() {
     closeDashboard();
   };
 
-  // ── Deterministic NBA ladder (D5 §5.3, first hit = primary) ─────────────
-  const nbas: Nba[] = [];
-  if (data) {
-    if (data.cast === 0) {
-      nbas.push({
-        id: 'cast',
-        label: 'Build your cast',
-        detail: 'No characters yet — audio synthesis needs a voice cast before any chapter can be produced.',
-        icon: Users,
-        go: () => goto('novel'),
-      });
-    }
-    if (untagged) {
-      nbas.push({
-        id: 'tag',
-        label: `Tag dialogue in chapter ${untagged.chapterNumber}`,
-        detail: `${untagged.count} dialogue segment${untagged.count === 1 ? '' : 's'} still speak with the narrator's voice — bulk-tag them in the inspector.`,
-        icon: Tags,
-        go: () => goto('novel'),
-      });
-    }
-    const produceTarget = data.chapters.find(
-      (c) => (data.coverage[c.id]?.total ?? 0) > 0 && data.coverage[c.id].synth === 0,
-    );
-    if (produceTarget) {
-      nbas.push({
-        id: 'produce',
-        label: `Produce audio for chapter ${produceTarget.chapter_number}`,
-        detail: `${data.coverage[produceTarget.id].total} segments have no audio yet — run the produce pipeline (plan → synthesize → master → validate).`,
-        icon: AudioLines,
-        go: () => goto('audio', { chapterId: produceTarget.id, arm: 'produce' }),
-      });
-    }
-    const assembled = data.chapters.find(
-      (c) =>
-        (data.coverage[c.id]?.total ?? 0) > 0 &&
-        data.coverage[c.id].synth === data.coverage[c.id].total,
-    );
-    if (assembled) {
-      nbas.push({
-        id: 'scene',
-        label: `Assemble the video novel for chapter ${assembled.chapter_number}`,
-        detail: 'Fully synthesized narration is ready — storyboard the scenes and render the MP4.',
-        icon: Clapperboard,
-        go: () => goto('video', { chapterId: assembled.id, arm: 'assemble' }),
-      });
-    }
-    if (data.kdp && !data.kdp.pass) {
-      nbas.push({
-        id: 'kdp',
-        label: 'Complete your KDP package',
-        detail: `Storefront readiness is ${data.kdp.score}/100 — finish keywords, categories and the description in the KDP panel.`,
-        icon: Package,
-        go: () => goto('craft', { arm: 'publish' }),
-      });
-    }
-  }
+  // ── Deterministic NBA ladder (RA-01: maturity first — see lib/nba.ts) ───
+  const ladder = data
+    ? buildNbaLadder({
+        chapters: data.chapters,
+        words: data.words,
+        cast: data.cast,
+        untagged,
+        coverage: data.coverage,
+        kdp: data.kdp,
+      })
+    : [];
+  const nbas: Nba[] = ladder.map((n) => ({
+    id: n.id,
+    label: n.label,
+    detail: n.detail,
+    icon: NBA_ICONS[n.id],
+    go: () => {
+      switch (n.id) {
+        case 'first-chapter':
+          // Deep-link: novel studio + auto-open the New Chapter dialog.
+          useWorkspaceStore.getState().requestNewChapter();
+          goto('novel');
+          break;
+        case 'write':
+        case 'tag':
+          goto('novel', n.chapterId != null ? { chapterId: n.chapterId } : undefined);
+          break;
+        case 'cast':
+          goto('novel');
+          break;
+        case 'produce':
+          goto('audio', { chapterId: n.chapterId, arm: 'produce' });
+          break;
+        case 'scene':
+          goto('video', { chapterId: n.chapterId, arm: 'assemble' });
+          break;
+        case 'kdp':
+          goto('craft', { arm: 'publish' });
+          break;
+      }
+    },
+  }));
 
   const epubReady = data
     ? Object.values(data.coverage).some((c) => c.total > 0 && c.synth === c.total)

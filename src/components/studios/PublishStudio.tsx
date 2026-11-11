@@ -56,7 +56,7 @@ function ArtifactLine({ path, bytes, extra }: { path: string; bytes?: number; ex
     } catch { /* clipboard unavailable — path stays visible */ }
   };
   return (
-    <div className="flex items-center gap-2 text-2xs font-mono text-ok/90" data-testid="artifact-line">
+    <div className="artifact-line flex items-center gap-2 text-2xs font-mono text-ok/90" data-testid="artifact-line">
       <CheckCircle2 size={11} className="shrink-0" />
       <span className="truncate" title={path}>{path}</span>
       {bytes != null && <span className="text-mut shrink-0">{formatBytes(bytes)}</span>}
@@ -391,7 +391,7 @@ export function PublishStudio() {
         </label>
       }
     >
-      <div className="pb-10 max-w-3xl">
+      <div className="pb-10 max-w-3xl studio-cards">
         <div className="px-6 pt-5 grid gap-3">
           <div>
             <RowShell
