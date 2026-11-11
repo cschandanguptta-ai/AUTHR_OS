@@ -14,8 +14,10 @@ import {
 } from 'lexical';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { useEffect, useRef } from 'react';
+import { UserPlus } from 'lucide-react';
 import { useManuscriptStore } from '../../../stores/manuscriptStore';
 import { useVoiceCastStore } from '../../../stores/voiceCastStore';
+import { useWorkspaceStore } from '../../../stores/workspaceStore';
 import { ROLE_SPEAKER_COLORS, SEGMENT_TYPE_HINTS } from '../../../lib/constants';
 import { cn, truncate } from '../../../lib/utils';
 import type { SegmentType } from '../../../types/ast';
@@ -77,6 +79,16 @@ function SpeakerGutterBadge({
   const speakerLabel = character ? character.display_name : data.speaker_id;
   const roleColor = ROLE_SPEAKER_COLORS[character?.role ?? 'NARRATOR'] ?? ROLE_SPEAKER_COLORS.NARRATOR;
 
+  // RA-08 companion: a DIALOGUE segment whose speaker has no cast profile
+  // offers an inline "add to cast" affordance — the CharacterModal opens
+  // pre-seeded with the segment's raw speaker key so one "Add to rack" makes
+  // the segment valid without leaving the cockpit.
+  const unknownSpeaker =
+    data.segment_type === 'DIALOGUE' &&
+    !character &&
+    data.speaker_id !== 'NARRATOR' &&
+    data.speaker_id.trim() !== '';
+
   const setType = (next: SegmentType) => {
     // Keep node data and the store row in lockstep; the store drives autosave.
     editor.update(() => {
@@ -102,6 +114,19 @@ function SpeakerGutterBadge({
         <span className={cn('font-medium truncate', roleColor)} title={speakerLabel}>
           {truncate(speakerLabel, 12)}
         </span>
+        {unknownSpeaker && (
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => useWorkspaceStore.getState().openCastModal(data.speaker_id)}
+            className="flex items-center gap-0.5 text-[9px] px-1 py-px rounded border border-dashed border-accent/60 text-accent hover:bg-accent/10"
+            title={`“${speakerLabel}” is not in the cast — add a voice profile (speaker key preserved, so the segment matches)`}
+            aria-label={`Add ${speakerLabel} to the cast`}
+            data-testid={`add-cast-${data.segment_id}`}
+          >
+            <UserPlus size={9} /> cast
+          </button>
+        )}
         <span className="flex items-center gap-px" role="group" aria-label="Segment type">
           {(
             [

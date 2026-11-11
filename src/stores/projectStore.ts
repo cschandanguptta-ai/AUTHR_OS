@@ -11,6 +11,7 @@ import { useThreadStore } from './threadStore';
 import { useWorkspaceStore } from './workspaceStore';
 import { useSettingsStore } from './settingsStore';
 import { useBookContextStore } from './bookContextStore';
+import { useTourStore } from './tourStore';
 
 export type ProjectStatus = 'closed' | 'opening' | 'open';
 
@@ -154,6 +155,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       // R-12/F-14: a fresh bootstrap is never silent — the dashboard opens
       // stating exactly what was created and what to do next.
       useWorkspaceStore.getState().openDashboard({ fresh: true });
+      // F-14 completion: the three-step tour rides only on a FIRST bootstrap —
+      // the done-flag wins, returning users never see it.
+      useTourStore.getState().maybeStart();
       void get().refreshLockStatus();
       return true;
     } catch (err) {

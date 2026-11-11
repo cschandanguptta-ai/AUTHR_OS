@@ -10,6 +10,7 @@ import { CommandPalette } from './components/layout/CommandPalette';
 import { DashboardOverlay } from './components/layout/DashboardOverlay';
 import { Cockpit } from './components/layout/Cockpit';
 import { Toaster } from './components/layout/Toaster';
+import { FirstRunTour } from './components/layout/FirstRunTour';
 import { AppConfirmHost } from './components/shared/AppConfirmHost';
 import { SmallWidthNotice } from './components/shared/SmallWidthNotice';
 import { useWorkspaceStore } from './stores/workspaceStore';
@@ -104,6 +105,7 @@ export default function App() {
       </main>
       <CommandPalette />
       <DashboardOverlay />
+      <FirstRunTour />
       <Toaster />
       <AppConfirmHost />
     </div>

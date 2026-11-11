@@ -476,6 +476,16 @@ function CanvasInner() {
         )}
       </div>
 
+      {/* RA-08: the edit/view split, stated where the mode is chosen. */}
+      {viewMode === 'readalong' && (
+        <p
+          className="px-6 pt-1.5 text-2xs text-mut/80 shrink-0"
+          data-testid="readalong-help"
+        >
+          Editing happens in Script &amp; Cast — Read-Along is for selection and read-along.
+        </p>
+      )}
+
       {/* Editor surface */}
       <div className="flex-1 min-h-0 overflow-y-auto relative bg-app">
         {loadingSegments && (

@@ -7,6 +7,7 @@ import {
   Command,
   Eye,
   GitCommitHorizontal,
+  HelpCircle,
   Languages,
   LayoutDashboard,
   Lock,
@@ -20,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useWorkspaceStore, type StudioId } from '../../stores/workspaceStore';
 import { useProjectStore } from '../../stores/projectStore';
+import { useTourStore } from '../../stores/tourStore';
 import { useManuscriptStore } from '../../stores/manuscriptStore';
 import { useBookContextStore } from '../../stores/bookContextStore';
 import * as api from '../../ipc/api';
@@ -140,12 +142,20 @@ function BookContextChip() {
   );
 }
 
-/** Lock dot: green = live lease held by this session; amber = read-only foreign lease. */
+/** Lock dot: green = live lease held by this session; amber = read-only foreign lease.
+ *  RA-05: the visible state is human ("Open in this window — since 09:12");
+ *  raw pid/host identifiers stay out of the default header and live on
+ *  demand — in the hover tooltip and the maintenance menu's lock entry. */
 function LockDot() {
   const lockInfo = useProjectStore((s) => s.lockInfo);
   const refresh = useProjectStore((s) => s.refreshLockStatus);
   const readonly = useProjectStore((s) => s.readonly);
+  const openedAt = useProjectStore((s) => s.openedAt);
 
+  const since = new Date(openedAt || Date.now()).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
   const tone = readonly
     ? 'bg-amber-400'
     : lockInfo?.locked
@@ -154,19 +164,23 @@ function LockDot() {
   const label = readonly
     ? 'Read-only — fresh foreign lease honored'
     : lockInfo?.locked
-      ? `Lease held · pid ${lockInfo.pid ?? '?'} @ ${lockInfo.hostname ?? 'local'}`
+      ? `Open in this window — since ${since}`
       : 'No lease recorded';
+  const raw = lockInfo
+    ? `pid ${lockInfo.pid ?? '?'} @ ${lockInfo.hostname ?? 'local'}${lockInfo.session_id ? ` · session ${lockInfo.session_id}` : ''}`
+    : 'no lock row';
 
   return (
     <button
       type="button"
       onClick={() => void refresh()}
-      title={`${label} — click to re-probe project_lock_status`}
+      title={`${label} — details: ${raw} (click to re-probe project_lock_status)`}
       className="flex items-center gap-1.5 text-2xs text-mut hover:text-ink transition-colors"
       aria-label={label}
+      data-testid="lease-chip"
     >
       <span className={cn('w-2 h-2 rounded-full', tone)} />
-      <span className="hidden md:inline">{readonly ? 'READ-ONLY' : 'LEASED'}</span>
+      <span className="hidden md:inline">{readonly ? 'READ-ONLY' : 'OPEN HERE'}</span>
     </button>
   );
 }
@@ -174,6 +188,7 @@ function LockDot() {
 export function WorkstationSwitcher() {
   const activeStudio = useWorkspaceStore((s) => s.activeStudio);
   const setActiveStudio = useWorkspaceStore((s) => s.setActiveStudio);
+  const lockInfo = useProjectStore((s) => s.lockInfo);
   const manifest = useProjectStore((s) => s.manifest);
   const readonly = useProjectStore((s) => s.readonly);
   const bundlePath = useProjectStore((s) => s.bundlePath);
@@ -367,11 +382,29 @@ export function WorkstationSwitcher() {
                   void useProjectStore.getState().refreshLockStatus();
                   setMenuOpen(false);
                 }}
+                title={
+                  lockInfo
+                    ? `Raw identifiers (on demand): pid ${lockInfo.pid ?? '?'} @ ${lockInfo.hostname ?? 'local'}${lockInfo.session_id ? ` · session ${lockInfo.session_id}` : ''}`
+                    : 'Raw lock identifiers appear here when a lease is held'
+                }
                 className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] hover:bg-panel2 text-ink text-left"
               >
                 <Lock size={14} className="text-mut" />
                 Re-probe lock status
                 <span className="ml-auto text-2xs text-mut font-mono">lock_status</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  useTourStore.getState().replay();
+                  setMenuOpen(false);
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] hover:bg-panel2 text-ink text-left"
+                data-testid="replay-tour"
+              >
+                <HelpCircle size={14} className="text-mut" />
+                Replay product tour
+                <span className="ml-auto text-2xs text-mut font-mono">3 steps</span>
               </button>
               <div className="my-1 border-t border-line" />
               <button
