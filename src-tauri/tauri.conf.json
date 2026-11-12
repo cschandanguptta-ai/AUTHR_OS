@@ -27,7 +27,7 @@
   "bundle": {
     "active": true,
     "targets": ["msi", "nsis", "dmg", "appimage", "deb"],
-    "icon": [],
+    "icon": ["icons/icon.ico"],
     "category": "Productivity",
     "shortDescription": "AUTHR_OS — AI-native novel workstation with studio-grade audiobook pipeline",
     "longDescription": "Local-first authoring cockpit: Lexical AST canvas, lookahead TTS, 3-layer DSP mastering, vector RAG, and 1-click EPUB 3 / DOCX / Typst PDF / ACX M4B publishing.",
