@@ -64,6 +64,7 @@ AUTHR_OS/
 ├── tests/                    # 41 modules · 229 E2E tests (pytest + run_e2e.py)
 └── scripts/                  # ipc-proxy.mjs (browser dev bridge) ·
                               # restore_env.sh (one-shot recycle recovery) ·
+                              # slim_workspace.sh (drop build-time state) ·
                               # build_deliverables.py (release zips)
 ```
 
