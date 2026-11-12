@@ -35,7 +35,9 @@ jobs:
       - name: Build core binary
         run: cargo build --release --manifest-path src-tauri/Cargo.toml
       - name: Package deliverable zips
-        run: python3 scripts/build_deliverables.py
+        run: |
+          python3 scripts/build_deliverables.py
+          mv ../AUTHR_OS_*.zip .
       - name: Attach zips to the GitHub Release
         uses: softprops/action-gh-release@v2
         with:
