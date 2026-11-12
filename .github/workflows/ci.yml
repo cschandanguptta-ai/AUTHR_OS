@@ -1,0 +1,54 @@
+name: CI
+
+# AUTHR_OS acceptance gates on GitHub runners:
+#   web  : npm run build (tsc --noEmit && vite build) — the "clean build" gate
+#   core : clippy -D warnings + 135 Rust unit tests + 229 E2E (pytest)
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist
+
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Tauri 2 Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev libgtk-3-dev \
+            libayatana-appindicator3-dev librsvg2-dev patchelf
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - name: Clippy (gate: zero warnings)
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+      - name: Rust unit tests (gate: 135/135)
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+      - name: Build release binary for E2E
+        run: cargo build --release --manifest-path src-tauri/Cargo.toml
+      - name: E2E suite (gate: 229/229)
+        run: |
+          python3 -m pip install --quiet pytest
+          pytest tests/ -q
