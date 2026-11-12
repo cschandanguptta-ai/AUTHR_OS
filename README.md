@@ -61,8 +61,10 @@ AUTHR_OS/
 │   ├── components/studios/   # Audio / Video / Localization / Marketing / Craft
 │   ├── stores/               # Zustand domain stores
 │   └── ipc/                  # typed contract surface + transport bridge
-├── tests/                    # 34 modules · 195 E2E tests (pytest + run_e2e.py)
-└── scripts/ipc-proxy.mjs     # browser dev bridge: POST /api/ipc → CLI
+├── tests/                    # 41 modules · 229 E2E tests (pytest + run_e2e.py)
+└── scripts/                  # ipc-proxy.mjs (browser dev bridge) ·
+                              # restore_env.sh (one-shot recycle recovery) ·
+                              # build_deliverables.py (release zips)
 ```
 
 ## Build & Run
