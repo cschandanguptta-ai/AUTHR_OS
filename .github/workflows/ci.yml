@@ -45,7 +45,9 @@ jobs:
       - name: "Clippy — gate: zero warnings"
         run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
       - name: "Rust unit tests — gate: 135/135"
-        run: cargo test --manifest-path src-tauri/Cargo.toml
+        # --test-threads=1: several tests mutate process env (AUTHR_IMG_*),
+        # which races under parallel test threads on 2-core runners.
+        run: cargo test --manifest-path src-tauri/Cargo.toml -- --test-threads=1
       - name: Build release binary for E2E
         run: cargo build --release --manifest-path src-tauri/Cargo.toml
       - name: "E2E suite — gate: 229/229"
