@@ -42,13 +42,13 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
-      - name: Clippy (gate: zero warnings)
+      - name: "Clippy — gate: zero warnings"
         run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
-      - name: Rust unit tests (gate: 135/135)
+      - name: "Rust unit tests — gate: 135/135"
         run: cargo test --manifest-path src-tauri/Cargo.toml
       - name: Build release binary for E2E
         run: cargo build --release --manifest-path src-tauri/Cargo.toml
-      - name: E2E suite (gate: 229/229)
+      - name: "E2E suite — gate: 229/229"
         run: |
           python3 -m pip install --quiet pytest
           pytest tests/ -q
