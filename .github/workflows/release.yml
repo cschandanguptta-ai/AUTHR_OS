@@ -44,3 +44,32 @@ jobs:
           files: |
             AUTHR_OS_v*-PROD.zip
             AUTHR_OS_docs.zip
+
+  # Windows installers (.msi via WiX, .exe via NSIS) — bundle targets are
+  # already configured in src-tauri/tauri.conf.json. Installers are unsigned.
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Drop tracked Linux target artifacts (stale on MSVC)
+        run: rm -rf src-tauri/target
+        shell: bash
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - name: Install Tauri CLI
+        run: npm install -g @tauri-apps/cli@^2
+      - name: Build Windows installers (msi + nsis)
+        run: tauri build
+        # tauri build runs beforeBuildCommand (npm run build) itself
+      - name: Attach installers to the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/nsis/*.exe
