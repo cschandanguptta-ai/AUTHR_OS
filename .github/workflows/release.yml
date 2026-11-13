@@ -68,8 +68,23 @@ jobs:
       - name: Install Tauri CLI
         run: npm install -g @tauri-apps/cli@^2
       - name: Build Windows installers (msi + nsis)
-        run: tauri build
+        # gui,os-keychain: main.rs dispatches a bare launch to the Tauri
+        # shell only when the gui feature is compiled in; os-keychain wires
+        # the Windows Credential Manager provider.
+        run: tauri build --features gui,os-keychain
         # tauri build runs beforeBuildCommand (npm run build) itself
+      - name: Smoke-launch the built GUI
+        run: |
+          $p = Start-Process -FilePath "src-tauri\target\release\authr.exe" -PassThru -RedirectStandardError smoke-stderr.txt -RedirectStandardOutput smoke-stdout.txt -WindowStyle Hidden
+          Start-Sleep -Seconds 30
+          if ($p.HasExited) {
+            Write-Host "=== GUI process exited early — smoke FAIL ==="
+            Write-Host "--- stderr ---"; Get-Content smoke-stderr.txt
+            Write-Host "--- stdout ---"; Get-Content smoke-stdout.txt
+            exit 1
+          }
+          Stop-Process -Id $p.Id -Force
+          Write-Host "GUI event loop alive after 30s — smoke PASS"
       - name: Attach installers to the GitHub Release
         uses: softprops/action-gh-release@v2
         with:

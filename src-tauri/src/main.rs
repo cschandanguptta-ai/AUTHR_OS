@@ -45,6 +45,24 @@ fn emit(value: Value) {
 fn main() {
     let cli = Cli::parse();
 
+    // Desktop shell: a bare launch — no command, no --contract, no --bundle,
+    // no --args — of a gui-enabled build opens the cockpit instead of
+    // printing the CLI usage envelope. release.yml builds the Windows
+    // installer with `--features gui,os-keychain`; CLI-only builds (default
+    // features, E2E runners) are unchanged.
+    #[cfg(feature = "gui")]
+    {
+        if cli.command.is_none()
+            && !cli.contract
+            && cli.bundle.is_none()
+            && cli.args.is_none()
+            && !cli.args_stdin
+        {
+            authr::shell::run();
+            return; // shell::run returns when the main window closes
+        }
+    }
+
     if cli.contract {
         emit(json!({
             "ok": true,
