@@ -126,13 +126,9 @@ fn pid_alive(pid: i64) -> bool {
         return false;
     }
     // /proc on Linux; on other platforms a lock from this host is trusted.
-    let proc_dir = std::path::PathBuf::from(format!("/proc/{pid}"));
-    if proc_dir.exists() {
-        return true;
-    }
     #[cfg(target_os = "linux")]
     {
-        false
+        std::path::PathBuf::from(format!("/proc/{pid}")).exists()
     }
     #[cfg(not(target_os = "linux"))]
     {
