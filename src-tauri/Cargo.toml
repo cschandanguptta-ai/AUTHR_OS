@@ -31,8 +31,11 @@ clap = { version = "4", features = ["derive"] }
 uuid = { version = "1", features = ["v4", "v5"] }
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 whoami = "1"
-keyring = { version = "3", optional = true, default-features = false, features = ["linux-native"] }
-tauri = { version = "2", optional = true, default-features = false }
+# linux-native AND windows-native: keyring gates each backend to its OS, so the
+# unused one compiles away. Without windows-native the Credential Manager
+# backend is missing on Windows builds.
+keyring = { version = "3", optional = true, default-features = false, features = ["linux-native", "windows-native"] }
+tauri = { version = "2", optional = true, default-features = false, features = ["wry"] }
 # R-10: native open/save dialogs — a shell capability, NOT a contract change
 # (docs/CLI_CONTRACT.md is untouched; the headless CLI binary never compiles it).
 tauri-plugin-dialog = { version = "2", optional = true, default-features = false }
