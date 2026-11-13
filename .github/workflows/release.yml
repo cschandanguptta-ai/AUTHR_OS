@@ -75,7 +75,11 @@ jobs:
         # tauri build runs beforeBuildCommand (npm run build) itself
       - name: Smoke-launch the built GUI
         run: |
-          $p = Start-Process -FilePath "src-tauri\target\release\authr.exe" -PassThru -RedirectStandardError smoke-stderr.txt -RedirectStandardOutput smoke-stdout.txt -WindowStyle Hidden
+          # tauri build renames the binary to mainBinaryName (AUTHR_OS.exe);
+          # fall back to the cargo name in case the config ever changes.
+          $exe = "src-tauri\target\release\AUTHR_OS.exe"
+          if (-not (Test-Path $exe)) { $exe = "src-tauri\target\release\authr.exe" }
+          $p = Start-Process -FilePath $exe -PassThru -RedirectStandardError smoke-stderr.txt -RedirectStandardOutput smoke-stdout.txt -WindowStyle Hidden
           Start-Sleep -Seconds 30
           if ($p.HasExited) {
             Write-Host "=== GUI process exited early — smoke FAIL ==="
