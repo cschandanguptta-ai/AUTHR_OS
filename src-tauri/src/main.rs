@@ -1,6 +1,12 @@
 // AUTHR_OS — CLI entry (headless / tests / scripting).
 // Single-line JSON envelope on stdout, exit 0/1 (docs/CLI_CONTRACT.md §1–2).
 
+// GUI builds (release) run windowed: no console flashes alongside the
+// cockpit, and the Windows Restart Manager can terminate the process during
+// installs/upgrades — console-subsystem exes can't be RM-shutdown, which
+// made the NSIS installer abort with "Failed to kill AUTHR_OS".
+#![cfg_attr(all(feature = "gui", not(debug_assertions)), windows_subsystem = "windows")]
+
 use clap::Parser;
 use serde_json::{json, Value};
 use std::io::Write;
